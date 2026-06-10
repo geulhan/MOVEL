@@ -21,6 +21,13 @@ export type Trainer = {
   created_at: string
 }
 
+export type AdminUser = {
+  id: string
+  username: string
+  password_hash: string
+  created_at: string
+}
+
 export type Member = {
   id: string
   name: string
@@ -507,9 +514,22 @@ export type Database = {
           reviewed_at?: string | null
         }
       >
+      admin_users: TableDef<
+        AdminUser,
+        { username: string; password_hash: string },
+        never
+      >
     }
     Views: Record<string, never>
-    Functions: Record<string, never>
+    Functions: {
+      verify_admin_login: {
+        Args: {
+          p_username: string
+          p_password: string
+        }
+        Returns: Json
+      }
+    }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
   }
