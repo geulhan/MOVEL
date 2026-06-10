@@ -1,0 +1,120 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui,
+    sans-serif;
+  --color-charcoal: #1c1c1c;
+  --color-charcoal-light: #2e2e2e;
+  --color-cream: #f5f0e8;
+  --color-cream-dark: #e8e0d4;
+  --color-gold: #c8b882;
+  --color-gold-dark: #a89868;
+}
+
+body {
+  @apply m-0 min-h-screen bg-cream text-charcoal antialiased;
+  font-family: var(--font-sans);
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-gold/35 bg-white shadow-sm;
+  }
+
+  .card-pad {
+    @apply p-5 sm:p-6;
+  }
+
+  .card-header {
+    @apply border-b border-gold/25 px-5 py-4 sm:px-6;
+  }
+
+  .page-title {
+    @apply text-xl font-bold tracking-tight text-charcoal sm:text-2xl;
+  }
+
+  .page-desc {
+    @apply mt-1 text-sm leading-relaxed text-charcoal/55;
+  }
+
+  .input-field {
+    @apply w-full min-w-0 rounded-lg border border-gold/40 bg-white px-3 py-2.5 text-sm text-charcoal outline-none transition placeholder:text-charcoal/35 focus:border-gold focus:ring-2 focus:ring-gold/25;
+  }
+
+  .select-compact {
+    @apply min-w-0 max-w-full rounded-lg border border-gold/40 bg-white px-2 py-1.5 text-xs text-charcoal outline-none focus:border-gold focus:ring-1 focus:ring-gold/25;
+  }
+
+  .btn-primary {
+    @apply shrink-0 rounded-lg bg-charcoal px-5 py-2.5 text-sm font-bold whitespace-nowrap text-cream transition hover:bg-charcoal-light disabled:opacity-60;
+  }
+
+  .btn-gold {
+    @apply shrink-0 rounded-lg bg-gold px-5 py-2.5 text-sm font-bold whitespace-nowrap text-charcoal transition hover:bg-gold-dark disabled:opacity-60;
+  }
+
+  .btn-outline {
+    @apply shrink-0 rounded-lg border border-gold/50 bg-white px-3 py-1.5 text-xs font-bold whitespace-nowrap text-charcoal transition hover:border-gold hover:bg-cream disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-ghost {
+    @apply shrink-0 rounded-md px-2.5 py-1 text-xs font-bold whitespace-nowrap text-charcoal/80 transition hover:bg-cream hover:text-charcoal;
+  }
+
+  /* 텍스트형 액션 (수정, 잔여 횟수 수정 등) */
+  .btn-link {
+    @apply text-xs font-bold text-gold-dark transition hover:text-charcoal hover:underline;
+  }
+
+  .btn-link-sm {
+    @apply text-sm font-bold text-gold-dark transition hover:underline;
+  }
+
+  .btn-nav-back {
+    @apply inline-flex items-center gap-1 text-sm font-bold whitespace-nowrap text-charcoal/75 transition hover:text-gold-dark;
+  }
+
+  .btn-inline-save {
+    @apply rounded bg-charcoal px-2.5 py-1 text-xs font-bold text-cream transition hover:bg-charcoal-light disabled:opacity-60;
+  }
+
+  .btn-inline-cancel {
+    @apply rounded border border-gold/40 bg-white px-2.5 py-1 text-xs font-bold text-charcoal transition hover:border-gold hover:bg-cream;
+  }
+
+  .chip {
+    @apply shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-bold whitespace-nowrap transition;
+  }
+
+  .chip-active {
+    @apply border-charcoal bg-charcoal text-cream;
+  }
+
+  .chip-inactive {
+    @apply border-gold/40 bg-white text-charcoal hover:border-gold hover:bg-cream;
+  }
+
+  .stat-value {
+    @apply mt-1 text-2xl font-bold tracking-tight text-charcoal tabular-nums sm:text-3xl;
+  }
+
+  .link-name {
+    @apply max-w-[7rem] truncate text-sm font-bold text-gold-dark transition hover:text-charcoal hover:underline sm:max-w-[9rem];
+  }
+
+  .text-muted {
+    @apply text-charcoal/55;
+  }
+
+  .table-head {
+    @apply bg-cream text-xs font-semibold whitespace-nowrap text-charcoal/50;
+  }
+
+  .table-scroll {
+    @apply -mx-5 overflow-x-auto px-5 sm:-mx-6 sm:px-6;
+  }
+
+  .chip-scroll {
+    @apply flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden;
+  }
+}
