@@ -24,6 +24,7 @@ import { btnGold, btnPrimary, cardClass, inputClass } from '../styles/theme'
 import type { Member } from '../types/database'
 import { MEMBER_STATUS_LABELS } from '../types/database'
 import { MemberRewardsSection } from '../components/MemberRewardsSection'
+import { PullToRefresh } from '../components/PullToRefresh'
 import { MemberScheduleSection } from '../components/MemberScheduleSection'
 import { SessionCount } from '../components/SessionCount'
 
@@ -48,6 +49,7 @@ export default function MemberPortalPage() {
   const [schedules, setSchedules] = useState<PtSchedule[]>([])
   const [checkInLoading, setCheckInLoading] = useState(false)
   const [portalError, setPortalError] = useState<string | null>(null)
+  const [refreshToken, setRefreshToken] = useState(0)
 
   const loadMemberData = useCallback(async (memberId: string) => {
     const m = await fetchMemberById(memberId)
@@ -228,6 +230,13 @@ export default function MemberPortalPage() {
     !memberExpired &&
     hasTodayPt
 
+  const handlePortalRefresh = useCallback(async () => {
+    if (!member) return
+    setPortalError(null)
+    await loadMemberData(member.id)
+    setRefreshToken((token) => token + 1)
+  }, [member, loadMemberData])
+
   const tabs: { id: Tab; label: string }[] = [
     { id: 'home', label: '내 정보' },
     { id: 'schedule', label: '수업 일정' },
@@ -256,13 +265,14 @@ export default function MemberPortalPage() {
         ))}
       </nav>
 
-      {portalError && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-          {portalError}
-        </div>
-      )}
+      <PullToRefresh onRefresh={handlePortalRefresh}>
+        {portalError && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            {portalError}
+          </div>
+        )}
 
-      {tab === 'home' && (
+        {tab === 'home' && (
         <section className={`${cardClass} space-y-4 p-6`}>
           <div className="text-center">
             <p className="text-2xl font-bold text-charcoal">{member.name}</p>
@@ -407,49 +417,53 @@ export default function MemberPortalPage() {
         </section>
       )}
 
-      {tab === 'rewards' && member && (
-        <MemberRewardsSection memberId={member.id} />
-      )}
+        {tab === 'rewards' && member && (
+          <MemberRewardsSection
+            memberId={member.id}
+            refreshToken={refreshToken}
+          />
+        )}
 
-      {tab === 'mypage' && member && (
-        <MemberMyPageSection phone={member.phone} />
-      )}
+        {tab === 'mypage' && member && (
+          <MemberMyPageSection phone={member.phone} />
+        )}
 
-      {tab === 'journal' && (
-        <section className={`${cardClass} overflow-hidden`}>
-          <div className="border-b border-gold/20 px-4 py-4">
-            <h3 className="font-semibold text-charcoal">운동일지</h3>
-            <p className="mt-1 text-xs text-muted">
-              트레이너가 작성한 운동 기록입니다.
-            </p>
-          </div>
-          {journals.length === 0 ? (
-            <p className="px-4 py-10 text-center text-sm text-muted">
-              아직 등록된 운동일지가 없습니다.
-            </p>
-          ) : (
-            <ul className="divide-y divide-gold/15">
-              {journals.map((j) => (
-                <li key={j.id} className="px-4 py-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded bg-gold/20 px-2 py-0.5 text-xs font-medium whitespace-nowrap tabular-nums">
-                      {formatDate(j.trained_at)}
-                    </span>
-                    {j.title && (
-                      <span className="text-sm font-semibold text-charcoal">
-                        {j.title}
+        {tab === 'journal' && (
+          <section className={`${cardClass} overflow-hidden`}>
+            <div className="border-b border-gold/20 px-4 py-4">
+              <h3 className="font-semibold text-charcoal">운동일지</h3>
+              <p className="mt-1 text-xs text-muted">
+                트레이너가 작성한 운동 기록입니다.
+              </p>
+            </div>
+            {journals.length === 0 ? (
+              <p className="px-4 py-10 text-center text-sm text-muted">
+                아직 등록된 운동일지가 없습니다.
+              </p>
+            ) : (
+              <ul className="divide-y divide-gold/15">
+                {journals.map((j) => (
+                  <li key={j.id} className="px-4 py-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded bg-gold/20 px-2 py-0.5 text-xs font-medium whitespace-nowrap tabular-nums">
+                        {formatDate(j.trained_at)}
                       </span>
-                    )}
-                  </div>
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-charcoal/85">
-                    {j.content}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      )}
+                      {j.title && (
+                        <span className="text-sm font-semibold text-charcoal">
+                          {j.title}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-charcoal/85">
+                      {j.content}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
+      </PullToRefresh>
     </MemberLayout>
   )
 }

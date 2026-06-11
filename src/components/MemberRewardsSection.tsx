@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   fetchRewardBalance,
   fetchRewardTransactions,
@@ -18,7 +18,17 @@ import {
   TIER_THRESHOLDS,
   type RewardEventType,
 } from '../constants/rewards'
+import { formatDate, todayDateString } from '../api/members'
 import { formatSupabaseError } from '../lib/errors'
+import {
+  closeVerificationCodePiP,
+  getVerificationCodePipMode,
+  isVerificationCodePipActive,
+  openVerificationCodePiP,
+  subscribeVerificationCodeOverlayClose,
+  verificationCodePipButtonLabel,
+  verificationCodePipHelpText,
+} from '../lib/verificationCodePip'
 import { VerificationCodeFullscreen } from './VerificationCodeFullscreen'
 import { btnGold, btnOutline, cardClass } from '../styles/theme'
 
@@ -26,7 +36,12 @@ type HistoryTab = 'earn' | 'spend'
 
 type Props = {
   memberId: string
+  refreshToken?: number
 }
+
+/** 모바일 갤러리(사진 보관함) 열기용 — capture 속성 없음 */
+const GALLERY_IMAGE_ACCEPT =
+  'image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic'
 
 function tierBadgeClass(tier: string): string {
   switch (tier) {
@@ -60,7 +75,7 @@ function verificationStatusLabel(v: StepVerification): string {
   return '검수 중'
 }
 
-export function MemberRewardsSection({ memberId }: Props) {
+export function MemberRewardsSection({ memberId, refreshToken }: Props) {
   const [balance, setBalance] = useState<RewardBalance | null>(null)
   const [transactions, setTransactions] = useState<RewardTransaction[]>([])
   const [todayCode, setTodayCode] = useState('')
@@ -77,8 +92,9 @@ export function MemberRewardsSection({ memberId }: Props) {
   const [ocrProgress, setOcrProgress] = useState<number | null>(null)
   const [showCodeFullscreen, setShowCodeFullscreen] = useState(false)
   const [copied, setCopied] = useState(false)
-  const galleryInputRef = useRef<HTMLInputElement>(null)
-  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const [pipActive, setPipActive] = useState(false)
+  const [pipLoading, setPipLoading] = useState(false)
+  const pipMode = getVerificationCodePipMode()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -105,9 +121,53 @@ export function MemberRewardsSection({ memberId }: Props) {
 
   useEffect(() => {
     void load()
-  }, [load])
+  }, [load, refreshToken])
+
+  useEffect(() => {
+    function syncPipState() {
+      setPipActive(isVerificationCodePipActive())
+    }
+    document.addEventListener('leavepictureinpicture', syncPipState)
+    const unsubscribeOverlay = subscribeVerificationCodeOverlayClose(syncPipState)
+    return () => {
+      document.removeEventListener('leavepictureinpicture', syncPipState)
+      unsubscribeOverlay()
+      void closeVerificationCodePiP()
+    }
+  }, [])
 
   const alreadyApprovedToday = todayVerification?.status === 'approved'
+
+  async function handleTogglePip() {
+    if (pipActive) {
+      await closeVerificationCodePiP()
+      setPipActive(false)
+      return
+    }
+    if (!todayCode) return
+
+    setPipLoading(true)
+    setError(null)
+    try {
+      const ok = await openVerificationCodePiP(
+        todayCode,
+        formatDate(todayDateString()),
+      )
+      setPipActive(ok)
+      if (!ok) {
+        setError(
+          '이 브라우저/기기에서는 PiP를 지원하지 않습니다. 전체화면 또는 분할 화면을 이용해 주세요.',
+        )
+      }
+    } catch (err) {
+      setPipActive(false)
+      setError(
+        err instanceof Error ? err.message : 'PiP 창을 열지 못했습니다.',
+      )
+    } finally {
+      setPipLoading(false)
+    }
+  }
 
   async function handleCopyCode() {
     if (!todayCode) return
@@ -120,7 +180,10 @@ export function MemberRewardsSection({ memberId }: Props) {
     }
   }
 
-  async function handleImageSelect(file: File | null) {
+  async function handleImageSelect(
+    file: File | null,
+    input?: HTMLInputElement | null,
+  ) {
     if (!file) return
     if (!file.type.startsWith('image/')) {
       setError('이미지 파일만 업로드할 수 있습니다.')
@@ -152,8 +215,7 @@ export function MemberRewardsSection({ memberId }: Props) {
     } finally {
       setUploading(false)
       setOcrProgress(null)
-      if (galleryInputRef.current) galleryInputRef.current.value = ''
-      if (cameraInputRef.current) cameraInputRef.current.value = ''
+      if (input) input.value = ''
     }
   }
 
@@ -259,10 +321,13 @@ export function MemberRewardsSection({ memberId }: Props) {
       <section className={`${cardClass} p-5 sm:p-6`}>
         <h4 className="text-sm font-bold text-charcoal">오늘 인증하기</h4>
         <p className="mt-1 text-xs leading-relaxed text-muted">
-          건강앱에는 MOVEL 코드가 없습니다. 분할 화면으로 건강앱과 코드를
-          <strong className="text-charcoal"> 한 화면에 함께</strong> 보이게 한 뒤
-          <strong className="text-charcoal"> 스크린샷</strong>을 찍고
-          「갤러리에서 선택」으로 업로드하세요.
+          건강앱에는 MOVEL 코드가 없습니다.{' '}
+          <strong className="text-charcoal">「코드 PiP 창」</strong> 또는 분할
+          화면으로 코드와 건강앱을 한 화면에 담아 스크린샷 후 갤러리에서
+          업로드하세요.
+        </p>
+        <p className="mt-1 text-[11px] text-amber-800">
+          {verificationCodePipHelpText(pipMode)}
         </p>
 
         <details className="mt-3 rounded-lg border border-gold/25 bg-cream/40 px-3 py-2 text-xs text-charcoal/80">
@@ -275,9 +340,8 @@ export function MemberRewardsSection({ memberId }: Props) {
               길게 눌러「분할 화면 보기」
             </li>
             <li>
-              <strong>아이폰:</strong> 설정 없이는 분할 불가 → 건강앱 캡처 후
-              모벨「전체화면」코드를 <strong>사진 편집</strong>으로 합치거나, 다른
-              기기로 코드 화면을 띄워 함께 촬영
+              <strong>아이폰:</strong> 「코드 떠있는 창」을 띄운 뒤 건강앱으로
+              이동해 한 화면에 코드와 걸음수가 보이게 캡처
             </li>
             <li>
               <strong>공통:</strong> 캡처에 <strong>오늘 걸음수 + MOVEL-코드 + 오늘
@@ -296,15 +360,29 @@ export function MemberRewardsSection({ memberId }: Props) {
           <p className="mt-2 text-[11px] text-cream/50">
             캡처 화면에 이 코드가 보여야 합니다
           </p>
-          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-center">
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-center">
+            <button
+              type="button"
+              onClick={() => void handleTogglePip()}
+              disabled={!todayCode || pipLoading || pipMode === 'none'}
+              className={pipActive ? `sm:flex-1 ${btnGold}` : `sm:flex-1 ${btnOutline}`}
+            >
+              {pipLoading
+                ? '창 여는 중…'
+                : verificationCodePipButtonLabel(pipMode, pipActive)}
+            </button>
             <button
               type="button"
               onClick={() => setShowCodeFullscreen(true)}
-              className={btnGold}
+              className={`sm:flex-1 ${btnOutline}`}
             >
               인증코드 전체화면
             </button>
-            <button type="button" onClick={() => void handleCopyCode()} className={btnOutline}>
+            <button
+              type="button"
+              onClick={() => void handleCopyCode()}
+              className={`sm:flex-1 ${btnOutline}`}
+            >
               {copied ? '복사됨!' : '코드 복사'}
             </button>
           </div>
@@ -321,45 +399,57 @@ export function MemberRewardsSection({ memberId }: Props) {
           </div>
         ) : (
           <div className="mt-4 space-y-2">
-            <input
-              ref={galleryInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => void handleImageSelect(e.target.files?.[0] ?? null)}
-            />
-            <input
-              ref={cameraInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={(e) => void handleImageSelect(e.target.files?.[0] ?? null)}
-            />
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <button
-                type="button"
+            <label
+              className={`flex w-full cursor-pointer items-center justify-center rounded-lg px-5 py-3 text-sm font-bold text-charcoal transition ${
+                uploading
+                  ? 'pointer-events-none bg-gold/40 opacity-70'
+                  : `${btnGold} hover:bg-gold-dark`
+              }`}
+            >
+              {uploading
+                ? ocrProgress !== null
+                  ? `OCR 분석 중… ${ocrProgress}%`
+                  : '업로드 중…'
+                : '갤러리에서 사진 선택'}
+              <input
+                type="file"
+                accept={GALLERY_IMAGE_ACCEPT}
+                className="sr-only"
                 disabled={uploading}
-                onClick={() => galleryInputRef.current?.click()}
-                className={`w-full ${btnGold}`}
-              >
-                {uploading
-                  ? ocrProgress !== null
-                    ? `OCR 분석 중… ${ocrProgress}%`
-                    : '업로드 중…'
-                  : '갤러리에서 선택'}
-              </button>
-              <button
-                type="button"
+                onChange={(e) =>
+                  void handleImageSelect(
+                    e.target.files?.[0] ?? null,
+                    e.target,
+                  )
+                }
+              />
+            </label>
+            <label
+              className={`hidden w-full cursor-pointer items-center justify-center rounded-lg border border-gold/50 bg-white px-5 py-3 text-sm font-bold text-charcoal transition hover:bg-cream sm:flex ${
+                uploading ? 'pointer-events-none opacity-70' : ''
+              }`}
+            >
+              카메라로 촬영
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="sr-only"
                 disabled={uploading}
-                onClick={() => cameraInputRef.current?.click()}
-                className={`w-full ${btnOutline}`}
-              >
-                카메라로 촬영
-              </button>
-            </div>
-            <p className="text-center text-[11px] text-muted">
-              분할 화면 캡처는 「갤러리에서 선택」을 이용하세요
+                onChange={(e) =>
+                  void handleImageSelect(
+                    e.target.files?.[0] ?? null,
+                    e.target,
+                  )
+                }
+              />
+            </label>
+            <p className="text-center text-[11px] leading-relaxed text-muted">
+              분할 화면 <strong className="text-charcoal">스크린샷</strong>은
+              「갤러리에서 사진 선택」을 눌러 업로드하세요.
+              <span className="mt-1 block text-amber-800">
+                (모바일에서는 갤러리 버튼만 사용하세요)
+              </span>
             </p>
             {todayVerification?.status === 'rejected' && (
               <p className="text-xs text-red-600">

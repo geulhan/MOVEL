@@ -1,5 +1,11 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { formatDate, todayDateString } from '../api/members'
+import {
+  closeVerificationCodePiP,
+  getVerificationCodePipMode,
+  openVerificationCodePiP,
+  verificationCodePipButtonLabel,
+} from '../lib/verificationCodePip'
 import { btnGold, btnOutline } from '../styles/theme'
 
 type Props = {
@@ -9,6 +15,9 @@ type Props = {
 
 export function VerificationCodeFullscreen({ code, onClose }: Props) {
   const today = todayDateString()
+  const pipMode = getVerificationCodePipMode()
+  const [pipActive, setPipActive] = useState(false)
+  const [pipLoading, setPipLoading] = useState(false)
 
   useEffect(() => {
     const prev = document.body.style.overflow
@@ -17,6 +26,21 @@ export function VerificationCodeFullscreen({ code, onClose }: Props) {
       document.body.style.overflow = prev
     }
   }, [])
+
+  async function handleTogglePip() {
+    if (pipActive) {
+      await closeVerificationCodePiP()
+      setPipActive(false)
+      return
+    }
+    setPipLoading(true)
+    try {
+      const ok = await openVerificationCodePiP(code, formatDate(today))
+      setPipActive(ok)
+    } finally {
+      setPipLoading(false)
+    }
+  }
 
   async function handleCopy() {
     try {
@@ -72,7 +96,19 @@ export function VerificationCodeFullscreen({ code, onClose }: Props) {
             <strong>이 코드가 보이게</strong> 한 장에 담아 업로드
           </li>
         </ol>
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
+          {pipMode !== 'none' && (
+            <button
+              type="button"
+              onClick={() => void handleTogglePip()}
+              disabled={pipLoading}
+              className={pipActive ? btnGold : btnOutline}
+            >
+              {pipLoading
+                ? '…'
+                : verificationCodePipButtonLabel(pipMode, pipActive)}
+            </button>
+          )}
           <button type="button" onClick={() => void handleCopy()} className={btnOutline}>
             코드 복사
           </button>

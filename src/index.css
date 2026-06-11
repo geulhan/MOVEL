@@ -11,9 +11,19 @@
   --color-gold-dark: #a89868;
 }
 
+html {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: auto;
+}
+
 body {
   @apply m-0 min-h-screen bg-cream text-charcoal antialiased;
   font-family: var(--font-sans);
+  overscroll-behavior-y: auto;
+}
+
+#root {
+  min-height: 100%;
 }
 
 @layer components {
