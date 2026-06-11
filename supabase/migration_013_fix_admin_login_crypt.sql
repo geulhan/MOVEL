@@ -1,18 +1,8 @@
--- 관리자 로그인 (admin_users + pgcrypto RPC)
+-- Supabase pgcrypto 스키마 수정 (crypt 함수 오류 해결)
+-- 오류: function crypt(text, text) does not exist
 -- Supabase SQL Editor에서 실행하세요.
--- crypt 오류 시 migration_013_fix_admin_login_crypt.sql 도 실행하세요.
 
 create extension if not exists pgcrypto with schema extensions;
-
-create table if not exists public.admin_users (
-  id uuid primary key default gen_random_uuid(),
-  username text not null unique,
-  password_hash text not null,
-  created_at timestamptz not null default now()
-);
-
-alter table public.admin_users enable row level security;
--- anon/authenticated 직접 조회 차단 (policy 없음)
 
 create or replace function public.verify_admin_login(
   p_username text,
@@ -54,9 +44,13 @@ $$;
 revoke all on function public.verify_admin_login(text, text) from public;
 grant execute on function public.verify_admin_login(text, text) to anon, authenticated;
 
--- 초기 관리자 (username: admin / password: mobel-admin — 배포 후 반드시 변경)
+-- admin 계정이 없으면 생성, 있으면 비밀번호 해시 재설정
 insert into public.admin_users (username, password_hash)
 select 'admin', extensions.crypt('mobel-admin', extensions.gen_salt('bf'))
 where not exists (
   select 1 from public.admin_users where username = 'admin'
 );
+
+update public.admin_users
+set password_hash = extensions.crypt('mobel-admin', extensions.gen_salt('bf'))
+where username = 'admin';

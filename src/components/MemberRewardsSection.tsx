@@ -77,7 +77,8 @@ export function MemberRewardsSection({ memberId }: Props) {
   const [ocrProgress, setOcrProgress] = useState<number | null>(null)
   const [showCodeFullscreen, setShowCodeFullscreen] = useState(false)
   const [copied, setCopied] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -151,7 +152,8 @@ export function MemberRewardsSection({ memberId }: Props) {
     } finally {
       setUploading(false)
       setOcrProgress(null)
-      if (fileInputRef.current) fileInputRef.current.value = ''
+      if (galleryInputRef.current) galleryInputRef.current.value = ''
+      if (cameraInputRef.current) cameraInputRef.current.value = ''
     }
   }
 
@@ -257,9 +259,10 @@ export function MemberRewardsSection({ memberId }: Props) {
       <section className={`${cardClass} p-5 sm:p-6`}>
         <h4 className="text-sm font-bold text-charcoal">오늘 인증하기</h4>
         <p className="mt-1 text-xs leading-relaxed text-muted">
-          건강앱에는 MOVEL 코드가 없습니다. 아래「인증코드 전체화면」을 켠 뒤
-          건강앱과 <strong className="text-charcoal">한 화면에 함께</strong> 보이게
-          캡처해 업로드하세요.
+          건강앱에는 MOVEL 코드가 없습니다. 분할 화면으로 건강앱과 코드를
+          <strong className="text-charcoal"> 한 화면에 함께</strong> 보이게 한 뒤
+          <strong className="text-charcoal"> 스크린샷</strong>을 찍고
+          「갤러리에서 선택」으로 업로드하세요.
         </p>
 
         <details className="mt-3 rounded-lg border border-gold/25 bg-cream/40 px-3 py-2 text-xs text-charcoal/80">
@@ -319,25 +322,45 @@ export function MemberRewardsSection({ memberId }: Props) {
         ) : (
           <div className="mt-4 space-y-2">
             <input
-              ref={fileInputRef}
+              ref={galleryInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => void handleImageSelect(e.target.files?.[0] ?? null)}
+            />
+            <input
+              ref={cameraInputRef}
               type="file"
               accept="image/*"
               capture="environment"
               className="hidden"
               onChange={(e) => void handleImageSelect(e.target.files?.[0] ?? null)}
             />
-            <button
-              type="button"
-              disabled={uploading}
-              onClick={() => fileInputRef.current?.click()}
-              className={`w-full ${btnGold}`}
-            >
-              {uploading
-                ? ocrProgress !== null
-                  ? `OCR 분석 중… ${ocrProgress}%`
-                  : '업로드 중…'
-                : '건강앱 캡처 이미지 업로드'}
-            </button>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                disabled={uploading}
+                onClick={() => galleryInputRef.current?.click()}
+                className={`w-full ${btnGold}`}
+              >
+                {uploading
+                  ? ocrProgress !== null
+                    ? `OCR 분석 중… ${ocrProgress}%`
+                    : '업로드 중…'
+                  : '갤러리에서 선택'}
+              </button>
+              <button
+                type="button"
+                disabled={uploading}
+                onClick={() => cameraInputRef.current?.click()}
+                className={`w-full ${btnOutline}`}
+              >
+                카메라로 촬영
+              </button>
+            </div>
+            <p className="text-center text-[11px] text-muted">
+              분할 화면 캡처는 「갤러리에서 선택」을 이용하세요
+            </p>
             {todayVerification?.status === 'rejected' && (
               <p className="text-xs text-red-600">
                 최근 반려: {todayVerification.rejection_reason}

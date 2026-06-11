@@ -179,16 +179,6 @@ export async function deductSession(memberId: string): Promise<Member> {
 
   const newRemaining = member.remaining_sessions - 1
 
-  const { error: logError } = await supabase
-    .from('session_logs')
-    .insert({
-      member_id: memberId,
-      quantity: 1,
-      remaining_after: newRemaining,
-    })
-
-  if (logError) throw logError
-
   const { data, error } = await supabase
     .from('members')
     .update({ remaining_sessions: newRemaining })
@@ -197,6 +187,21 @@ export async function deductSession(memberId: string): Promise<Member> {
     .single()
 
   if (error) throw error
+
+  const { error: logError } = await supabase.from('session_logs').insert({
+    member_id: memberId,
+    quantity: 1,
+    remaining_after: newRemaining,
+  })
+
+  if (logError) {
+    await supabase
+      .from('members')
+      .update({ remaining_sessions: member.remaining_sessions })
+      .eq('id', memberId)
+    throw logError
+  }
+
   return normalizeMember(data)
 }
 

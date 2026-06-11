@@ -459,8 +459,8 @@ create policy "step_verifications_storage_all" on storage.objects
   for all using (bucket_id = 'step-verifications')
   with check (bucket_id = 'step-verifications');
 
--- 19. 관리자 로그인 (admin_users)
-create extension if not exists pgcrypto;
+-- 19. 관리자 로그인 (admin_users) — Supabase extensions 스키마 사용
+create extension if not exists pgcrypto with schema extensions;
 
 create table if not exists public.admin_users (
   id uuid primary key default gen_random_uuid(),
@@ -478,7 +478,7 @@ create or replace function public.verify_admin_login(
 returns json
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_admin public.admin_users%rowtype;
@@ -491,13 +491,13 @@ begin
   select * into v_admin
   from public.admin_users
   where username = p_username
-    and password_hash = crypt(p_password, password_hash);
+    and password_hash = extensions.crypt(p_password, password_hash);
 
   if not found then
     return json_build_object('ok', false);
   end if;
 
-  v_token := encode(gen_random_bytes(32), 'hex');
+  v_token := encode(extensions.gen_random_bytes(32), 'hex');
 
   return json_build_object(
     'ok', true,
@@ -512,10 +512,175 @@ revoke all on function public.verify_admin_login(text, text) from public;
 grant execute on function public.verify_admin_login(text, text) to anon, authenticated;
 
 insert into public.admin_users (username, password_hash)
-select 'admin', crypt('mobel-admin', gen_salt('bf'))
+select 'admin', extensions.crypt('mobel-admin', extensions.gen_salt('bf'))
 where not exists (
   select 1 from public.admin_users where username = 'admin'
 );
+
+-- 20. 회원 로그인 (member_credentials)
+create extension if not exists pgcrypto with schema extensions;
+
+create table if not exists public.member_credentials (
+  member_id uuid primary key references public.members (id) on delete cascade,
+  password_hash text not null,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.member_credentials enable row level security;
+
+create or replace function public.member_phone_last_four(p_phone text)
+returns text
+language sql
+immutable
+as $$
+  select right(regexp_replace(coalesce(p_phone, ''), '\D', '', 'g'), 4);
+$$;
+
+create or replace function public.create_member_credentials()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_default_password text;
+begin
+  v_default_password := public.member_phone_last_four(new.phone);
+  if length(v_default_password) < 4 then
+    v_default_password := '0000';
+  end if;
+
+  insert into public.member_credentials (member_id, password_hash)
+  values (
+    new.id,
+    extensions.crypt(v_default_password, extensions.gen_salt('bf'))
+  )
+  on conflict (member_id) do nothing;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists members_create_credentials on public.members;
+create trigger members_create_credentials
+  after insert on public.members
+  for each row
+  execute function public.create_member_credentials();
+
+insert into public.member_credentials (member_id, password_hash)
+select
+  m.id,
+  extensions.crypt(
+    case
+      when length(public.member_phone_last_four(m.phone)) >= 4
+        then public.member_phone_last_four(m.phone)
+      else '0000'
+    end,
+    extensions.gen_salt('bf')
+  )
+from public.members m
+where not exists (
+  select 1 from public.member_credentials c where c.member_id = m.id
+);
+
+create or replace function public.verify_member_login(
+  p_phone text,
+  p_password text
+)
+returns json
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_member public.members%rowtype;
+  v_hash text;
+  v_token text;
+  v_digits text;
+begin
+  v_digits := regexp_replace(coalesce(p_phone, ''), '\D', '', 'g');
+  if v_digits = '' or p_password is null or p_password = '' then
+    return json_build_object('ok', false);
+  end if;
+
+  select * into v_member from public.members where phone = v_digits;
+  if not found then
+    return json_build_object('ok', false);
+  end if;
+
+  select password_hash into v_hash
+  from public.member_credentials
+  where member_id = v_member.id;
+
+  if v_hash is null or v_hash <> extensions.crypt(p_password, v_hash) then
+    return json_build_object('ok', false);
+  end if;
+
+  v_token := encode(extensions.gen_random_bytes(32), 'hex');
+
+  return json_build_object(
+    'ok', true,
+    'id', v_member.id,
+    'name', v_member.name,
+    'phone', v_member.phone,
+    'token', v_token
+  );
+end;
+$$;
+
+create or replace function public.change_member_password(
+  p_phone text,
+  p_old_password text,
+  p_new_password text
+)
+returns json
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_member public.members%rowtype;
+  v_hash text;
+  v_digits text;
+begin
+  v_digits := regexp_replace(coalesce(p_phone, ''), '\D', '', 'g');
+
+  if v_digits = '' or p_old_password is null or p_new_password is null then
+    return json_build_object('ok', false, 'error', 'invalid_input');
+  end if;
+
+  if length(p_new_password) < 4 then
+    return json_build_object('ok', false, 'error', 'too_short');
+  end if;
+
+  select * into v_member from public.members where phone = v_digits;
+  if not found then
+    return json_build_object('ok', false, 'error', 'not_found');
+  end if;
+
+  select password_hash into v_hash
+  from public.member_credentials
+  where member_id = v_member.id;
+
+  if v_hash is null or v_hash <> extensions.crypt(p_old_password, v_hash) then
+    return json_build_object('ok', false, 'error', 'wrong_password');
+  end if;
+
+  update public.member_credentials
+  set
+    password_hash = extensions.crypt(p_new_password, extensions.gen_salt('bf')),
+    updated_at = now()
+  where member_id = v_member.id;
+
+  return json_build_object('ok', true);
+end;
+$$;
+
+revoke all on function public.verify_member_login(text, text) from public;
+grant execute on function public.verify_member_login(text, text) to anon, authenticated;
+
+revoke all on function public.change_member_password(text, text, text) from public;
+grant execute on function public.change_member_password(text, text, text) to anon, authenticated;
 
 -- 완료 확인용 (회원 수 표시)
 select 'members' as table_name, count(*)::int as row_count from public.members

@@ -5,6 +5,19 @@ export function formatSupabaseError(err: unknown): string {
   const msg = e.message ?? ''
 
   if (
+    msg.includes('verify_member_login') ||
+    msg.includes('change_member_password') ||
+    msg.includes('member_credentials') ||
+    msg.includes('verify_admin_login') ||
+    msg.includes('admin_users')
+  ) {
+    return (
+      '데이터베이스 로그인 설정이 필요합니다. ' +
+      'Supabase SQL Editor에서 supabase/migration_014_member_auth.sql (회원) 또는 migration_012_admin_users.sql (관리자)을 실행해 주세요.'
+    )
+  }
+
+  if (
     msg.includes('trainers') ||
     msg.includes('trainer_id') ||
     msg.includes('period_extensions') ||

@@ -28,6 +28,12 @@ export type AdminUser = {
   created_at: string
 }
 
+export type MemberCredential = {
+  member_id: string
+  password_hash: string
+  updated_at: string
+}
+
 export type Member = {
   id: string
   name: string
@@ -519,6 +525,11 @@ export type Database = {
         { username: string; password_hash: string },
         never
       >
+      member_credentials: TableDef<
+        MemberCredential,
+        { member_id: string; password_hash: string },
+        { password_hash?: string; updated_at?: string }
+      >
     }
     Views: Record<string, never>
     Functions: {
@@ -526,6 +537,21 @@ export type Database = {
         Args: {
           p_username: string
           p_password: string
+        }
+        Returns: Json
+      }
+      verify_member_login: {
+        Args: {
+          p_phone: string
+          p_password: string
+        }
+        Returns: Json
+      }
+      change_member_password: {
+        Args: {
+          p_phone: string
+          p_old_password: string
+          p_new_password: string
         }
         Returns: Json
       }

@@ -1,19 +1,24 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { fetchMemberById } from '../api/memberDetail'
-import { formatDate, formatPhone } from '../api/members'
+import { formatDate, formatPhone, isExpired } from '../api/members'
+import {
+  fetchMemberSchedules,
+  getTodayScheduledPts,
+  hasScheduledPtToday,
+  type PtSchedule,
+} from '../api/schedule'
+import { loginMember } from '../api/memberAuth'
 import {
   checkIn,
   clearMemberSession,
   fetchJournals,
   fetchRecentAttendance,
   fetchTodayAttendance,
-  findMemberByPhone,
   getMemberSession,
-  saveMemberSession,
   type AttendanceLog,
   type ExerciseJournal,
 } from '../api/memberPortal'
-import { PhoneInput, phoneBodyToFull, validatePhoneBody } from '../components/PhoneInput'
+import { MemberMyPageSection } from '../components/MemberMyPageSection'
 import { MemberLayout } from '../components/layouts/MemberLayout'
 import { btnGold, btnPrimary, cardClass, inputClass } from '../styles/theme'
 import type { Member } from '../types/database'
@@ -22,12 +27,13 @@ import { MemberRewardsSection } from '../components/MemberRewardsSection'
 import { MemberScheduleSection } from '../components/MemberScheduleSection'
 import { SessionCount } from '../components/SessionCount'
 
-type Tab = 'home' | 'schedule' | 'attendance' | 'journal' | 'rewards'
+type Tab = 'home' | 'schedule' | 'attendance' | 'journal' | 'rewards' | 'mypage'
 
 export default function MemberPortalPage() {
   const [member, setMember] = useState<Member | null>(null)
   const [loading, setLoading] = useState(true)
-  const [phoneBody, setPhoneBody] = useState('')
+  const [loginPhone, setLoginPhone] = useState('')
+  const [loginPassword, setLoginPassword] = useState('')
   const [loginError, setLoginError] = useState<string | null>(null)
   const [loginLoading, setLoginLoading] = useState(false)
   const [tab, setTab] = useState<Tab>('home')
@@ -39,6 +45,7 @@ export default function MemberPortalPage() {
     [],
   )
   const [journals, setJournals] = useState<ExerciseJournal[]>([])
+  const [schedules, setSchedules] = useState<PtSchedule[]>([])
   const [checkInLoading, setCheckInLoading] = useState(false)
   const [portalError, setPortalError] = useState<string | null>(null)
 
@@ -66,6 +73,13 @@ export default function MemberPortalPage() {
     } catch {
       setJournals([])
     }
+
+    try {
+      const scheduleList = await fetchMemberSchedules(memberId)
+      setSchedules(scheduleList)
+    } catch {
+      setSchedules([])
+    }
   }, [])
 
   useEffect(() => {
@@ -90,23 +104,13 @@ export default function MemberPortalPage() {
   async function handleLogin(e: FormEvent) {
     e.preventDefault()
     setLoginError(null)
-    const phoneError = validatePhoneBody(phoneBody)
-    if (phoneError) {
-      setLoginError(phoneError)
-      return
-    }
     setLoginLoading(true)
     try {
-      const found = await findMemberByPhone(phoneBodyToFull(phoneBody))
-      if (!found) {
-        setLoginError('등록된 회원을 찾을 수 없습니다.')
-        return
-      }
-      saveMemberSession(found.id)
-      await loadMemberData(found.id)
+      const { memberId } = await loginMember(loginPhone, loginPassword)
+      await loadMemberData(memberId)
     } catch (err) {
       setLoginError(
-        err instanceof Error ? err.message : '조회에 실패했습니다.',
+        err instanceof Error ? err.message : '로그인에 실패했습니다.',
       )
     } finally {
       setLoginLoading(false)
@@ -116,7 +120,8 @@ export default function MemberPortalPage() {
   function handleLogout() {
     clearMemberSession()
     setMember(null)
-    setPhoneBody('')
+    setLoginPhone('')
+    setLoginPassword('')
     setTab('home')
   }
 
@@ -161,23 +166,47 @@ export default function MemberPortalPage() {
           </p>
           <h3 className="mt-4 text-base font-semibold text-charcoal">로그인</h3>
           <p className="mt-1 text-sm text-muted">
-            등록된 전화번호로 본인 정보를 확인합니다.
+            아이디는 휴대전화번호(숫자만), 최초 비밀번호는 번호 뒤 4자리입니다.
           </p>
           <form onSubmit={(e) => void handleLogin(e)} className="mt-5 space-y-4">
             <label className="block">
-              <span className="mb-1.5 block text-sm font-medium">전화번호</span>
-              <PhoneInput
-                value={phoneBody}
-                onChange={setPhoneBody}
+              <span className="mb-1.5 block text-sm font-medium">
+                아이디 (휴대전화번호)
+              </span>
+              <input
+                type="tel"
+                inputMode="numeric"
+                value={loginPhone}
+                onChange={(e) =>
+                  setLoginPhone(e.target.value.replace(/\D/g, '').slice(0, 11))
+                }
+                placeholder="01012345678"
                 className={inputClass}
+                autoComplete="username"
+                disabled={loginLoading}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium">비밀번호</span>
+              <input
+                type="password"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                placeholder="휴대폰 뒤 4자리 (예: 5678)"
+                className={inputClass}
+                autoComplete="current-password"
+                maxLength={32}
+                disabled={loginLoading}
               />
             </label>
             <button
               type="submit"
-              disabled={loginLoading}
+              disabled={
+                loginLoading || loginPhone.length !== 11 || !loginPassword
+              }
               className={`w-full ${btnPrimary}`}
             >
-              {loginLoading ? '확인 중…' : '내 정보 보기'}
+              {loginLoading ? '로그인 중…' : '로그인'}
             </button>
             {loginError && (
               <p className="text-sm text-red-700">{loginError}</p>
@@ -188,12 +217,24 @@ export default function MemberPortalPage() {
     )
   }
 
+  const todaySchedules = getTodayScheduledPts(schedules)
+  const hasTodayPt = hasScheduledPtToday(schedules)
+  const memberExpired =
+    member.expires_at != null && isExpired(member.expires_at)
+  const canCheckIn =
+    !todayAttendance &&
+    member.status === 'active' &&
+    member.remaining_sessions > 0 &&
+    !memberExpired &&
+    hasTodayPt
+
   const tabs: { id: Tab; label: string }[] = [
     { id: 'home', label: '내 정보' },
     { id: 'schedule', label: '수업 일정' },
     { id: 'attendance', label: '출석' },
     { id: 'journal', label: '운동일지' },
     { id: 'rewards', label: 'MY REWARDS' },
+    { id: 'mypage', label: '마이페이지' },
   ]
 
   return (
@@ -277,6 +318,24 @@ export default function MemberPortalPage() {
         <section className="space-y-4">
           <div className={`${cardClass} p-6 text-center`}>
             <h3 className="font-semibold text-charcoal">오늘의 출석</h3>
+            {todaySchedules.length > 0 ? (
+              <ul className="mt-3 space-y-1 text-sm text-charcoal/80">
+                {todaySchedules.map((s) => (
+                  <li key={s.id} className="tabular-nums">
+                    오늘 PT ·{' '}
+                    {new Date(s.scheduled_at).toLocaleString('ko-KR', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-2 text-sm text-amber-800">
+                오늘 예약된 PT가 없습니다. 센터에서 스케줄 등록 후 출석할 수
+                있습니다.
+              </p>
+            )}
             {todayAttendance ? (
               <>
                 <p className="mt-3 font-semibold text-emerald-700">
@@ -296,11 +355,7 @@ export default function MemberPortalPage() {
                 <button
                   type="button"
                   onClick={() => void handleCheckIn()}
-                  disabled={
-                    checkInLoading ||
-                    member.status !== 'active' ||
-                    member.remaining_sessions <= 0
-                  }
+                  disabled={checkInLoading || !canCheckIn}
                   className={`mt-4 w-full ${btnGold}`}
                 >
                   {checkInLoading ? '처리 중…' : '출석하기 (PT 1회 차감)'}
@@ -314,6 +369,21 @@ export default function MemberPortalPage() {
                   member.remaining_sessions <= 0 && (
                     <p className="mt-2 text-xs text-red-600">
                       잔여 PT가 없어 출석할 수 없습니다.
+                    </p>
+                  )}
+                {member.status === 'active' &&
+                  member.remaining_sessions > 0 &&
+                  memberExpired && (
+                    <p className="mt-2 text-xs text-red-600">
+                      회원권 만료일이 지나 출석할 수 없습니다.
+                    </p>
+                  )}
+                {member.status === 'active' &&
+                  member.remaining_sessions > 0 &&
+                  !memberExpired &&
+                  !hasTodayPt && (
+                    <p className="mt-2 text-xs text-red-600">
+                      오늘 PT 예약이 있어야 출석할 수 있습니다.
                     </p>
                   )}
               </>
@@ -339,6 +409,10 @@ export default function MemberPortalPage() {
 
       {tab === 'rewards' && member && (
         <MemberRewardsSection memberId={member.id} />
+      )}
+
+      {tab === 'mypage' && member && (
+        <MemberMyPageSection phone={member.phone} />
       )}
 
       {tab === 'journal' && (

@@ -1,0 +1,151 @@
+import { supabase } from '../lib/supabase'
+import { formatSupabaseError } from '../lib/errors'
+import { saveMemberSession } from './memberPortal'
+import type { Json } from '../types/database'
+import { normalizePhone } from './members'
+
+type MemberLoginResponse = {
+  ok: boolean
+  id?: string
+  name?: string
+  phone?: string
+  token?: string
+  error?: string
+}
+
+type ChangePasswordResponse = {
+  ok: boolean
+  error?: string
+}
+
+function parseLoginResponse(data: Json): MemberLoginResponse {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    return { ok: false }
+  }
+
+  const row = data as Record<string, Json | undefined>
+  if (row.ok !== true) {
+    return {
+      ok: false,
+      error: row.error != null ? String(row.error) : undefined,
+    }
+  }
+
+  const id = row.id != null ? String(row.id) : undefined
+  const name = row.name != null ? String(row.name) : undefined
+  const phone = row.phone != null ? String(row.phone) : undefined
+  const token = row.token != null ? String(row.token) : undefined
+  if (!id || !token) return { ok: false }
+
+  return { ok: true, id, name, phone, token }
+}
+
+function loginErrorMessage(code?: string): string {
+  switch (code) {
+    case 'not_found':
+      return '등록되지 않은 휴대전화번호입니다. 센터에 등록된 번호인지 확인해 주세요.'
+    case 'no_credentials':
+      return '회원 비밀번호가 설정되지 않았습니다. Supabase에서 migration_014 또는 migration_015를 실행해 주세요.'
+    case 'wrong_password':
+      return '비밀번호가 올바르지 않습니다. (최초 비밀번호: 휴대폰 뒤 4자리)'
+    case 'invalid_input':
+      return '아이디와 비밀번호를 입력해 주세요.'
+    default:
+      return '아이디 또는 비밀번호가 올바르지 않습니다.'
+  }
+}
+
+function parseChangePasswordResponse(data: Json): ChangePasswordResponse {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    return { ok: false, error: 'unknown' }
+  }
+
+  const row = data as Record<string, Json | undefined>
+  if (row.ok === true) return { ok: true }
+
+  return {
+    ok: false,
+    error: row.error != null ? String(row.error) : 'unknown',
+  }
+}
+
+export function normalizeLoginPhone(phone: string): string {
+  return normalizePhone(phone)
+}
+
+export async function loginMember(
+  phone: string,
+  password: string,
+): Promise<{ memberId: string; memberName: string }> {
+  const digits = normalizeLoginPhone(phone)
+  if (digits.length !== 11 || !digits.startsWith('010')) {
+    throw new Error('아이디는 010으로 시작하는 11자리 숫자입니다.')
+  }
+  if (!password) {
+    throw new Error('비밀번호를 입력해 주세요.')
+  }
+
+  const { data, error } = await supabase.rpc('verify_member_login', {
+    p_phone: digits,
+    p_password: password,
+  })
+
+  if (error) {
+    const msg = formatSupabaseError(error)
+    if (msg.includes('verify_member_login') || msg.includes('member_credentials')) {
+      throw new Error(
+        '회원 로그인 DB 설정이 필요합니다. Supabase SQL Editor에서 migration_014_member_auth.sql을 실행해 주세요.',
+      )
+    }
+    throw new Error(msg)
+  }
+
+  const result = parseLoginResponse(data)
+  if (!result.ok || !result.id || !result.token) {
+    throw new Error(loginErrorMessage(result.error))
+  }
+
+  saveMemberSession(result.id, result.token)
+  return {
+    memberId: result.id,
+    memberName: result.name ?? '회원',
+  }
+}
+
+export async function changeMemberPassword(
+  phone: string,
+  oldPassword: string,
+  newPassword: string,
+): Promise<void> {
+  const digits = normalizeLoginPhone(phone)
+
+  if (!oldPassword || !newPassword) {
+    throw new Error('현재 비밀번호와 새 비밀번호를 입력해 주세요.')
+  }
+  if (newPassword.length < 4) {
+    throw new Error('새 비밀번호는 4자리 이상이어야 합니다.')
+  }
+  if (oldPassword === newPassword) {
+    throw new Error('새 비밀번호는 현재 비밀번호와 달라야 합니다.')
+  }
+
+  const { data, error } = await supabase.rpc('change_member_password', {
+    p_phone: digits,
+    p_old_password: oldPassword,
+    p_new_password: newPassword,
+  })
+
+  if (error) throw error
+
+  const result = parseChangePasswordResponse(data)
+  if (!result.ok) {
+    switch (result.error) {
+      case 'wrong_password':
+        throw new Error('현재 비밀번호가 올바르지 않습니다.')
+      case 'too_short':
+        throw new Error('새 비밀번호는 4자리 이상이어야 합니다.')
+      default:
+        throw new Error('비밀번호 변경에 실패했습니다.')
+    }
+  }
+}

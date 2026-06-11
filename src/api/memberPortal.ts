@@ -63,15 +63,24 @@ export async function fetchRecentAttendance(
 }
 
 const SESSION_KEY = 'mobel_member_id'
+const TOKEN_KEY = 'mobel_member_token'
 
-export function saveMemberSession(memberId: string): void {
+export function saveMemberSession(memberId: string, token?: string): void {
   sessionStorage.setItem(SESSION_KEY, memberId)
+  if (token) {
+    sessionStorage.setItem(TOKEN_KEY, token)
+  }
 }
 
 export function getMemberSession(): string | null {
   return sessionStorage.getItem(SESSION_KEY)
 }
 
+export function getMemberAuthToken(): string | null {
+  return sessionStorage.getItem(TOKEN_KEY)
+}
+
 export function clearMemberSession(): void {
   sessionStorage.removeItem(SESSION_KEY)
+  sessionStorage.removeItem(TOKEN_KEY)
 }

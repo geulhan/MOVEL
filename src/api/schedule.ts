@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { isSameLocalDay } from '../utils/date'
 
 export type ScheduleStatus = 'scheduled' | 'completed' | 'cancelled' | 'no_show'
 
@@ -83,6 +84,46 @@ const STATUS_LABELS: Record<ScheduleStatus, string> = {
 
 export function scheduleStatusLabel(status: ScheduleStatus): string {
   return STATUS_LABELS[status]
+}
+
+/** 오늘 예정된 PT가 있는지 (시간이 지났어도 당일이면 포함) */
+export function hasScheduledPtToday(
+  schedules: PtSchedule[],
+): boolean {
+  return schedules.some(
+    (s) => s.status === 'scheduled' && isSameLocalDay(s.scheduled_at),
+  )
+}
+
+export function getTodayScheduledPts(
+  schedules: PtSchedule[],
+): PtSchedule[] {
+  return schedules.filter(
+    (s) => s.status === 'scheduled' && isSameLocalDay(s.scheduled_at),
+  )
+}
+
+/** 트레이너 담당 오늘 PT 예약 회원 ID */
+export async function fetchTodayScheduledMemberIdsForTrainer(
+  trainerId: string,
+): Promise<Set<string>> {
+  const start = new Date()
+  start.setHours(0, 0, 0, 0)
+  const end = new Date()
+  end.setHours(23, 59, 59, 999)
+
+  const { data, error } = await supabase
+    .from('pt_schedules')
+    .select('member_id')
+    .eq('trainer_id', trainerId)
+    .eq('status', 'scheduled')
+    .gte('scheduled_at', start.toISOString())
+    .lte('scheduled_at', end.toISOString())
+
+  if (error) throw error
+  return new Set(
+    ((data ?? []) as { member_id: string }[]).map((row) => row.member_id),
+  )
 }
 
 export async function fetchMemberSchedules(

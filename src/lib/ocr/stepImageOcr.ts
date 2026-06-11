@@ -1,3 +1,5 @@
+import { todayDateString } from '../../api/members'
+
 /**
  * 건강앱 캡처 OCR 파이프라인
  * - 엔진: Tesseract.js (클라이언트) → 추후 Google Vision / AWS Textract 교체 가능
@@ -93,7 +95,7 @@ function extractDate(text: string): string | null {
   }
 
   if (/오늘|today/i.test(text)) {
-    return today.toISOString().slice(0, 10)
+    return todayDateString()
   }
 
   return null

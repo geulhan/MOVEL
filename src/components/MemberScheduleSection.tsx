@@ -4,6 +4,7 @@ import {
   scheduleStatusLabel,
   type PtSchedule,
 } from '../api/schedule'
+import { isSameLocalDay } from '../utils/date'
 import { fetchTrainers } from '../api/trainers'
 import { formatSupabaseError } from '../lib/errors'
 import { cardClass } from '../styles/theme'
@@ -57,11 +58,11 @@ export function MemberScheduleSection({ memberId }: Props) {
   }, [load])
 
   const upcoming = schedules.filter(
-    (s) => s.status === 'scheduled' && new Date(s.scheduled_at) >= new Date(),
+    (s) =>
+      s.status === 'scheduled' &&
+      (new Date(s.scheduled_at) >= new Date() || isSameLocalDay(s.scheduled_at)),
   )
-  const past = schedules.filter(
-    (s) => !(s.status === 'scheduled' && new Date(s.scheduled_at) >= new Date()),
-  )
+  const past = schedules.filter((s) => !upcoming.includes(s))
 
   return (
     <section className={`${cardClass} overflow-hidden`}>

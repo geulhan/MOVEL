@@ -8,6 +8,7 @@ import {
   type AttendanceRecord,
 } from '../../api/attendance'
 import { fetchMembers, formatPhone, isExpired } from '../../api/members'
+import { fetchTodayScheduledMemberIdsForTrainer } from '../../api/schedule'
 import { formatSupabaseError } from '../../lib/errors'
 import { SearchBar } from '../SearchBar'
 import type { Member } from '../../types/database'
@@ -58,6 +59,9 @@ export function AttendanceBook({
   const [records, setRecords] = useState<AttendanceRecord[]>([])
   const [members, setMembers] = useState<Member[]>([])
   const [checkedInToday, setCheckedInToday] = useState<Set<string>>(new Set())
+  const [scheduledTodayIds, setScheduledTodayIds] = useState<Set<string>>(
+    new Set(),
+  )
   const [fromDate, setFromDate] = useState(todayStr())
   const [toDate, setToDate] = useState(todayStr())
   const [searchInput, setSearchInput] = useState('')
@@ -72,21 +76,25 @@ export function AttendanceBook({
     setLoading(true)
     setError(null)
     try {
-      const [data, memberList, todayIds] = await Promise.all([
+      const [data, memberList, todayIds, todayScheduleIds] = await Promise.all([
         fetchAttendanceRecords(fromDate, toDate),
         fetchMembers(),
         fetchTodayCheckedInMemberIds(),
+        role === 'trainer' && trainerId
+          ? fetchTodayScheduledMemberIdsForTrainer(trainerId)
+          : Promise.resolve(new Set<string>()),
       ])
       setRecords(data)
       setMembers(memberList)
       setCheckedInToday(todayIds)
+      setScheduledTodayIds(todayScheduleIds)
     } catch (err) {
       setRecords([])
       setError(formatSupabaseError(err))
     } finally {
       setLoading(false)
     }
-  }, [fromDate, toDate])
+  }, [fromDate, toDate, role, trainerId])
 
   useEffect(() => {
     void load()
@@ -101,10 +109,12 @@ export function AttendanceBook({
   const displayMembers = useMemo(() => {
     let list = members.filter((m) => m.status !== 'terminated')
     if (role === 'trainer' && trainerId) {
-      list = list.filter((m) => m.trainer_id === trainerId)
+      list = list.filter(
+        (m) => m.trainer_id === trainerId || scheduledTodayIds.has(m.id),
+      )
     }
     return filterBySearch(list, activeSearch)
-  }, [members, activeSearch, role, trainerId])
+  }, [members, activeSearch, role, trainerId, scheduledTodayIds])
 
   const displayRecords = useMemo(() => {
     if (role !== 'trainer' || !trainerId) return records
@@ -129,6 +139,10 @@ export function AttendanceBook({
     setError(null)
     try {
       const { member: updated } = await checkInMember(member.id, checkInMethod)
+      setMembers((prev) =>
+        prev.map((m) => (m.id === updated.id ? updated : m)),
+      )
+      setCheckedInToday((prev) => new Set(prev).add(member.id))
       setToast(
         `${updated.name} 님 출석 완료 · 잔여 ${updated.remaining_sessions}회`,
       )

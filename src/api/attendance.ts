@@ -1,6 +1,12 @@
 import { supabase } from '../lib/supabase'
 import type { Member } from '../types/database'
+import { localDayEndIso, localDayStartIso } from '../utils/date'
 import { awardPtAttendance, reversePtAttendance } from './rewards'
+import {
+  fetchMemberSchedules,
+  getTodayScheduledPts,
+  updateScheduleStatus,
+} from './schedule'
 import { deductSession, fetchMembers, restoreOneSession } from './members'
 
 export type AttendanceMethod = 'self' | 'admin' | 'trainer'
@@ -20,20 +26,17 @@ type AttendanceRow = {
   method: string
 }
 
-function todayDateString(): string {
-  return new Date().toISOString().slice(0, 10)
-}
-
 export async function fetchTodayAttendanceForMember(
   memberId: string,
 ): Promise<AttendanceRow | null> {
-  const today = todayDateString()
   const { data, error } = await supabase
     .from('attendance_logs')
     .select('id, member_id, checked_in_at, method')
     .eq('member_id', memberId)
-    .gte('checked_in_at', `${today}T00:00:00`)
-    .lte('checked_in_at', `${today}T23:59:59`)
+    .gte('checked_in_at', localDayStartIso())
+    .lte('checked_in_at', localDayEndIso())
+    .order('checked_in_at', { ascending: false })
+    .limit(1)
     .maybeSingle()
 
   if (error) throw error
@@ -41,12 +44,11 @@ export async function fetchTodayAttendanceForMember(
 }
 
 export async function fetchTodayCheckedInMemberIds(): Promise<Set<string>> {
-  const today = todayDateString()
   const { data, error } = await supabase
     .from('attendance_logs')
     .select('member_id')
-    .gte('checked_in_at', `${today}T00:00:00`)
-    .lte('checked_in_at', `${today}T23:59:59`)
+    .gte('checked_in_at', localDayStartIso())
+    .lte('checked_in_at', localDayEndIso())
 
   if (error) throw error
 
@@ -81,6 +83,20 @@ export async function checkInMember(
   if (error) throw error
 
   const attendance = data as AttendanceRow
+
+  try {
+    const schedules = await fetchMemberSchedules(memberId, {
+      includePastDays: 0,
+      futureDays: 1,
+    })
+    const todaySchedules = getTodayScheduledPts(schedules)
+    await Promise.all(
+      todaySchedules.map((s) => updateScheduleStatus(s.id, 'completed')),
+    )
+  } catch (scheduleErr) {
+    console.warn('스케줄 완료 처리 실패:', scheduleErr)
+  }
+
   try {
     await awardPtAttendance(memberId, attendance.id)
   } catch (rewardErr) {
@@ -89,6 +105,7 @@ export async function checkInMember(
 
   return { member, attendance }
 }
+
 
 /** 관리자 전용: 출석 취소 + PT 1회 복구 */
 export async function cancelAttendance(recordId: string): Promise<Member> {
