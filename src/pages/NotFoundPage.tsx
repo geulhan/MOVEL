@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom'
+import { SiteUrlCopy } from '../components/SiteUrlCopy'
+import { getMemberPortalUrl } from '../lib/siteUrl'
 
 export default function NotFoundPage() {
   return (
@@ -19,9 +21,9 @@ export default function NotFoundPage() {
           회원 페이지
         </Link>
       </div>
-      <p className="mt-4 text-xs text-muted">
-        회원 페이지 주소: <strong>/member</strong> (또는 /user)
-      </p>
+      <div className="mt-6 w-full max-w-md">
+        <SiteUrlCopy url={getMemberPortalUrl()} label="회원 페이지 주소" />
+      </div>
     </div>
   )
 }

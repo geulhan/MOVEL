@@ -12,6 +12,7 @@ import TrainersPage from './pages/admin/TrainersPage'
 import RewardsPage from './pages/admin/RewardsPage'
 import MemberPortalPage from './pages/MemberPortalPage'
 import TrainerPortalPage from './pages/TrainerPortalPage'
+import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import NotFoundPage from './pages/NotFoundPage'
 
@@ -19,7 +20,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Navigate to="/admin" replace />} />
+        <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/admin" element={<ProtectedRoute />}>
           <Route element={<AdminLayout />}>

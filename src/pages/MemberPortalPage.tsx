@@ -18,7 +18,9 @@ import {
   type AttendanceLog,
   type ExerciseJournal,
 } from '../api/memberPortal'
+import { SiteUrlCopy } from '../components/SiteUrlCopy'
 import { MemberMyPageSection } from '../components/MemberMyPageSection'
+import { getMemberPortalUrl } from '../lib/siteUrl'
 import { MemberLayout } from '../components/layouts/MemberLayout'
 import { btnGold, btnPrimary, cardClass, inputClass } from '../styles/theme'
 import type { Member } from '../types/database'
@@ -174,9 +176,11 @@ export default function MemberPortalPage() {
       <MemberLayout>
         <section className={`${cardClass} p-6`}>
           <h2 className="text-lg font-semibold text-charcoal">회원 페이지</h2>
-          <p className="mt-1 text-xs text-muted">
-            주소: <strong>/member</strong>
-          </p>
+          <SiteUrlCopy
+            className="mt-3"
+            url={getMemberPortalUrl()}
+            label="회원 페이지 주소 (전체 주소를 북마크·카톡 공유)"
+          />
           <h3 className="mt-4 text-base font-semibold text-charcoal">로그인</h3>
           <p className="mt-1 text-sm text-muted">
             아이디는 휴대전화번호(숫자만), 최초 비밀번호는 번호 뒤 4자리입니다.
