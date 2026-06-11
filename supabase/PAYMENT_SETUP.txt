@@ -11,7 +11,7 @@ MOVEL 결제 시스템 가이드
 
 [Supabase SQL]
 migration_020_payment_system.sql 실행
-migration_021_reward_settings_dedupe.sql 실행 (pt_pricing 중복 정리)
+migration_021_reward_settings_dedupe.sql 실행 (reward_settings 전역 키 중복 정리)
 
 [걸음 인증 · 마일리지]
 - 회원 OCR 자동 인증 + 구간별 적립 피드백
