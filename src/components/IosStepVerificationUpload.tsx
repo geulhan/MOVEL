@@ -101,7 +101,8 @@ export function IosStepVerificationUpload({
       <ol className="list-inside list-decimal space-y-1 text-xs leading-relaxed text-charcoal/85">
         <li>
           {isApple ? 'Apple 건강' : '삼성헬스·건강앱'}에서{' '}
-          <strong>오늘 걸음수</strong> 화면 캡처
+          <strong>오늘 걸음수</strong>가 크게 보이는 화면 캡처 (다크/라이트
+          모드 모두 OK)
         </li>
         <li>아래에서 건강앱 사진 선택 → 코드 자동 합성 후 인증</li>
       </ol>

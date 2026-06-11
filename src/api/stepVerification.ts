@@ -123,10 +123,29 @@ function evaluateAutoReview(input: AutoReviewInput): {
   if (input.alreadyApproved) {
     return { approved: false, reason: '같은 날짜에 이미 승인된 인증이 있습니다.' }
   }
+
+  if (input.codeTrusted) {
+    if (input.stepCount === null || input.stepCount <= 0) {
+      return {
+        approved: false,
+        reason:
+          '걸음수를 읽지 못했습니다. 건강앱에서 오늘 걸음수가 크게 보이는 화면을 캡처해 주세요. (다크/라이트 모드 모두 가능)',
+      }
+    }
+    if (input.stepCount < MIN_STEPS_FOR_VERIFICATION) {
+      return {
+        approved: false,
+        reason: `걸음수가 부족합니다. (인식: ${input.stepCount.toLocaleString()}보 / 필요: ${MIN_STEPS_FOR_VERIFICATION.toLocaleString()}보 이상)`,
+      }
+    }
+    return { approved: true, reason: null }
+  }
+
   if (!input.ocrSuccess) {
     return {
       approved: false,
-      reason: '이미지 판독(OCR)에 실패했습니다. 건강앱 걸음 화면이 선명하게 보이게 다시 캡처해 주세요.',
+      reason:
+        '걸음수를 읽지 못했습니다. 건강앱 걸음 화면 전체가 보이게 다시 캡처해 주세요.',
     }
   }
 
@@ -134,7 +153,7 @@ function evaluateAutoReview(input: AutoReviewInput): {
     return {
       approved: false,
       reason:
-        '걸음수를 추출하지 못했습니다. 건강앱 걸음 화면이 선명하게 보이게 다시 캡처해 주세요.',
+        '걸음수를 읽지 못했습니다. 건강앱에서 오늘 걸음수가 크게 보이는 화면을 캡처해 주세요.',
     }
   }
 
@@ -145,7 +164,7 @@ function evaluateAutoReview(input: AutoReviewInput): {
     }
   }
 
-  if (!input.codeTrusted && !input.codeMatch) {
+  if (!input.codeMatch) {
     return { approved: false, reason: '인증코드가 일치하지 않습니다.' }
   }
 
@@ -187,9 +206,12 @@ export async function submitStepVerification(
     .getPublicUrl(imagePath)
 
   const codeDigits = expectedCode.match(/(\d{4})$/)?.[1]
+  const codeTrusted = options?.codeTrusted === true
+
   const ocr = await analyzeStepCaptureImage(file, onOcrProgress, {
-    healthRegionOnly: options?.codeTrusted === true,
-    excludeCodeDigits: options?.codeTrusted ? codeDigits : undefined,
+    healthRegionOnly: codeTrusted,
+    excludeCodeDigits: codeTrusted ? codeDigits : undefined,
+    codeTrusted,
   })
 
   const extractedCode = ocr.extracted_code
@@ -204,10 +226,12 @@ export async function submitStepVerification(
   const extractedDate = ocr.extracted_date ?? today
   const dateMatch = extractedDate === today || ocr.extracted_date == null
 
-  const codeTrusted = options?.codeTrusted === true
-
   const { approved, reason } = evaluateAutoReview({
-    ocrSuccess: ocr.success && !ocr.error,
+    ocrSuccess:
+      !ocr.error &&
+      (ocr.success ||
+        ocr.extracted_step_count != null ||
+        (codeTrusted && /\d{3,}/.test(ocr.rawText))),
     codeMatch,
     codeTrusted,
     dateMatch,

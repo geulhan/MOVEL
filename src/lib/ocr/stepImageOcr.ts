@@ -3,11 +3,12 @@ import {
   extractVerificationCodesFromText,
   normalizeVerificationCode,
 } from './verificationCodeMatch'
+import { buildOcrImageVariants } from './stepImagePreprocess'
 
 /**
  * 건강앱 캡처 OCR 파이프라인
- * - 엔진: Tesseract.js (클라이언트)
- * - 파서: 추출 텍스트에서 걸음수·날짜·시간·인증코드 분석
+ * - 다크/라이트 모드: normal · inverted · binarize 3회 시도
+ * - 엔진: Tesseract.js (kor+eng)
  */
 
 export type StepOcrParseResult = {
@@ -22,14 +23,27 @@ export type StepOcrParseResult = {
 }
 
 export type StepOcrOptions = {
-  /** 합성 이미지에서 건강앱 영역(상단)만 OCR */
   healthRegionOnly?: boolean
-  /** 코드 자동 합성 시 걸음수 후보에서 제외할 4자리 */
   excludeCodeDigits?: string
+  /** 간편 인증(코드 자동 합성) — 걸음수만 있으면 성공 처리 */
+  codeTrusted?: boolean
 }
 
 type ParseOptions = {
   excludeCodeDigits?: string
+  codeTrusted?: boolean
+}
+
+function scoreParseResult(result: StepOcrParseResult): number {
+  let score = 0
+  if (result.extracted_step_count != null) {
+    score += 10_000 + result.extracted_step_count
+  }
+  if (result.extracted_date) score += 500
+  if (result.extracted_code) score += 200
+  if (result.rawText.match(/\d{3,}/)) score += 50
+  score += result.confidence * 10
+  return score
 }
 
 /** OCR 원문에서 걸음수·날짜·시간·코드 추출 */
@@ -46,15 +60,21 @@ export function parseStepCaptureText(
     codeCandidates[0] != null ? normalizeVerificationCode(codeCandidates[0]) : null
 
   const extracted_step_count = extractStepCount(
-    normalized,
+    text,
     parseOptions?.excludeCodeDigits,
   )
   const extracted_date = extractDate(text)
   const extracted_time = extractTime(normalized)
 
+  const hasUsefulData = Boolean(
+    extracted_step_count || extracted_code || extracted_date,
+  )
+  const hasDigits = /\d{3,}/.test(normalized)
+
   const success =
-    confidence > 0 &&
-    Boolean(extracted_code || extracted_step_count || extracted_date)
+    parseOptions?.codeTrusted === true
+      ? hasUsefulData || hasDigits
+      : hasUsefulData || (confidence > 0 && hasDigits)
 
   return {
     success,
@@ -67,34 +87,48 @@ export function parseStepCaptureText(
   }
 }
 
+function isYearLike(n: number): boolean {
+  return n >= 2020 && n <= 2035
+}
+
 function extractStepCount(
   text: string,
   excludeCodeDigits?: string,
 ): number | null {
+  const normalized = text.replace(/\s+/g, ' ')
+  const candidates: number[] = []
+
   const labeled = [
-    /(?:걸음|보|steps?|step\s*count)\s*[:：]?\s*([\d,.\s]+)/gi,
+    /(?:걸음|보|steps?|step\s*count|walking)\s*[:：]?\s*([\d,.\s]+)/gi,
     /([\d,]+)\s*(?:걸음|보|steps?)/gi,
     /오늘\s*([\d,]+)/gi,
     /([\d,]+)\s*\/\s*[\d,]+/gi,
-    /(?:이동|활동)\s*[:：]?\s*([\d,]+)/gi,
+    /(?:이동|활동|distance)\s*[:：]?\s*([\d,]+)/gi,
+    /(?:총|합계|total)\s*[:：]?\s*([\d,]+)/gi,
   ]
-
-  const candidates: number[] = []
 
   for (const pattern of labeled) {
     let m: RegExpExecArray | null
     pattern.lastIndex = 0
-    while ((m = pattern.exec(text)) !== null) {
+    while ((m = pattern.exec(normalized)) !== null) {
       const n = parseInt(m[1].replace(/[^\d]/g, ''), 10)
-      if (n >= 100 && n <= 100000) candidates.push(n)
+      if (n >= 100 && n <= 100_000 && !isYearLike(n)) candidates.push(n)
     }
   }
 
   const plainNumbers =
-    text.match(/\b(\d{1,3}(?:[,\s]\d{3})+|\d{4,6})\b/g) ?? []
+    normalized.match(/\b(\d{1,3}(?:[,\s.'·]\d{3})+|\d{4,6})\b/g) ?? []
   for (const chunk of plainNumbers) {
     const n = parseInt(chunk.replace(/[^\d]/g, ''), 10)
-    if (n >= 1000 && n <= 100000) candidates.push(n)
+    if (n >= 500 && n <= 100_000 && !isYearLike(n)) candidates.push(n)
+  }
+
+  // 줄 단위 큰 숫자 (Apple 건강·삼성헬스 큰 표시)
+  for (const line of text.split('\n')) {
+    const trimmed = line.trim()
+    if (!/^\d[\d,.\s]{2,}$/.test(trimmed)) continue
+    const n = parseInt(trimmed.replace(/[^\d]/g, ''), 10)
+    if (n >= 500 && n <= 100_000 && !isYearLike(n)) candidates.push(n)
   }
 
   const filtered = candidates.filter((n) => {
@@ -103,7 +137,10 @@ function extractStepCount(
   })
 
   if (filtered.length === 0) return null
-  return Math.max(...filtered)
+
+  // 걸음수는 보통 화면에서 가장 큰 숫자
+  const sorted = [...new Set(filtered)].sort((a, b) => b - a)
+  return sorted[0] ?? null
 }
 
 function extractDate(text: string): string | null {
@@ -142,87 +179,76 @@ function extractTime(text: string): string | null {
   return null
 }
 
-function enhanceContrastForOcr(
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-): void {
-  const imageData = ctx.getImageData(0, 0, width, height)
-  const pixels = imageData.data
-  for (let i = 0; i < pixels.length; i += 4) {
-    const gray =
-      0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2]
-    const boosted = gray < 140 ? gray * 0.82 : Math.min(255, gray * 1.18)
-    pixels[i] = pixels[i + 1] = pixels[i + 2] = boosted
+function mergeParseResults(
+  results: StepOcrParseResult[],
+  parseOptions?: ParseOptions,
+): StepOcrParseResult {
+  const combinedText = results.map((r) => r.rawText).join('\n')
+  const maxConfidence = Math.max(...results.map((r) => r.confidence), 0)
+
+  let best = parseStepCaptureText(combinedText, maxConfidence, parseOptions)
+  for (const result of results) {
+    if (scoreParseResult(result) > scoreParseResult(best)) {
+      best = result
+    }
   }
-  ctx.putImageData(imageData, 0, 0)
-}
 
-async function prepareImageForOcr(
-  file: File,
-  options?: { cropTopRatio?: number },
-): Promise<File | Blob> {
-  if (typeof createImageBitmap !== 'function') return file
+  const merged = parseStepCaptureText(combinedText, maxConfidence, parseOptions)
+  if (scoreParseResult(merged) >= scoreParseResult(best)) {
+    best = merged
+  }
 
-  try {
-    const bitmap = await createImageBitmap(file)
-    const cropRatio = options?.cropTopRatio ?? 1
-    const longest = Math.max(bitmap.width, bitmap.height)
-    const scale = longest < 2000 ? Math.min(3, 2000 / longest) : 1
-    const width = Math.round(bitmap.width * scale)
-    const fullHeight = Math.round(bitmap.height * scale)
-    const height = Math.round(fullHeight * cropRatio)
-
-    const canvas = document.createElement('canvas')
-    canvas.width = width
-    canvas.height = height
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return file
-
-    ctx.drawImage(bitmap, 0, 0, bitmap.width, bitmap.height * cropRatio, 0, 0, width, height)
-    bitmap.close()
-    enhanceContrastForOcr(ctx, width, height)
-
-    const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, 'image/jpeg', 0.94),
-    )
-    return blob ?? file
-  } catch {
-    return file
+  return {
+    ...best,
+    rawText: combinedText,
+    confidence: maxConfidence,
   }
 }
 
-/** 이미지 파일 OCR 실행 */
+/** 이미지 파일 OCR 실행 (다크/라이트 모드 대응 다중 시도) */
 export async function analyzeStepCaptureImage(
   file: File,
   onProgress?: (pct: number) => void,
   options?: StepOcrOptions,
 ): Promise<StepOcrParseResult> {
   try {
-    const prepared = await prepareImageForOcr(file, {
-      cropTopRatio: options?.healthRegionOnly ? 0.72 : undefined,
-    })
+    const cropRatio = options?.healthRegionOnly ? 0.7 : 1
+    const variants = await buildOcrImageVariants(file, cropRatio)
     const { createWorker, PSM } = await import('tesseract.js')
     const worker = await createWorker('kor+eng', undefined, {
       logger: (m) => {
         if (m.status === 'recognizing text' && onProgress) {
-          onProgress(Math.round((m.progress ?? 0) * 100))
+          const pass = Number(m.progress ?? 0)
+          onProgress(Math.min(99, Math.round(pass * 100)))
         }
       },
     })
 
     await worker.setParameters({
-      tessedit_pageseg_mode: PSM.AUTO,
+      tessedit_pageseg_mode: PSM.SPARSE_TEXT,
     })
 
-    const { data } = await worker.recognize(prepared)
+    const parseOptions: ParseOptions = {
+      excludeCodeDigits: options?.excludeCodeDigits,
+      codeTrusted: options?.codeTrusted,
+    }
+
+    const passResults: StepOcrParseResult[] = []
+
+    for (let i = 0; i < variants.length; i++) {
+      const { data } = await worker.recognize(variants[i])
+      const confidence = (data.confidence ?? 0) / 100
+      passResults.push(
+        parseStepCaptureText(data.text, confidence, parseOptions),
+      )
+      onProgress?.(Math.round(((i + 1) / variants.length) * 100))
+    }
+
     await worker.terminate()
 
-    const confidence = (data.confidence ?? 0) / 100
-
-    return parseStepCaptureText(data.text, confidence, {
-      excludeCodeDigits: options?.excludeCodeDigits,
-    })
+    const merged = mergeParseResults(passResults, parseOptions)
+    onProgress?.(100)
+    return merged
   } catch (err) {
     return {
       success: false,
