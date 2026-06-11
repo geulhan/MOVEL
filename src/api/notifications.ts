@@ -3,17 +3,25 @@ import type { MessageLog, MessageTemplateKey } from '../types/database'
 
 export type NotificationTemplateKey = MessageTemplateKey
 
+export type SendNotificationResult = {
+  ok: boolean
+  status: 'sent' | 'failed' | 'skipped'
+  logId?: string
+  error?: string
+  skippedReason?: string
+}
+
 async function invokeNotification(
   templateKey: NotificationTemplateKey,
   memberId: string,
   extra?: { paymentId?: string; metadata?: Record<string, string | number> },
-): Promise<void> {
+): Promise<SendNotificationResult | null> {
   const triggerKey = import.meta.env.VITE_NOTIFICATION_TRIGGER_KEY
   if (!triggerKey) {
     console.info(
       `[notifications] VITE_NOTIFICATION_TRIGGER_KEY 없음 — ${templateKey} 발송 생략`,
     )
-    return
+    return null
   }
 
   try {
@@ -31,18 +39,39 @@ async function invokeNotification(
 
     if (error) {
       console.warn(`[notifications] ${templateKey} 호출 실패:`, error.message)
-      return
-    }
-
-    if (data && typeof data === 'object' && 'status' in data) {
-      const status = (data as { status: string }).status
-      if (status === 'failed') {
-        console.warn(`[notifications] ${templateKey} 발송 실패:`, data)
+      return {
+        ok: false,
+        status: 'failed',
+        error: error.message,
       }
     }
+
+    const result = data as SendNotificationResult | null
+    if (result?.status === 'failed') {
+      console.warn(`[notifications] ${templateKey} 발송 실패:`, data)
+    }
+    return result
   } catch (err) {
     console.warn(`[notifications] ${templateKey} 예외:`, err)
+    return {
+      ok: false,
+      status: 'failed',
+      error: err instanceof Error ? err.message : '알 수 없는 오류',
+    }
   }
+}
+
+/** 관리자 수동 발송 (결과 반환) */
+export async function sendNotification(
+  templateKey: NotificationTemplateKey,
+  memberId: string,
+  extra?: { paymentId?: string; metadata?: Record<string, string | number> },
+): Promise<SendNotificationResult> {
+  const result = await invokeNotification(templateKey, memberId, extra)
+  if (!result) {
+    throw new Error('VITE_NOTIFICATION_TRIGGER_KEY가 설정되지 않았습니다.')
+  }
+  return result
 }
 
 /** 회원 등록 후 환영 알림 (실패해도 회원 등록은 유지) */
