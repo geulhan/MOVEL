@@ -1,3 +1,5 @@
+import { isAndroid, isIOS } from './device'
+
 /** 인증코드 PiP / 플로팅 창 지원 여부 */
 export type VerificationCodePipMode = 'document' | 'video' | 'overlay' | 'none'
 
@@ -23,18 +25,6 @@ function isTouchDevice(): boolean {
     typeof window !== 'undefined' &&
     ('ontouchstart' in window || navigator.maxTouchPoints > 0)
   )
-}
-
-function isIOS(): boolean {
-  if (typeof navigator === 'undefined') return false
-  return (
-    /iPad|iPhone|iPod/i.test(navigator.userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-  )
-}
-
-function isAndroid(): boolean {
-  return /Android/i.test(navigator.userAgent)
 }
 
 function supportsVideoPiP(): boolean {
