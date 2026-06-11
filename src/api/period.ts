@@ -1,7 +1,72 @@
 import { normalizeMember } from '../lib/memberNormalize'
 import { supabase } from '../lib/supabase'
 import type { Member, PeriodExtension } from '../types/database'
-import { calcMemberExpiry } from '../utils/period'
+import {
+  calcMemberExpiry,
+  calcPaymentExpiry,
+} from '../utils/period'
+
+async function fetchLatestPaymentAnchor(
+  memberId: string,
+): Promise<{ paid_at: string; sessions: number } | null> {
+  const { data, error } = await supabase
+    .from('payment_history')
+    .select('paid_at, sessions, created_at')
+    .eq('member_id', memberId)
+    .order('paid_at', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error) throw error
+  if (!data) return null
+
+  return {
+    paid_at: String(data.paid_at).slice(0, 10),
+    sessions: Number(data.sessions),
+  }
+}
+
+/** 결제 이력이 있으면 최신 결제 기준, 없으면 최초 등록일 기준 */
+export async function resolveMemberExpiresAt(
+  member: Member,
+  extensionDays?: number,
+): Promise<string | null> {
+  const ext =
+    extensionDays ?? (await getTotalExtensionDays(member.id))
+  const latest = await fetchLatestPaymentAnchor(member.id)
+
+  if (latest && latest.sessions > 0) {
+    return calcPaymentExpiry(latest.paid_at, latest.sessions, ext)
+  }
+
+  if (member.total_sessions > 0) {
+    return calcMemberExpiry(member.registered_at, member.total_sessions, ext)
+  }
+
+  return null
+}
+
+export async function recalcMemberExpiry(memberId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('members')
+    .select('*')
+    .eq('id', memberId)
+    .single()
+
+  if (error) throw error
+
+  const member = normalizeMember(data)
+  const expires_at = await resolveMemberExpiresAt(member)
+
+  const { error: updateError } = await supabase
+    .from('members')
+    .update({ expires_at })
+    .eq('id', memberId)
+
+  if (updateError) throw updateError
+  return expires_at
+}
 
 export async function getTotalExtensionDays(memberId: string): Promise<number> {
   const { data, error } = await supabase
@@ -45,31 +110,14 @@ export async function extendMemberPeriod(
 
   if (insertError) throw insertError
 
-  const extensionDays = await getTotalExtensionDays(member.id)
-  const expires_at = calcMemberExpiry(
-    member.registered_at,
-    member.total_sessions,
-    extensionDays,
-  )
+  await recalcMemberExpiry(member.id)
 
   const { data, error } = await supabase
     .from('members')
-    .update({ expires_at })
-    .eq('id', member.id)
     .select('*')
+    .eq('id', member.id)
     .single()
 
   if (error) throw error
   return normalizeMember(data)
-}
-
-export function resolveMemberExpiry(
-  member: Member,
-  extensionDays: number,
-): string {
-  return calcMemberExpiry(
-    member.registered_at,
-    member.total_sessions,
-    extensionDays,
-  )
 }

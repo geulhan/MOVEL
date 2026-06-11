@@ -1,10 +1,9 @@
 import { fetchMemberById } from './memberDetail'
 import { notifyPaymentDone } from './notifications'
 import { awardReferralOnPayment } from './rewards'
-import { getTotalExtensionDays } from './period'
+import { recalcMemberExpiry } from './period'
 import { supabase } from '../lib/supabase'
 import type { PaymentHistory } from '../types/database'
-import { calcMemberExpiry } from '../utils/period'
 
 export async function createMemberPayment(
   memberId: string,
@@ -40,6 +39,7 @@ export async function createMemberPayment(
   if (error) throw error
 
   await applySessionsDeltaToMember(memberId, input.sessions)
+  await recalcMemberExpiry(memberId)
   await syncMemberPaymentTotal(memberId)
 
   try {
@@ -106,6 +106,7 @@ export async function updatePayment(
 
   if (error) throw error
 
+  await recalcMemberExpiry(memberId)
   await syncMemberPaymentTotal(memberId)
   return data
 }
@@ -117,7 +118,6 @@ async function applySessionsDeltaToMember(
   if (sessionsDelta === 0) return
 
   const member = await fetchMemberById(memberId)
-  const extensionDays = await getTotalExtensionDays(memberId)
   const newTotal = member.total_sessions + sessionsDelta
   const newRemaining = member.remaining_sessions + sessionsDelta
 
@@ -125,17 +125,11 @@ async function applySessionsDeltaToMember(
     throw new Error('PT 횟수를 더 이상 줄일 수 없습니다.')
   }
 
-  const expires_at =
-    newTotal > 0
-      ? calcMemberExpiry(member.registered_at, newTotal, extensionDays)
-      : null
-
   const { error } = await supabase
     .from('members')
     .update({
       total_sessions: newTotal,
       remaining_sessions: newRemaining,
-      expires_at,
     })
     .eq('id', memberId)
 

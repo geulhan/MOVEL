@@ -4,6 +4,7 @@ import {
   formatDate,
   updateMemberRemainingSessions,
 } from '../../api/members'
+import { recalcMemberExpiry } from '../../api/period'
 import { updatePayment } from '../../api/payments'
 import {
   btnInlineCancel,
@@ -37,8 +38,22 @@ export function MemberPtPaymentTab() {
   const [editingRemaining, setEditingRemaining] = useState(false)
   const [editRemaining, setEditRemaining] = useState('')
   const [savingRemaining, setSavingRemaining] = useState(false)
+  const [recalculatingExpiry, setRecalculatingExpiry] = useState(false)
 
   if (!member) return null
+
+  async function handleRecalcExpiry() {
+    setRecalculatingExpiry(true)
+    setError(null)
+    try {
+      await recalcMemberExpiry(memberId)
+      await reload()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '만료일 재계산 실패')
+    } finally {
+      setRecalculatingExpiry(false)
+    }
+  }
 
   const remainingClass = getRemainingSessionsClass(member.remaining_sessions)
 
@@ -176,6 +191,25 @@ export function MemberPtPaymentTab() {
           </div>
         )}
         <PtUsageBar used={usedSessions} total={member.total_sessions} />
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-gold/15 pt-3 text-sm">
+          <span className="text-muted">
+            만료일:{' '}
+            <strong className="text-charcoal">
+              {formatDate(member.expires_at)}
+            </strong>
+            <span className="ml-1 text-xs">
+              (최신 결제일 + 해당 PT 횟수 기준)
+            </span>
+          </span>
+          <button
+            type="button"
+            onClick={() => void handleRecalcExpiry()}
+            disabled={recalculatingExpiry || payments.length === 0}
+            className={btnLink}
+          >
+            {recalculatingExpiry ? '재계산 중…' : '만료일 재계산'}
+          </button>
+        </div>
       </section>
 
       <section className={`${cardClass} overflow-hidden`}>
