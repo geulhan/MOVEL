@@ -109,7 +109,10 @@ export default function MemberPortalPage() {
     setLoginLoading(true)
     try {
       const { memberId } = await loginMember(loginPhone, loginPassword)
-      await loadMemberData(memberId)
+      const loggedInMember = await fetchMemberById(memberId)
+      setMember(loggedInMember)
+      setLoginPassword('')
+      void loadMemberData(memberId)
     } catch (err) {
       setLoginError(
         err instanceof Error ? err.message : '로그인에 실패했습니다.',
@@ -147,6 +150,14 @@ export default function MemberPortalPage() {
       setCheckInLoading(false)
     }
   }
+
+  const handlePortalRefresh = useCallback(async () => {
+    const memberId = member?.id ?? getMemberSession()
+    if (!memberId) return
+    setPortalError(null)
+    await loadMemberData(memberId)
+    setRefreshToken((token) => token + 1)
+  }, [member, loadMemberData])
 
   if (loading) {
     return (
@@ -229,13 +240,6 @@ export default function MemberPortalPage() {
     member.remaining_sessions > 0 &&
     !memberExpired &&
     hasTodayPt
-
-  const handlePortalRefresh = useCallback(async () => {
-    if (!member) return
-    setPortalError(null)
-    await loadMemberData(member.id)
-    setRefreshToken((token) => token + 1)
-  }, [member, loadMemberData])
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'home', label: '내 정보' },
