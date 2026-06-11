@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase'
 import { formatSupabaseError } from '../lib/errors'
+import { notifyMemberWelcome } from './notifications'
 import { saveMemberSession } from './memberPortal'
 import type { Json } from '../types/database'
 import { normalizePhone } from './members'
@@ -71,6 +72,67 @@ function parseChangePasswordResponse(data: Json): ChangePasswordResponse {
 
 export function normalizeLoginPhone(phone: string): string {
   return normalizePhone(phone)
+}
+
+function registerErrorMessage(code?: string): string {
+  switch (code) {
+    case 'already_exists':
+      return '이미 가입된 휴대전화번호입니다. 로그인해 주세요.'
+    case 'invalid_name':
+      return '이름을 입력해 주세요.'
+    case 'invalid_phone':
+      return '010으로 시작하는 11자리 휴대전화번호를 입력해 주세요.'
+    case 'invalid_password':
+      return '비밀번호는 4자리 이상이어야 합니다.'
+    default:
+      return '회원가입에 실패했습니다. 잠시 후 다시 시도해 주세요.'
+  }
+}
+
+export async function registerMember(
+  name: string,
+  phone: string,
+  password: string,
+): Promise<{ memberId: string; memberName: string }> {
+  const digits = normalizeLoginPhone(phone)
+  if (!name.trim()) {
+    throw new Error('이름을 입력해 주세요.')
+  }
+  if (digits.length !== 11 || !digits.startsWith('010')) {
+    throw new Error('010으로 시작하는 11자리 휴대전화번호를 입력해 주세요.')
+  }
+  if (password.length < 4) {
+    throw new Error('비밀번호는 4자리 이상이어야 합니다.')
+  }
+
+  const { data, error } = await supabase.rpc('register_member', {
+    p_name: name.trim(),
+    p_phone: digits,
+    p_password: password,
+  })
+
+  if (error) {
+    const msg = formatSupabaseError(error)
+    if (msg.includes('register_member')) {
+      throw new Error(
+        '회원가입 DB 설정이 필요합니다. Supabase SQL Editor에서 migration_017_member_self_register.sql을 실행해 주세요.',
+      )
+    }
+    throw new Error(msg)
+  }
+
+  const result = parseLoginResponse(data)
+  if (!result.ok || !result.id || !result.token) {
+    throw new Error(registerErrorMessage(result.error))
+  }
+
+  saveMemberSession(result.id, result.token)
+  notifyMemberWelcome(result.id)
+
+  return {
+    memberId: result.id,
+    memberName: result.name ?? '회원',
+  }
 }
 
 export async function loginMember(

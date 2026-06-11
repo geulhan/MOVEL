@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase'
 import { normalizeMember } from '../lib/memberNormalize'
 import type { Member, MemberInsert, MemberStatus } from '../types/database'
+import { notifyMemberWelcome, notifyPaymentDone } from './notifications'
 import { awardReferralOnPayment } from './rewards'
 import { calcSessionExpiry } from '../utils/period'
 
@@ -74,16 +75,16 @@ export async function createMember(input: {
   if (paymentError) {
     console.warn('payment_history 저장 실패:', paymentError.message)
   } else if (paymentRow) {
+    const paymentId = (paymentRow as { id: string }).id
     try {
-      await awardReferralOnPayment(
-        data.id,
-        (paymentRow as { id: string }).id,
-        input.payment_amount,
-      )
+      await awardReferralOnPayment(data.id, paymentId, input.payment_amount)
     } catch (rewardErr) {
       console.warn('소개 리워드 적립 실패:', rewardErr)
     }
+    notifyPaymentDone(data.id, paymentId)
   }
+
+  notifyMemberWelcome(data.id)
 
   return normalizeMember(data)
 }

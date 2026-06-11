@@ -69,6 +69,40 @@ export type PaymentHistory = {
   created_at: string
 }
 
+export type MessageTemplateKey = 'welcome' | 'payment_done' | 'renewal'
+
+export type MessageLogStatus = 'pending' | 'sent' | 'failed' | 'skipped'
+
+export type MessageLogChannel = 'alimtalk' | 'sms' | 'skipped'
+
+export const MESSAGE_TEMPLATE_LABELS: Record<MessageTemplateKey, string> = {
+  welcome: '신규 가입 환영',
+  payment_done: '결제 완료',
+  renewal: '갱신 안내',
+}
+
+export const MESSAGE_STATUS_LABELS: Record<MessageLogStatus, string> = {
+  pending: '대기',
+  sent: '발송 완료',
+  failed: '실패',
+  skipped: '생략',
+}
+
+export type MessageLog = {
+  id: string
+  member_id: string | null
+  phone: string
+  template_key: MessageTemplateKey
+  channel: MessageLogChannel | null
+  status: MessageLogStatus
+  provider_message_id: string | null
+  error_message: string | null
+  variables: Json
+  metadata: Json
+  created_at: string
+  sent_at: string | null
+}
+
 export type SessionLog = {
   id: string
   member_id: string
@@ -311,7 +345,29 @@ export type Database = {
           paid_at: string
           note?: string | null
         },
-        { paid_at?: string; amount?: number }
+        { paid_at?: string; amount?: number; sessions?: number }
+      >
+      message_logs: TableDef<
+        MessageLog,
+        {
+          member_id?: string | null
+          phone: string
+          template_key: MessageTemplateKey
+          channel?: MessageLogChannel | null
+          status?: MessageLogStatus
+          provider_message_id?: string | null
+          error_message?: string | null
+          variables?: Json
+          metadata?: Json
+          sent_at?: string | null
+        },
+        {
+          channel?: MessageLogChannel | null
+          status?: MessageLogStatus
+          provider_message_id?: string | null
+          error_message?: string | null
+          sent_at?: string | null
+        }
       >
       member_memos: TableDef<
         MemberMemo,
@@ -552,6 +608,14 @@ export type Database = {
           p_phone: string
           p_old_password: string
           p_new_password: string
+        }
+        Returns: Json
+      }
+      register_member: {
+        Args: {
+          p_name: string
+          p_phone: string
+          p_password: string
         }
         Returns: Json
       }

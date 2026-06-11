@@ -7,7 +7,7 @@ import {
   hasScheduledPtToday,
   type PtSchedule,
 } from '../api/schedule'
-import { loginMember } from '../api/memberAuth'
+import { loginMember, registerMember } from '../api/memberAuth'
 import {
   checkIn,
   clearMemberSession,
@@ -37,12 +37,18 @@ import { MemberScheduleSection } from '../components/MemberScheduleSection'
 import { SessionCount } from '../components/SessionCount'
 
 type Tab = 'home' | 'schedule' | 'attendance' | 'journal' | 'rewards' | 'mypage'
+type AuthMode = 'login' | 'signup'
 
 export default function MemberPortalPage() {
   const [member, setMember] = useState<Member | null>(null)
   const [loading, setLoading] = useState(true)
   const [loginPhone, setLoginPhone] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
+  const [authMode, setAuthMode] = useState<AuthMode>('login')
+  const [signupName, setSignupName] = useState('')
+  const [signupPhone, setSignupPhone] = useState('')
+  const [signupPassword, setSignupPassword] = useState('')
+  const [signupPasswordConfirm, setSignupPasswordConfirm] = useState('')
   const [loginError, setLoginError] = useState<string | null>(null)
   const [loginLoading, setLoginLoading] = useState(false)
   const [rememberLogin, setRememberLogin] = useState(false)
@@ -120,6 +126,39 @@ export default function MemberPortalPage() {
       })
       .finally(() => setLoading(false))
   }, [loadMemberData])
+
+  async function handleSignup(e: FormEvent) {
+    e.preventDefault()
+    setLoginError(null)
+
+    if (signupPassword !== signupPasswordConfirm) {
+      setLoginError('비밀번호 확인이 일치하지 않습니다.')
+      return
+    }
+
+    setLoginLoading(true)
+    try {
+      const { memberId } = await registerMember(
+        signupName,
+        signupPhone,
+        signupPassword,
+      )
+      const registeredMember = await fetchMemberById(memberId)
+      setMember(registeredMember)
+      setSignupPassword('')
+      setSignupPasswordConfirm('')
+      if (rememberLogin) {
+        saveRememberedMemberLogin(signupPhone, signupPassword)
+      }
+      void loadMemberData(memberId)
+    } catch (err) {
+      setLoginError(
+        err instanceof Error ? err.message : '회원가입에 실패했습니다.',
+      )
+    } finally {
+      setLoginLoading(false)
+    }
+  }
 
   async function handleLogin(e: FormEvent) {
     e.preventDefault()
@@ -204,64 +243,203 @@ export default function MemberPortalPage() {
             url={getMemberPortalUrl()}
             label="회원 페이지 주소 (전체 주소를 북마크·카톡 공유)"
           />
-          <h3 className="mt-4 text-base font-semibold text-charcoal">로그인</h3>
-          <p className="mt-1 text-sm text-muted">
-            아이디는 휴대전화번호(숫자만), 최초 비밀번호는 번호 뒤 4자리입니다.
-          </p>
-          <form onSubmit={(e) => void handleLogin(e)} className="mt-5 space-y-4">
-            <label className="block">
-              <span className="mb-1.5 block text-sm font-medium">
-                아이디 (휴대전화번호)
-              </span>
-              <input
-                type="tel"
-                inputMode="numeric"
-                value={loginPhone}
-                onChange={(e) =>
-                  setLoginPhone(e.target.value.replace(/\D/g, '').slice(0, 11))
-                }
-                placeholder="01012345678"
-                className={inputClass}
-                autoComplete="username"
-                disabled={loginLoading}
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1.5 block text-sm font-medium">비밀번호</span>
-              <input
-                type="password"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                placeholder="휴대폰 뒤 4자리 (예: 5678)"
-                className={inputClass}
-                autoComplete="current-password"
-                maxLength={32}
-                disabled={loginLoading}
-              />
-            </label>
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-charcoal/80">
-              <input
-                type="checkbox"
-                checked={rememberLogin}
-                onChange={(e) => setRememberLogin(e.target.checked)}
-                disabled={loginLoading}
-                className="h-4 w-4 rounded border-gold/50 text-charcoal focus:ring-gold/40"
-              />
-              아이디·비밀번호 기억하기
-            </label>
+          <div className="mt-4 flex rounded-lg border border-gold/30 bg-cream/50 p-1">
             <button
-              type="submit"
-              disabled={
-                loginLoading || loginPhone.length !== 11 || !loginPassword
-              }
-              className={`w-full ${btnPrimary}`}
+              type="button"
+              onClick={() => {
+                setAuthMode('login')
+                setLoginError(null)
+              }}
+              className={`flex-1 rounded-md py-2 text-sm font-semibold transition ${
+                authMode === 'login'
+                  ? 'bg-white text-charcoal shadow-sm'
+                  : 'text-muted'
+              }`}
             >
-              {loginLoading ? '로그인 중…' : '로그인'}
+              로그인
             </button>
-            {loginError && (
-              <p className="text-sm text-red-700">{loginError}</p>
-            )}
-          </form>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode('signup')
+                setLoginError(null)
+              }}
+              className={`flex-1 rounded-md py-2 text-sm font-semibold transition ${
+                authMode === 'signup'
+                  ? 'bg-white text-charcoal shadow-sm'
+                  : 'text-muted'
+              }`}
+            >
+              회원가입
+            </button>
+          </div>
+
+          {authMode === 'login' ? (
+            <>
+              <p className="mt-4 text-sm text-muted">
+                아이디는 휴대전화번호(숫자만)입니다. 관리자 등록 회원은 최초
+                비밀번호가 번호 뒤 4자리입니다.
+              </p>
+              <form
+                onSubmit={(e) => void handleLogin(e)}
+                className="mt-5 space-y-4"
+              >
+                <label className="block">
+                  <span className="mb-1.5 block text-sm font-medium">
+                    아이디 (휴대전화번호)
+                  </span>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    value={loginPhone}
+                    onChange={(e) =>
+                      setLoginPhone(
+                        e.target.value.replace(/\D/g, '').slice(0, 11),
+                      )
+                    }
+                    placeholder="01012345678"
+                    className={inputClass}
+                    autoComplete="username"
+                    disabled={loginLoading}
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-sm font-medium">
+                    비밀번호
+                  </span>
+                  <input
+                    type="password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    placeholder="비밀번호"
+                    className={inputClass}
+                    autoComplete="current-password"
+                    maxLength={32}
+                    disabled={loginLoading}
+                  />
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-charcoal/80">
+                  <input
+                    type="checkbox"
+                    checked={rememberLogin}
+                    onChange={(e) => setRememberLogin(e.target.checked)}
+                    disabled={loginLoading}
+                    className="h-4 w-4 rounded border-gold/50 text-charcoal focus:ring-gold/40"
+                  />
+                  아이디·비밀번호 기억하기
+                </label>
+                <button
+                  type="submit"
+                  disabled={
+                    loginLoading || loginPhone.length !== 11 || !loginPassword
+                  }
+                  className={`w-full ${btnPrimary}`}
+                >
+                  {loginLoading ? '로그인 중…' : '로그인'}
+                </button>
+              </form>
+            </>
+          ) : (
+            <>
+              <p className="mt-4 text-sm text-muted">
+                이름·휴대전화번호·비밀번호로 가입할 수 있습니다. PT 이용은 센터
+                결제 후 시작됩니다.
+              </p>
+              <form
+                onSubmit={(e) => void handleSignup(e)}
+                className="mt-5 space-y-4"
+              >
+                <label className="block">
+                  <span className="mb-1.5 block text-sm font-medium">이름</span>
+                  <input
+                    type="text"
+                    value={signupName}
+                    onChange={(e) => setSignupName(e.target.value)}
+                    placeholder="홍길동"
+                    className={inputClass}
+                    autoComplete="name"
+                    disabled={loginLoading}
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-sm font-medium">
+                    휴대전화번호
+                  </span>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    value={signupPhone}
+                    onChange={(e) =>
+                      setSignupPhone(
+                        e.target.value.replace(/\D/g, '').slice(0, 11),
+                      )
+                    }
+                    placeholder="01012345678"
+                    className={inputClass}
+                    autoComplete="tel"
+                    disabled={loginLoading}
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-sm font-medium">
+                    비밀번호
+                  </span>
+                  <input
+                    type="password"
+                    value={signupPassword}
+                    onChange={(e) => setSignupPassword(e.target.value)}
+                    placeholder="4자리 이상"
+                    className={inputClass}
+                    autoComplete="new-password"
+                    maxLength={32}
+                    disabled={loginLoading}
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-sm font-medium">
+                    비밀번호 확인
+                  </span>
+                  <input
+                    type="password"
+                    value={signupPasswordConfirm}
+                    onChange={(e) => setSignupPasswordConfirm(e.target.value)}
+                    placeholder="비밀번호 다시 입력"
+                    className={inputClass}
+                    autoComplete="new-password"
+                    maxLength={32}
+                    disabled={loginLoading}
+                  />
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-charcoal/80">
+                  <input
+                    type="checkbox"
+                    checked={rememberLogin}
+                    onChange={(e) => setRememberLogin(e.target.checked)}
+                    disabled={loginLoading}
+                    className="h-4 w-4 rounded border-gold/50 text-charcoal focus:ring-gold/40"
+                  />
+                  아이디·비밀번호 기억하기
+                </label>
+                <button
+                  type="submit"
+                  disabled={
+                    loginLoading ||
+                    !signupName.trim() ||
+                    signupPhone.length !== 11 ||
+                    signupPassword.length < 4 ||
+                    !signupPasswordConfirm
+                  }
+                  className={`w-full ${btnGold}`}
+                >
+                  {loginLoading ? '가입 중…' : '회원가입'}
+                </button>
+              </form>
+            </>
+          )}
+
+          {loginError && (
+            <p className="mt-4 text-sm text-red-700">{loginError}</p>
+          )}
         </section>
       </MemberLayout>
     )

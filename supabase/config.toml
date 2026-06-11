@@ -1,0 +1,8 @@
+# Supabase local / deploy config
+# https://supabase.com/docs/guides/functions
+
+[functions.send-notification]
+verify_jwt = false
+
+[functions.renewal-reminders]
+verify_jwt = false
