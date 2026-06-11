@@ -5,6 +5,7 @@ import {
 } from '../lib/ocr/verificationCodeMatch'
 import { supabase } from '../lib/supabase'
 import { todayDateString } from './members'
+import { MIN_STEPS_FOR_VERIFICATION } from '../constants/rewards'
 import { awardStepRewardsFromVerification, hasApprovedStepsToday } from './rewards'
 
 export type StepVerificationStatus = 'pending' | 'approved' | 'rejected'
@@ -32,6 +33,11 @@ export type StepVerificationSubmitResult = {
   verification: StepVerification
   approved: boolean
   message: string
+}
+
+export type SubmitStepVerificationOptions = {
+  /** 아이폰 자동 코드 합성 등 앱이 코드를 붙인 경우 OCR 코드 검사 생략 */
+  codeTrusted?: boolean
 }
 
 function generateCode(): string {
@@ -104,10 +110,10 @@ export async function fetchTodayVerificationStatus(
 type AutoReviewInput = {
   ocrSuccess: boolean
   codeMatch: boolean
+  codeTrusted: boolean
   dateMatch: boolean
-  stepExtracted: boolean
+  stepCount: number | null
   alreadyApproved: boolean
-  duplicatePending: boolean
 }
 
 function evaluateAutoReview(input: AutoReviewInput): {
@@ -118,17 +124,35 @@ function evaluateAutoReview(input: AutoReviewInput): {
     return { approved: false, reason: '같은 날짜에 이미 승인된 인증이 있습니다.' }
   }
   if (!input.ocrSuccess) {
-    return { approved: false, reason: '이미지 판독(OCR)에 실패했습니다.' }
+    return {
+      approved: false,
+      reason: '이미지 판독(OCR)에 실패했습니다. 건강앱 걸음 화면이 선명하게 보이게 다시 캡처해 주세요.',
+    }
   }
-  if (!input.codeMatch) {
+
+  if (input.stepCount === null || input.stepCount <= 0) {
+    return {
+      approved: false,
+      reason:
+        '걸음수를 추출하지 못했습니다. 건강앱 걸음 화면이 선명하게 보이게 다시 캡처해 주세요.',
+    }
+  }
+
+  if (input.stepCount < MIN_STEPS_FOR_VERIFICATION) {
+    return {
+      approved: false,
+      reason: `걸음수가 부족합니다. (인식: ${input.stepCount.toLocaleString()}보 / 필요: ${MIN_STEPS_FOR_VERIFICATION.toLocaleString()}보 이상)`,
+    }
+  }
+
+  if (!input.codeTrusted && !input.codeMatch) {
     return { approved: false, reason: '인증코드가 일치하지 않습니다.' }
   }
+
   if (!input.dateMatch) {
     return { approved: false, reason: '캡처 날짜가 오늘과 일치하지 않습니다.' }
   }
-  if (!input.stepExtracted) {
-    return { approved: false, reason: '걸음수를 추출하지 못했습니다.' }
-  }
+
   return { approved: true, reason: null }
 }
 
@@ -137,6 +161,7 @@ export async function submitStepVerification(
   memberId: string,
   file: File,
   onOcrProgress?: (pct: number) => void,
+  options?: SubmitStepVerificationOptions,
 ): Promise<StepVerificationSubmitResult> {
   const today = todayDateString()
 
@@ -175,16 +200,15 @@ export async function submitStepVerification(
   const extractedDate = ocr.extracted_date ?? today
   const dateMatch = extractedDate === today || ocr.extracted_date == null
 
-  const stepExtracted =
-    ocr.extracted_step_count !== null && ocr.extracted_step_count > 0
+  const codeTrusted = options?.codeTrusted === true
 
   const { approved, reason } = evaluateAutoReview({
     ocrSuccess: ocr.success && !ocr.error,
     codeMatch,
+    codeTrusted,
     dateMatch,
-    stepExtracted,
+    stepCount: ocr.extracted_step_count,
     alreadyApproved: false,
-    duplicatePending: false,
   })
 
   const status: StepVerificationStatus = approved ? 'approved' : 'rejected'
@@ -233,10 +257,15 @@ export async function submitStepVerification(
     ? `${ocr.extracted_step_count!.toLocaleString()}보 인증 완료 · 리워드가 적립되었습니다.`
     : reason ?? '인증이 반려되었습니다.'
 
-  if (!approved && !codeMatch) {
+  if (
+    !approved &&
+    !codeTrusted &&
+    !codeMatch &&
+    reason === '인증코드가 일치하지 않습니다.'
+  ) {
     message += extractedCode
       ? ` (인식된 코드: ${extractedCode})`
-      : ' (캡처에서 MOVEL 코드를 찾지 못했습니다. 코드 글자가 선명하게 보이게 다시 캡처해 주세요.)'
+      : ' (캡처에서 MOVEL 코드를 찾지 못했습니다.)'
   }
 
   return {

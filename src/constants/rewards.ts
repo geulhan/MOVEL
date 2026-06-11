@@ -32,6 +32,9 @@ export function getNextTier(score: number): {
   return { tier: 'SILVER', remaining: 1000 - score }
 }
 
+/** 걸음 인증 최소 기준 (7,000보 미만은 반려) */
+export const MIN_STEPS_FOR_VERIFICATION = 7000
+
 /** 기본 적립 규칙 (reward_settings 미설정 시 폴백) */
 export const DEFAULT_REWARD_RULES = {
   pt_attendance: { score: 20, mile: 500 },

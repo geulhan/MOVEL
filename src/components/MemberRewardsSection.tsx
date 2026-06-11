@@ -11,6 +11,7 @@ import {
   getTodayVerificationCode,
   submitStepVerification,
   type StepVerification,
+  type SubmitStepVerificationOptions,
 } from '../api/stepVerification'
 import {
   getNextTier,
@@ -193,6 +194,7 @@ export function MemberRewardsSection({ memberId, refreshToken }: Props) {
   async function handleImageSelect(
     file: File | null,
     input?: HTMLInputElement | null,
+    submitOptions?: SubmitStepVerificationOptions,
   ) {
     if (!file) return
     if (!file.type.startsWith('image/')) {
@@ -214,6 +216,7 @@ export function MemberRewardsSection({ memberId, refreshToken }: Props) {
         memberId,
         file,
         (pct) => setOcrProgress(pct),
+        submitOptions,
       )
       setSuccessMsg(result.message)
       if (!result.approved) {
@@ -425,8 +428,8 @@ export function MemberRewardsSection({ memberId, refreshToken }: Props) {
               uploading={uploading}
               ocrProgress={ocrProgress}
               onOpenFullscreen={() => setShowCodeFullscreen(true)}
-              onSubmit={async (file) => {
-                await handleImageSelect(file)
+              onSubmit={async (file, options) => {
+                await handleImageSelect(file, undefined, options)
               }}
             />
             {todayVerification?.status === 'rejected' && (

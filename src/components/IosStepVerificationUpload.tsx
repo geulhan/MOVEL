@@ -3,6 +3,7 @@ import {
   appendVerificationCodeBanner,
   mergeVerificationScreenshots,
 } from '../lib/image/mergeVerificationImages'
+import { MIN_STEPS_FOR_VERIFICATION } from '../constants/rewards'
 import { btnGold, btnOutline } from '../styles/theme'
 
 const GALLERY_IMAGE_ACCEPT =
@@ -15,7 +16,10 @@ type Props = {
   ocrProgress: number | null
   disabled?: boolean
   onOpenFullscreen: () => void
-  onSubmit: (file: File) => Promise<void>
+  onSubmit: (
+    file: File,
+    options?: { codeTrusted?: boolean },
+  ) => Promise<void>
 }
 
 type IosMode = 'auto' | 'manual'
@@ -45,7 +49,7 @@ export function IosStepVerificationUpload({
         todayCode,
         dateLabel,
       )
-      await onSubmit(merged)
+      await onSubmit(merged, { codeTrusted: true })
       setHealthFile(null)
     } catch (err) {
       setLocalError(
@@ -82,7 +86,11 @@ export function IosStepVerificationUpload({
         <p className="text-sm font-bold text-charcoal">아이폰 인증</p>
         <p className="mt-1 text-xs leading-relaxed text-muted">
           아이폰은 분할 화면이 안 됩니다. 건강앱 스크린샷만 올리면 MOVEL이
-          코드를 자동으로 붙여 줍니다.
+          코드를 자동으로 붙여 줍니다. 인증은{' '}
+          <strong className="text-charcoal">
+            {MIN_STEPS_FOR_VERIFICATION.toLocaleString()}보 이상
+          </strong>
+          부터 가능합니다.
         </p>
       </div>
 
