@@ -47,11 +47,13 @@ export async function fetchPtPricing(): Promise<PtPricingConfig> {
     .select('setting_value')
     .eq('setting_key', 'pt_pricing')
     .is('branch_id', null)
-    .maybeSingle()
+    .order('updated_at', { ascending: false })
+    .limit(1)
 
   if (error) throw error
-  if (!data?.setting_value) return DEFAULT_PT_PRICING
-  return normalizePricing(data.setting_value)
+  const row = data?.[0]
+  if (!row?.setting_value) return DEFAULT_PT_PRICING
+  return normalizePricing(row.setting_value)
 }
 
 export async function savePtPricing(config: PtPricingConfig): Promise<void> {
@@ -76,20 +78,21 @@ export async function savePtPricing(config: PtPricingConfig): Promise<void> {
     updated_at: new Date().toISOString(),
   }
 
-  const { data: existing, error: fetchError } = await supabase
+  const { data: existingRows, error: fetchError } = await supabase
     .from('reward_settings')
     .select('id')
     .eq('setting_key', 'pt_pricing')
     .is('branch_id', null)
-    .maybeSingle()
+    .order('updated_at', { ascending: false })
 
   if (fetchError) throw fetchError
 
-  if (existing) {
+  const primary = existingRows?.[0]
+  if (primary) {
     const { error } = await supabase
       .from('reward_settings')
       .update(payload)
-      .eq('id', existing.id)
+      .eq('id', primary.id)
     if (error) throw error
     return
   }
