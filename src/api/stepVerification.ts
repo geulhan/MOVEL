@@ -7,7 +7,12 @@ import { supabase } from '../lib/supabase'
 import { todayDateString } from './members'
 import { MIN_STEPS_FOR_VERIFICATION } from '../constants/rewards'
 import { notifyStepVerificationResult } from './notifications'
-import { awardStepRewardsFromVerification, hasApprovedStepsToday } from './rewards'
+import {
+  awardStepRewardsFromVerification,
+  formatStepRewardSummary,
+  hasApprovedStepsToday,
+  type StepRewardResult,
+} from './rewards'
 
 export type StepVerificationStatus = 'pending' | 'approved' | 'rejected'
 
@@ -34,6 +39,7 @@ export type StepVerificationSubmitResult = {
   verification: StepVerification
   approved: boolean
   message: string
+  rewardResult?: StepRewardResult
 }
 
 export type SubmitStepVerificationOptions = {
@@ -273,8 +279,9 @@ export async function submitStepVerification(
 
   const verification = data as StepVerification
 
+  let rewardResult: StepRewardResult | undefined
   if (approved && ocr.extracted_step_count) {
-    await awardStepRewardsFromVerification(
+    rewardResult = await awardStepRewardsFromVerification(
       memberId,
       ocr.extracted_step_count,
       today,
@@ -283,7 +290,9 @@ export async function submitStepVerification(
   }
 
   let message = approved
-    ? `${ocr.extracted_step_count!.toLocaleString()}보 인증 완료 · 리워드가 적립되었습니다.`
+    ? rewardResult
+      ? formatStepRewardSummary(rewardResult)
+      : `${ocr.extracted_step_count!.toLocaleString()}보 인증 완료`
     : reason ?? '인증이 반려되었습니다.'
 
   if (
@@ -308,7 +317,12 @@ export async function submitStepVerification(
     verification,
     approved,
     message,
+    rewardResult,
   }
+}
+
+export type StepVerificationWithMember = StepVerification & {
+  member_name?: string | null
 }
 
 /** 관리자/트레이너: 인증 내역 조회 */
@@ -329,4 +343,25 @@ export async function fetchStepVerifications(options?: {
   const { data, error } = await query
   if (error) throw error
   return (data ?? []) as StepVerification[]
+}
+
+export async function fetchStepVerificationsWithMembers(options?: {
+  limit?: number
+}): Promise<StepVerificationWithMember[]> {
+  const rows = await fetchStepVerifications({ limit: options?.limit ?? 30 })
+  if (rows.length === 0) return []
+
+  const memberIds = [...new Set(rows.map((row) => row.member_id))]
+  const { data: members, error } = await supabase
+    .from('members')
+    .select('id, name')
+    .in('id', memberIds)
+
+  if (error) throw error
+  const nameMap = new Map((members ?? []).map((member) => [member.id, member.name]))
+
+  return rows.map((row) => ({
+    ...row,
+    member_name: nameMap.get(row.member_id) ?? null,
+  }))
 }

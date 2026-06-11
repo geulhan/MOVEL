@@ -5,9 +5,14 @@ import {
   formatDiscountSummary,
 } from '../../api/paymentRequests'
 import { fetchPtPricing, getActivePackages } from '../../api/pricing'
+import {
+  calcMaxRedeemableMiles,
+  fetchRewardBalance,
+} from '../../api/rewards'
 import { PAYMENT_REQUEST_EXPIRY_DAYS } from '../../constants/pricing'
+import { REDEMPTION_MAX_PERCENT } from '../../constants/rewards'
 import type { PaymentRequest } from '../../types/database'
-import { btnGold, cardClass } from '../../styles/theme'
+import { cardClass } from '../../styles/theme'
 
 type Props = {
   memberId: string
@@ -21,6 +26,7 @@ function formatExpires(iso: string | null): string {
 export function MemberPaymentSection({ memberId }: Props) {
   const [pending, setPending] = useState<PaymentRequest[]>([])
   const [catalogAmount, setCatalogAmount] = useState<number | null>(null)
+  const [availableMiles, setAvailableMiles] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -28,11 +34,13 @@ export function MemberPaymentSection({ memberId }: Props) {
     setLoading(true)
     setError(null)
     try {
-      const [requests, pricing] = await Promise.all([
+      const [requests, pricing, balance] = await Promise.all([
         fetchMemberPendingPaymentRequests(memberId),
         fetchPtPricing(),
+        fetchRewardBalance(memberId),
       ])
       setPending(requests)
+      setAvailableMiles(balance.move_mile)
       const active = getActivePackages(pricing)
       setCatalogAmount(active[0]?.amount ?? null)
     } catch (err) {
@@ -47,8 +55,6 @@ export function MemberPaymentSection({ memberId }: Props) {
   useEffect(() => {
     void load()
   }, [load])
-
-  const tossReady = Boolean(import.meta.env.VITE_TOSS_CLIENT_KEY)
 
   if (loading) {
     return <p className="text-sm text-muted">불러오는 중…</p>
@@ -78,6 +84,9 @@ export function MemberPaymentSection({ memberId }: Props) {
       ) : (
         pending.map((request) => {
           const discount = formatDiscountSummary(request)
+          const amount = Number(request.amount)
+          const maxMiles = calcMaxRedeemableMiles(amount, availableMiles)
+          const minCash = amount - maxMiles
           return (
             <section key={request.id} className={`${cardClass} p-5`}>
               <div className="flex items-start justify-between gap-3">
@@ -117,19 +126,30 @@ export function MemberPaymentSection({ memberId }: Props) {
                 </p>
               )}
 
-              <div className="mt-4 space-y-2">
-                {tossReady ? (
-                  <button type="button" className={`w-full ${btnGold}`} disabled>
-                    온라인 결제 연동 준비 중
-                  </button>
-                ) : (
-                  <div className="rounded-xl border border-gold/30 bg-cream/50 px-4 py-3 text-sm text-charcoal">
-                    <p className="font-semibold">센터 결제 안내</p>
-                    <p className="mt-1 text-muted">
-                      위 금액으로 센터 방문 또는 안내받은 계좌로 입금해
-                      주세요. 확인 후 PT가 등록됩니다.
-                    </p>
-                  </div>
+              <div className="mt-4 rounded-xl border border-gold/30 bg-cream/50 px-4 py-3 text-sm text-charcoal">
+                <p className="font-semibold">센터 결제 안내</p>
+                <p className="mt-1 text-muted">
+                  센터 방문 또는 안내받은 계좌로 입금해 주세요. 확인 후 PT가
+                  등록됩니다.
+                </p>
+                {maxMiles > 0 && (
+                  <p className="mt-2 rounded-lg bg-gold/10 px-3 py-2 text-xs text-charcoal">
+                    MOVE MILE 최대{' '}
+                    <strong className="tabular-nums">
+                      {maxMiles.toLocaleString()}M
+                    </strong>
+                    까지 사용 가능 (결제금액의 {REDEMPTION_MAX_PERCENT}%).
+                    결제 시 센터에 말씀해 주시면 반영됩니다.
+                    {minCash < amount && (
+                      <>
+                        {' '}
+                        최소 실수납{' '}
+                        <strong className="tabular-nums">
+                          {formatCurrency(minCash)}
+                        </strong>
+                      </>
+                    )}
+                  </p>
                 )}
               </div>
             </section>
@@ -138,8 +158,7 @@ export function MemberPaymentSection({ memberId }: Props) {
       )}
 
       <section className="rounded-xl border border-dashed border-gold/40 bg-white/60 px-4 py-3 text-xs text-muted">
-        카드·간편결제는 토스페이먼츠 연동 후 「결제하기」 버튼으로 이용할 수
-        있습니다.
+        결제·할인·MILE 사용은 센터에서 최종 확인 후 반영됩니다.
       </section>
     </div>
   )

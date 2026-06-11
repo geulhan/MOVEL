@@ -34,10 +34,20 @@ type ParseOptions = {
   codeTrusted?: boolean
 }
 
+function stepCountQualityBonus(n: number): number {
+  if (isRoundStepGoal(n)) return -900
+  if (n % 1000 === 0) return -500
+  if (n >= MIN_DAILY_STEPS && n < 20_000) return 250
+  if (n >= 20_000) return -300
+  return 0
+}
+
+const MIN_DAILY_STEPS = 7000
+
 function scoreParseResult(result: StepOcrParseResult): number {
   let score = 0
   if (result.extracted_step_count != null) {
-    score += 10_000 + result.extracted_step_count
+    score += 5000 + stepCountQualityBonus(result.extracted_step_count)
   }
   if (result.extracted_date) score += 500
   if (result.extracted_code) score += 200
@@ -91,28 +101,94 @@ function isYearLike(n: number): boolean {
   return n >= 2020 && n <= 2035
 }
 
+const COMMON_STEP_GOALS = new Set([
+  3000, 4000, 5000, 6000, 8000, 10000, 12000, 15000, 20000,
+])
+
+type StepCountCandidate = {
+  value: number
+  weight: number
+}
+
+function pushStepCandidate(
+  candidates: StepCountCandidate[],
+  raw: string,
+  weight: number,
+  excludeCodeDigits?: string,
+): void {
+  const n = parseInt(raw.replace(/[^\d]/g, ''), 10)
+  if (n < 100 || n > 100_000 || isYearLike(n)) return
+  if (excludeCodeDigits && String(n) === excludeCodeDigits) return
+  candidates.push({ value: n, weight })
+}
+
+function isRoundStepGoal(n: number): boolean {
+  return COMMON_STEP_GOALS.has(n)
+}
+
+function pickBestStepCount(candidates: StepCountCandidate[]): number | null {
+  if (candidates.length === 0) return null
+
+  const weightByValue = new Map<number, number>()
+  for (const { value, weight } of candidates) {
+    weightByValue.set(value, (weightByValue.get(value) ?? 0) + weight)
+  }
+
+  const ranked = [...weightByValue.entries()]
+    .map(([value, weight]) => ({ value, weight }))
+    .sort((a, b) => {
+      if (b.weight !== a.weight) return b.weight - a.weight
+      const aGoal = isRoundStepGoal(a.value)
+      const bGoal = isRoundStepGoal(b.value)
+      if (aGoal !== bGoal) return aGoal ? 1 : -1
+      return b.value - a.value
+    })
+
+  return ranked[0]?.value ?? null
+}
+
 function extractStepCount(
   text: string,
   excludeCodeDigits?: string,
 ): number | null {
   const normalized = text.replace(/\s+/g, ' ')
-  const candidates: number[] = []
+  const candidates: StepCountCandidate[] = []
 
-  const labeled = [
-    /(?:걸음|보|steps?|step\s*count|walking)\s*[:：]?\s*([\d,.\s]+)/gi,
-    /([\d,]+)\s*(?:걸음|보|steps?)/gi,
-    /오늘\s*([\d,]+)/gi,
-    /([\d,]+)\s*\/\s*[\d,]+/gi,
-    /(?:이동|활동|distance)\s*[:：]?\s*([\d,]+)/gi,
-    /(?:총|합계|total)\s*[:：]?\s*([\d,]+)/gi,
+  const labeledPatterns: Array<{ pattern: RegExp; weight: number }> = [
+    {
+      pattern: /(?:걸음|보|steps?|step\s*count|walking)\s*[:：]?\s*([\d,.\s]+)/gi,
+      weight: 120,
+    },
+    { pattern: /([\d,]+)\s*(?:걸음|보|steps?)/gi, weight: 115 },
+    { pattern: /오늘\s*([\d,]+)/gi, weight: 100 },
+    { pattern: /(?:총|합계|total)\s*[:：]?\s*([\d,]+)/gi, weight: 90 },
   ]
 
-  for (const pattern of labeled) {
+  for (const { pattern, weight } of labeledPatterns) {
     let m: RegExpExecArray | null
     pattern.lastIndex = 0
     while ((m = pattern.exec(normalized)) !== null) {
-      const n = parseInt(m[1].replace(/[^\d]/g, ''), 10)
-      if (n >= 100 && n <= 100_000 && !isYearLike(n)) candidates.push(n)
+      pushStepCandidate(candidates, m[1], weight, excludeCodeDigits)
+    }
+  }
+
+  const progressPattern = /([\d,]+)\s*\/\s*([\d,]+)/gi
+  let progressMatch: RegExpExecArray | null
+  while ((progressMatch = progressPattern.exec(normalized)) !== null) {
+    pushStepCandidate(
+      candidates,
+      progressMatch[1],
+      110,
+      excludeCodeDigits,
+    )
+    const goal = parseInt(progressMatch[2].replace(/[^\d]/g, ''), 10)
+    if (
+      goal >= 500 &&
+      goal <= 100_000 &&
+      !isYearLike(goal) &&
+      (!excludeCodeDigits || String(goal) !== excludeCodeDigits)
+    ) {
+      candidates.push({ value: goal, weight: 8 })
     }
   }
 
@@ -120,27 +196,19 @@ function extractStepCount(
     normalized.match(/\b(\d{1,3}(?:[,\s.'·]\d{3})+|\d{4,6})\b/g) ?? []
   for (const chunk of plainNumbers) {
     const n = parseInt(chunk.replace(/[^\d]/g, ''), 10)
-    if (n >= 500 && n <= 100_000 && !isYearLike(n)) candidates.push(n)
+    const weight = isRoundStepGoal(n) ? 25 : 55
+    pushStepCandidate(candidates, chunk, weight, excludeCodeDigits)
   }
 
-  // 줄 단위 큰 숫자 (Apple 건강·삼성헬스 큰 표시)
   for (const line of text.split('\n')) {
     const trimmed = line.trim()
     if (!/^\d[\d,.\s]{2,}$/.test(trimmed)) continue
     const n = parseInt(trimmed.replace(/[^\d]/g, ''), 10)
-    if (n >= 500 && n <= 100_000 && !isYearLike(n)) candidates.push(n)
+    const weight = isRoundStepGoal(n) ? 35 : 80
+    pushStepCandidate(candidates, String(n), weight, excludeCodeDigits)
   }
 
-  const filtered = candidates.filter((n) => {
-    if (excludeCodeDigits && String(n) === excludeCodeDigits) return false
-    return true
-  })
-
-  if (filtered.length === 0) return null
-
-  // 걸음수는 보통 화면에서 가장 큰 숫자
-  const sorted = [...new Set(filtered)].sort((a, b) => b - a)
-  return sorted[0] ?? null
+  return pickBestStepCount(candidates)
 }
 
 function extractDate(text: string): string | null {

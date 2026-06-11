@@ -1,7 +1,8 @@
 import { PAYMENT_REQUEST_EXPIRY_DAYS } from '../constants/pricing'
 import { supabase } from '../lib/supabase'
 import type { Member, PaymentHistory, PaymentRequest } from '../types/database'
-import { createMemberPayment } from './payments'
+import { createMemberPayment, syncMemberPaymentTotal } from './payments'
+import { redeemMilesForPayment } from './rewards'
 import { todayDateString } from './members'
 
 export type PaymentRequestWithMember = PaymentRequest & {
@@ -145,7 +146,7 @@ export async function createPaymentRequest(input: {
 }
 
 export async function cancelPaymentRequest(requestId: string): Promise<void> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('payment_requests')
     .update({
       status: 'cancelled',
@@ -153,13 +154,19 @@ export async function cancelPaymentRequest(requestId: string): Promise<void> {
     })
     .eq('id', requestId)
     .eq('status', 'pending')
+    .select('id')
+    .maybeSingle()
 
   if (error) throw error
+  if (!data) {
+    throw new Error('취소할 결제 요청이 없거나 이미 처리되었습니다.')
+  }
 }
 
 /** 센터 방문·계좌이체 등 오프라인 결제 완료 처리 */
 export async function completePaymentRequestManually(
   requestId: string,
+  options?: { milesToUse?: number },
 ): Promise<PaymentHistory> {
   const { data: request, error } = await supabase
     .from('payment_requests')
@@ -173,22 +180,50 @@ export async function completePaymentRequestManually(
     throw new Error('이미 처리된 결제 요청입니다.')
   }
 
-  return fulfillPaymentRequest(request)
+  return fulfillPaymentRequest(request, options?.milesToUse ?? 0)
 }
 
 async function fulfillPaymentRequest(
   request: PaymentRequest,
+  milesToUse = 0,
 ): Promise<PaymentHistory> {
   const noteParts = [request.label]
   if (request.discount_note) noteParts.push(request.discount_note)
   if (request.note) noteParts.push(request.note)
 
+  const contractAmount = Number(request.amount)
   const payment = await createMemberPayment(request.member_id, {
-    amount: Number(request.amount),
+    amount: contractAmount,
     sessions: request.sessions,
     paid_at: todayDateString(),
     note: noteParts.join(' · '),
   })
+
+  let finalPayment = payment
+  if (milesToUse > 0) {
+    const { milesUsed, cashAmount } = await redeemMilesForPayment(
+      request.member_id,
+      contractAmount,
+      milesToUse,
+      payment.id,
+    )
+    if (milesUsed > 0) {
+      const mileNote = `MILE ${milesUsed.toLocaleString()}M 사용 (실수납 ${cashAmount.toLocaleString()}원)`
+      const { data: updated, error: mileUpdateError } = await supabase
+        .from('payment_history')
+        .update({
+          amount: cashAmount,
+          note: [payment.note, mileNote].filter(Boolean).join(' · '),
+        })
+        .eq('id', payment.id)
+        .select()
+        .single()
+
+      if (mileUpdateError) throw mileUpdateError
+      finalPayment = updated
+      await syncMemberPaymentTotal(request.member_id)
+    }
+  }
 
   await supabase
     .from('payment_history')
@@ -209,7 +244,7 @@ async function fulfillPaymentRequest(
     .eq('id', request.id)
 
   if (updateError) throw updateError
-  return payment
+  return finalPayment
 }
 
 export function formatDiscountSummary(request: PaymentRequest): string | null {

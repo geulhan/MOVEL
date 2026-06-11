@@ -18,6 +18,7 @@ import {
 import { getRemainingSessionsClass } from '../../utils/sessions'
 import { useMemberDetail } from './MemberDetailContext'
 import { PaymentFormModal } from './PaymentFormModal'
+import { MemberPendingPaymentRequest } from './MemberPendingPaymentRequest'
 import { PaymentRequestModal } from './PaymentRequestModal'
 import { PtUsageBar } from './ui'
 
@@ -41,6 +42,7 @@ export function MemberPtPaymentTab() {
   const [editRemaining, setEditRemaining] = useState('')
   const [savingRemaining, setSavingRemaining] = useState(false)
   const [recalculatingExpiry, setRecalculatingExpiry] = useState(false)
+  const [requestRefresh, setRequestRefresh] = useState(0)
 
   if (!member) return null
 
@@ -214,6 +216,13 @@ export function MemberPtPaymentTab() {
         </div>
       </section>
 
+      <MemberPendingPaymentRequest
+        memberId={memberId}
+        refreshToken={requestRefresh}
+        onError={setError}
+        onChanged={() => setRequestRefresh((value) => value + 1)}
+      />
+
       <section className={`${cardClass} overflow-hidden`}>
         <div className="card-header flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -353,7 +362,10 @@ export function MemberPtPaymentTab() {
         memberName={member.name}
         open={showRequestModal}
         onClose={() => setShowRequestModal(false)}
-        onSuccess={reload}
+        onSuccess={async () => {
+          setRequestRefresh((value) => value + 1)
+          await reload()
+        }}
         onError={setError}
       />
     </div>

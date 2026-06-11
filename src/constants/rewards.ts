@@ -50,6 +50,17 @@ export const DEFAULT_REWARD_RULES = {
 export const MILE_EXPIRY_MONTHS = 12
 export const REDEMPTION_MAX_PERCENT = 20
 export const STEP_THRESHOLDS = [7000, 10000, 15000] as const
+
+/** 건강앱 목표 걸음수로 자주 나오는 값 — OCR 오인 방지 */
+export const COMMON_STEP_GOALS = [
+  3000, 4000, 5000, 6000, 8000, 10000, 12000, 15000, 20000,
+] as const
+
+export const STEP_REWARD_TIERS = [
+  { key: 'steps_7000' as const, min: 7000 },
+  { key: 'steps_10000' as const, min: 10000 },
+  { key: 'steps_15000' as const, min: 15000 },
+]
 export const STREAK_DAYS = 7
 
 export type RewardEventType =

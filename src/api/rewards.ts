@@ -3,6 +3,8 @@ import {
   getTierFromScore,
   MILE_EXPIRY_MONTHS,
   REDEMPTION_MAX_PERCENT,
+  REWARD_EVENT_LABELS,
+  STEP_REWARD_TIERS,
   STREAK_DAYS,
   type RewardEventType,
   type RewardTier,
@@ -38,19 +40,63 @@ export type RewardTransaction = {
 }
 
 type EarnRule = { score: number; mile: number }
-
 type EarnRules = typeof DEFAULT_REWARD_RULES
 
+export type StepRewardTierAward = {
+  eventType: RewardEventType
+  label: string
+  minSteps: number
+  score: number
+  mile: number
+}
+
+export type StepRewardResult = {
+  stepCount: number
+  awards: StepRewardTierAward[]
+  totalScore: number
+  totalMile: number
+}
+
+export function computeStepTierAwards(
+  stepCount: number,
+  rules: EarnRules = DEFAULT_REWARD_RULES,
+): StepRewardTierAward[] {
+  return STEP_REWARD_TIERS.filter((tier) => stepCount >= tier.min).map(
+    (tier) => {
+      const rule = rules[tier.key] as EarnRule
+      return {
+        eventType: tier.key,
+        label: REWARD_EVENT_LABELS[tier.key],
+        minSteps: tier.min,
+        score: rule.score,
+        mile: rule.mile,
+      }
+    },
+  )
+}
+
+export function formatStepRewardSummary(result: StepRewardResult): string {
+  const parts = result.awards.map(
+    (award) =>
+      `${award.label} SCORE +${award.score} · MILE +${award.mile.toLocaleString()}M`,
+  )
+  const detail = parts.length > 0 ? parts.join(' / ') : '적립 구간 없음'
+  return `${result.stepCount.toLocaleString()}보 인증 · 합계 SCORE +${result.totalScore} · MILE +${result.totalMile.toLocaleString()}M (${detail})`
+}
+
 async function fetchEarnRules(): Promise<EarnRules> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('reward_settings')
     .select('setting_value')
     .is('branch_id', null)
     .eq('setting_key', 'earn_rules')
-    .maybeSingle()
+    .order('updated_at', { ascending: false })
+    .limit(1)
 
-  if (!data?.setting_value) return DEFAULT_REWARD_RULES
-  return { ...DEFAULT_REWARD_RULES, ...(data.setting_value as Partial<EarnRules>) }
+  if (error) throw error
+  const row = data?.[0]
+  if (!row?.setting_value) return DEFAULT_REWARD_RULES
+  return { ...DEFAULT_REWARD_RULES, ...(row.setting_value as Partial<EarnRules>) }
 }
 
 async function ensureBalance(memberId: string): Promise<{
@@ -478,7 +524,7 @@ export async function awardStepRewardsFromVerification(
   stepCount: number,
   date: string,
   verificationId: string,
-): Promise<void> {
+): Promise<StepRewardResult> {
   if (stepCount < 0) throw new Error('걸음 수가 올바르지 않습니다.')
 
   await upsertDailyActivity(memberId, date, {
@@ -487,26 +533,26 @@ export async function awardStepRewardsFromVerification(
   })
 
   const rules = await fetchEarnRules()
-  const thresholds: {
-    key: 'steps_7000' | 'steps_10000' | 'steps_15000'
-    min: number
-  }[] = [
-    { key: 'steps_7000', min: 7000 },
-    { key: 'steps_10000', min: 10000 },
-    { key: 'steps_15000', min: 15000 },
-  ]
+  const planned = computeStepTierAwards(stepCount, rules)
+  const awards: StepRewardTierAward[] = []
 
-  for (const { key, min } of thresholds) {
-    if (stepCount < min) continue
-    const eventKey = `${key}:${memberId}:${date}`
-    const rule = rules[key] as EarnRule
+  for (const tier of planned) {
+    const eventKey = `${tier.eventType}:${memberId}:${date}`
     try {
-      await awardPair(memberId, key, eventKey, rule.score, rule.mile, {
-        reference_type: 'step_verifications',
-        reference_id: verificationId,
-        note: `걸음 OCR 인증 ${min.toLocaleString()}보`,
-        created_by: 'ocr_auto',
-      })
+      await awardPair(
+        memberId,
+        tier.eventType,
+        eventKey,
+        tier.score,
+        tier.mile,
+        {
+          reference_type: 'step_verifications',
+          reference_id: verificationId,
+          note: `걸음 OCR 인증 ${tier.minSteps.toLocaleString()}보`,
+          created_by: 'ocr_auto',
+        },
+      )
+      awards.push(tier)
     } catch (err) {
       if (err instanceof Error && err.message === 'ALREADY_AWARDED') continue
       throw err
@@ -514,6 +560,11 @@ export async function awardStepRewardsFromVerification(
   }
 
   await checkStreakReward(memberId)
+
+  const totalScore = awards.reduce((sum, row) => sum + row.score, 0)
+  const totalMile = awards.reduce((sum, row) => sum + row.mile, 0)
+
+  return { stepCount, awards, totalScore, totalMile }
 }
 
 function isQualifyingDay(activity: DailyActivity): boolean {

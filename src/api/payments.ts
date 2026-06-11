@@ -136,7 +136,7 @@ async function applySessionsDeltaToMember(
   if (error) throw error
 }
 
-async function syncMemberPaymentTotal(memberId: string): Promise<void> {
+export async function syncMemberPaymentTotal(memberId: string): Promise<void> {
   const { data, error } = await supabase
     .from('payment_history')
     .select('amount')

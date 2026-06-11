@@ -94,6 +94,15 @@ export async function savePtPricing(config: PtPricingConfig): Promise<void> {
       .update(payload)
       .eq('id', primary.id)
     if (error) throw error
+
+    const duplicateIds = (existingRows ?? []).slice(1).map((row) => row.id)
+    if (duplicateIds.length > 0) {
+      const { error: deleteError } = await supabase
+        .from('reward_settings')
+        .delete()
+        .in('id', duplicateIds)
+      if (deleteError) throw deleteError
+    }
     return
   }
 

@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
+  computeStepTierAwards,
   fetchRewardBalance,
   fetchRewardTransactions,
   type RewardBalance,
   type RewardTransaction,
+  type StepRewardResult,
 } from '../api/rewards'
 import {
   fetchMemberStepVerifications,
@@ -92,6 +94,8 @@ export function MemberRewardsSection({ memberId, refreshToken }: Props) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
+  const [lastRewardResult, setLastRewardResult] =
+    useState<StepRewardResult | null>(null)
   const [historyTab, setHistoryTab] = useState<HistoryTab>('earn')
   const [uploading, setUploading] = useState(false)
   const [ocrProgress, setOcrProgress] = useState<number | null>(null)
@@ -150,6 +154,10 @@ export function MemberRewardsSection({ memberId, refreshToken }: Props) {
   }, [])
 
   const alreadyApprovedToday = todayVerification?.status === 'approved'
+  const todayStepAwards =
+    alreadyApprovedToday && todayVerification?.extracted_step_count != null
+      ? computeStepTierAwards(todayVerification.extracted_step_count)
+      : []
 
   async function handleTogglePip() {
     if (pipActive) {
@@ -212,6 +220,7 @@ export function MemberRewardsSection({ memberId, refreshToken }: Props) {
     setOcrProgress(0)
     setError(null)
     setSuccessMsg(null)
+    setLastRewardResult(null)
 
     try {
       const result = await submitStepVerification(
@@ -221,6 +230,7 @@ export function MemberRewardsSection({ memberId, refreshToken }: Props) {
         submitOptions,
       )
       setSuccessMsg(result.message)
+      setLastRewardResult(result.rewardResult ?? null)
       if (!result.approved) {
         setError(result.message)
       }
@@ -417,11 +427,25 @@ export function MemberRewardsSection({ memberId, refreshToken }: Props) {
 
         {alreadyApprovedToday ? (
           <div className="mt-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-            오늘 걸음수 인증이 완료되었습니다.
-            {todayVerification?.extracted_step_count != null && (
-              <span className="ml-1 font-bold tabular-nums">
-                ({todayVerification.extracted_step_count.toLocaleString()}보)
-              </span>
+            <p className="font-bold">
+              오늘 걸음수 인증 완료
+              {todayVerification?.extracted_step_count != null && (
+                <span className="ml-1 tabular-nums">
+                  · {todayVerification.extracted_step_count.toLocaleString()}보
+                </span>
+              )}
+            </p>
+            {todayStepAwards.length > 0 && (
+              <ul className="mt-2 space-y-1 text-xs">
+                {todayStepAwards.map((award) => (
+                  <li key={award.eventType} className="flex justify-between gap-3">
+                    <span>{award.label}</span>
+                    <span className="shrink-0 font-semibold tabular-nums">
+                      SCORE +{award.score} · MILE +{award.mile.toLocaleString()}M
+                    </span>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         ) : (
@@ -530,7 +554,29 @@ export function MemberRewardsSection({ memberId, refreshToken }: Props) {
 
       {successMsg && !error && (
         <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-          {successMsg}
+          {lastRewardResult ? (
+            <div className="space-y-2">
+              <p className="font-bold">
+                {lastRewardResult.stepCount.toLocaleString()}보 인증 완료
+              </p>
+              <ul className="space-y-1 text-xs">
+                {lastRewardResult.awards.map((award) => (
+                  <li key={award.eventType} className="flex justify-between gap-3">
+                    <span>{award.label}</span>
+                    <span className="shrink-0 font-semibold tabular-nums">
+                      SCORE +{award.score} · MILE +{award.mile.toLocaleString()}M
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="border-t border-green-200 pt-2 text-xs font-bold tabular-nums">
+                합계 SCORE +{lastRewardResult.totalScore} · MILE +
+                {lastRewardResult.totalMile.toLocaleString()}M
+              </p>
+            </div>
+          ) : (
+            successMsg
+          )}
         </div>
       )}
 

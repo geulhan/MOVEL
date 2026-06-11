@@ -387,6 +387,7 @@ export type Database = {
           paid_at?: string
           amount?: number
           sessions?: number
+          note?: string | null
           source?: PaymentHistorySource
           payment_request_id?: string | null
         }

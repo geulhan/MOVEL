@@ -10,6 +10,7 @@ import {
 } from '../../api/rewards'
 import { fetchMembers } from '../../api/members'
 import { PageHeader } from '../../components/admin/PageHeader'
+import { StepVerificationsPanel } from '../../components/admin/StepVerificationsPanel'
 import {
   REWARD_EVENT_LABELS,
   type RewardEventType,
@@ -19,8 +20,10 @@ import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/them
 import type { Member } from '../../types/database'
 
 type HistoryTab = 'earn' | 'spend'
+type RewardsAdminTab = 'balances' | 'steps'
 
 export default function RewardsPage() {
+  const [adminTab, setAdminTab] = useState<RewardsAdminTab>('balances')
   const [summaries, setSummaries] = useState<MemberRewardSummary[]>([])
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
@@ -131,15 +134,37 @@ export default function RewardsPage() {
     <div className="space-y-6">
       <PageHeader
         title="마일리지 관리"
-        description="회원별 MOVE MILE · SCORE 조회, 수동 적립·차감 (관리자 전용)"
+        description="회원별 MOVE MILE · SCORE 조회, 걸음 인증 확인, 수동 적립·차감"
       />
 
-      {error && (
+      <nav className="chip-scroll -mx-1 px-1">
+        <button
+          type="button"
+          onClick={() => setAdminTab('balances')}
+          className={`chip ${adminTab === 'balances' ? 'chip-active' : 'chip-inactive'}`}
+        >
+          잔액 · 수동 조정
+        </button>
+        <button
+          type="button"
+          onClick={() => setAdminTab('steps')}
+          className={`chip ${adminTab === 'steps' ? 'chip-active' : 'chip-inactive'}`}
+        >
+          걸음 인증
+        </button>
+      </nav>
+
+      {adminTab === 'steps' ? (
+        <StepVerificationsPanel />
+      ) : null}
+
+      {adminTab === 'balances' && error && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           {error}
         </div>
       )}
 
+      {adminTab === 'balances' ? (
       <div className="grid gap-6 lg:grid-cols-5">
         <section className={`${cardClass} overflow-hidden lg:col-span-2`}>
           <div className="card-header">
@@ -346,6 +371,7 @@ export default function RewardsPage() {
           )}
         </section>
       </div>
+      ) : null}
     </div>
   )
 }

@@ -8,6 +8,7 @@ import {
   formatDiscountSummary,
   type PaymentRequestWithMember,
 } from '../../api/paymentRequests'
+import { CompletePaymentModal } from '../../components/admin/CompletePaymentModal'
 import { PtPricingEditor } from '../../components/admin/PtPricingEditor'
 import { PageHeader } from '../../components/admin/PageHeader'
 import { PAYMENT_REQUEST_STATUS_LABELS } from '../../constants/pricing'
@@ -39,6 +40,8 @@ export default function PaymentsPage() {
   const [error, setError] = useState<string | null>(null)
   const [actionId, setActionId] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+  const [completeTarget, setCompleteTarget] =
+    useState<PaymentRequestWithMember | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -65,22 +68,22 @@ export default function PaymentsPage() {
     }
   }, [adminTab, load])
 
-  async function handleComplete(requestId: string) {
-    if (
-      !window.confirm(
-        '오프라인 결제(센터·계좌이체) 완료로 처리할까요?\nPT 횟수가 반영되고 결제 완료 알림이 발송됩니다.',
-      )
-    ) {
-      return
-    }
-    setActionId(requestId)
+  async function handleCompleteConfirm(milesToUse: number) {
+    if (!completeTarget) return
+    setActionId(completeTarget.id)
     setToast(null)
+    setError(null)
     try {
-      await completePaymentRequestManually(requestId)
-      setToast('결제가 완료 처리되었습니다.')
+      await completePaymentRequestManually(completeTarget.id, { milesToUse })
+      setToast(
+        milesToUse > 0
+          ? `결제 완료 (MILE ${milesToUse.toLocaleString()}M 사용)`
+          : '결제가 완료 처리되었습니다.',
+      )
+      setCompleteTarget(null)
       await load()
     } catch (err) {
-      setError(err instanceof Error ? err.message : '완료 처리 실패')
+      throw err
     } finally {
       setActionId(null)
     }
@@ -104,7 +107,7 @@ export default function PaymentsPage() {
     <div className="space-y-6">
       <PageHeader
         title="결제 관리"
-        description="PT 기본 가격 설정과 회원별 결제 요청(할인 포함)을 관리합니다."
+        description="PT 기본 가격, 결제 요청(할인), 오프라인 완료 처리 및 MILE 사용을 관리합니다."
       />
 
       <nav className="chip-scroll -mx-1 px-1">
@@ -245,7 +248,7 @@ export default function PaymentsPage() {
                               <button
                                 type="button"
                                 disabled={busy}
-                                onClick={() => void handleComplete(request.id)}
+                                onClick={() => setCompleteTarget(request)}
                                 className="text-left text-xs font-semibold text-charcoal hover:underline disabled:opacity-50"
                               >
                                 {busy ? '처리 중…' : '결제 완료 처리'}
@@ -272,6 +275,14 @@ export default function PaymentsPage() {
           </div>
         </div>
       )}
+
+      <CompletePaymentModal
+        request={completeTarget}
+        open={completeTarget != null}
+        saving={actionId === completeTarget?.id}
+        onClose={() => setCompleteTarget(null)}
+        onConfirm={handleCompleteConfirm}
+      />
     </div>
   )
 }
