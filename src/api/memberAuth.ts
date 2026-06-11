@@ -174,6 +174,44 @@ export async function loginMember(
   }
 }
 
+export function getDefaultMemberPasswordHint(phone: string): string {
+  const digits = normalizePhone(phone)
+  if (digits.length >= 4) return digits.slice(-4)
+  return '0000'
+}
+
+export async function resetMemberPasswordToDefault(
+  memberId: string,
+): Promise<void> {
+  const { data, error } = await supabase.rpc('reset_member_password_to_default', {
+    p_member_id: memberId,
+  })
+
+  if (error) {
+    const msg = formatSupabaseError(error)
+    if (msg.includes('reset_member_password_to_default')) {
+      throw new Error(
+        '비밀번호 초기화 DB 설정이 필요합니다. Supabase SQL Editor에서 migration_018_admin_reset_member_password.sql을 실행해 주세요.',
+      )
+    }
+    throw new Error(msg)
+  }
+
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error('비밀번호 초기화에 실패했습니다.')
+  }
+
+  const row = data as Record<string, Json | undefined>
+  if (row.ok !== true) {
+    switch (row.error) {
+      case 'not_found':
+        throw new Error('회원을 찾을 수 없습니다.')
+      default:
+        throw new Error('비밀번호 초기화에 실패했습니다.')
+    }
+  }
+}
+
 export async function changeMemberPassword(
   phone: string,
   oldPassword: string,

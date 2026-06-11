@@ -619,6 +619,12 @@ export type Database = {
         }
         Returns: Json
       }
+      reset_member_password_to_default: {
+        Args: {
+          p_member_id: string
+        }
+        Returns: Json
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>

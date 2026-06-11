@@ -1,13 +1,18 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import {
+  getDefaultMemberPasswordHint,
+  resetMemberPasswordToDefault,
+} from '../../api/memberAuth'
+import {
   formatCurrency,
   formatDate,
+  formatPhone,
   isExpired,
 } from '../../api/members'
 import { extendMemberPeriod } from '../../api/period'
 import { SESSION_DAYS_PER_SESSION } from '../../constants/session'
-import { btnPrimary, cardClass, inputClass } from '../../styles/theme'
+import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/theme'
 import { MEMBER_STATUS_LABELS } from '../../types/database'
 import { useMemberDetail } from './MemberDetailContext'
 import { formatDateTime, ProfileField } from './ui'
@@ -26,12 +31,41 @@ export function MemberOverviewTab() {
   const [extendDays, setExtendDays] = useState('7')
   const [extendNote, setExtendNote] = useState('')
   const [extendSaving, setExtendSaving] = useState(false)
+  const [resettingPassword, setResettingPassword] = useState(false)
+  const [passwordResetMessage, setPasswordResetMessage] = useState<string | null>(
+    null,
+  )
 
   if (!member) return null
+
+  const defaultPasswordHint = getDefaultMemberPasswordHint(member.phone)
 
   const expired =
     member.expires_at != null && isExpired(member.expires_at)
   const basePath = `/admin/member/${memberId}`
+
+  async function handlePasswordReset() {
+    const confirmed = window.confirm(
+      `${member!.name}님의 비밀번호를 휴대폰 뒤 4자리(${defaultPasswordHint})로 초기화할까요?\n\n회원에게 새 비밀번호를 안내해 주세요.`,
+    )
+    if (!confirmed) return
+
+    setResettingPassword(true)
+    setPasswordResetMessage(null)
+    setError(null)
+    try {
+      await resetMemberPasswordToDefault(memberId)
+      setPasswordResetMessage(
+        `비밀번호가 ${defaultPasswordHint}(휴대폰 ${formatPhone(member!.phone)} 뒤 4자리)로 초기화되었습니다.`,
+      )
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : '비밀번호 초기화에 실패했습니다.',
+      )
+    } finally {
+      setResettingPassword(false)
+    }
+  }
 
   async function handleExtendSubmit(e: FormEvent) {
     e.preventDefault()
@@ -56,7 +90,22 @@ export function MemberOverviewTab() {
   return (
     <div className="space-y-5">
       <section className={`${cardClass} card-pad`}>
-        <h3 className="text-base font-semibold text-charcoal">기본 정보</h3>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="text-base font-semibold text-charcoal">기본 정보</h3>
+          <button
+            type="button"
+            onClick={() => void handlePasswordReset()}
+            disabled={resettingPassword}
+            className={btnOutline}
+          >
+            {resettingPassword ? '초기화 중…' : '비밀번호 초기화'}
+          </button>
+        </div>
+        {passwordResetMessage && (
+          <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+            {passwordResetMessage}
+          </p>
+        )}
         <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
           <ProfileField
             label="담당 트레이너"
