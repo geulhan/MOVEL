@@ -780,11 +780,15 @@ begin
   )
   returning * into v_member;
 
-  update public.member_credentials
+  insert into public.member_credentials (member_id, password_hash)
+  values (
+    v_member.id,
+    extensions.crypt(p_password, extensions.gen_salt('bf'))
+  )
+  on conflict (member_id) do update
   set
     password_hash = extensions.crypt(p_password, extensions.gen_salt('bf')),
-    updated_at = now()
-  where member_id = v_member.id;
+    updated_at = now();
 
   v_token := encode(extensions.gen_random_bytes(32), 'hex');
 
@@ -851,6 +855,23 @@ $$;
 
 revoke all on function public.reset_member_password_to_default(uuid) from public;
 grant execute on function public.reset_member_password_to_default(uuid) to anon, authenticated;
+
+-- ========== migration_019: 자가가입 비밀번호 수정 + 알림 템플릿 키 ==========
+-- register_member는 migration_017 블록에서 이미 ON CONFLICT 반영됨
+
+alter table public.message_logs
+  drop constraint if exists message_logs_template_key_check;
+
+alter table public.message_logs
+  add constraint message_logs_template_key_check check (
+    template_key in (
+      'welcome',
+      'payment_done',
+      'renewal',
+      'step_verification_result',
+      'pt_reminder'
+    )
+  );
 
 -- 완료 확인용 (회원 수 표시)
 select 'members' as table_name, count(*)::int as row_count from public.members

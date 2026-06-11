@@ -58,6 +58,22 @@ export function notifyPaymentDone(
   void invokeNotification('payment_done', memberId, { paymentId })
 }
 
+/** 만보 인증 승인/반려 결과 알림 (템플릿 승인 후 발송) */
+export function notifyStepVerificationResult(
+  memberId: string,
+  verificationId: string,
+  approved: boolean,
+  reason?: string | null,
+): void {
+  void invokeNotification('step_verification_result', memberId, {
+    metadata: {
+      verification_id: verificationId,
+      approved: approved ? '1' : '0',
+      reason: reason ?? '',
+    },
+  })
+}
+
 export async function fetchMessageLogs(limit = 100): Promise<MessageLog[]> {
   const { data, error } = await supabase
     .from('message_logs')

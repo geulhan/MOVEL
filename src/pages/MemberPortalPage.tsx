@@ -493,6 +493,16 @@ export default function MemberPortalPage() {
 
         {tab === 'home' && (
         <section className={`${cardClass} space-y-4 p-6`}>
+          {member.total_sessions === 0 && (
+            <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+              <p className="font-semibold">PT 이용 전 안내</p>
+              <p className="mt-1 text-sky-800/90">
+                센터에서 결제·등록이 완료되면 PT 출석과 수업 일정을 이용할 수
+                있습니다. MY REWARDS(만보 인증 등)는 지금도 이용 가능합니다.
+              </p>
+            </div>
+          )}
+
           <div className="text-center">
             <p className="text-2xl font-bold text-charcoal">{member.name}</p>
             <p className="text-sm text-muted">{formatPhone(member.phone)}</p>

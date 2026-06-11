@@ -6,6 +6,7 @@ import {
 import { supabase } from '../lib/supabase'
 import { todayDateString } from './members'
 import { MIN_STEPS_FOR_VERIFICATION } from '../constants/rewards'
+import { notifyStepVerificationResult } from './notifications'
 import { awardStepRewardsFromVerification, hasApprovedStepsToday } from './rewards'
 
 export type StepVerificationStatus = 'pending' | 'approved' | 'rejected'
@@ -295,6 +296,13 @@ export async function submitStepVerification(
       ? ` (인식된 코드: ${extractedCode})`
       : ' (캡처에서 MOVEL 코드를 찾지 못했습니다.)'
   }
+
+  notifyStepVerificationResult(
+    memberId,
+    verification.id,
+    approved,
+    approved ? null : reason,
+  )
 
   return {
     verification,

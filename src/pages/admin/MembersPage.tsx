@@ -21,6 +21,7 @@ import {
   filterBySearch,
   isExpiringSoon,
   isRenewalTarget,
+  isUnregisteredMember,
   type RenewalFilter,
 } from '../../utils/renewal'
 
@@ -86,6 +87,7 @@ export default function MembersPage() {
     () => ({
       all: allMembers.length,
       active: allMembers.filter((m) => m.status === 'active').length,
+      unregistered: allMembers.filter(isUnregisteredMember).length,
       renewal: allMembers.filter(isRenewalTarget).length,
       expiring: allMembers.filter((m) =>
         isExpiringSoon(m.expires_at, m.status),

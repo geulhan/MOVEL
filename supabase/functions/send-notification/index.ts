@@ -6,6 +6,8 @@ const TEMPLATE_KEYS = new Set<TemplateKey>([
   'welcome',
   'payment_done',
   'renewal',
+  'step_verification_result',
+  'pt_reminder',
 ])
 
 function isAuthorized(req: Request): boolean {

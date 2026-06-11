@@ -65,6 +65,20 @@ async function hasDuplicate(
     return (count ?? 0) > 0
   }
 
+  if (
+    templateKey === 'step_verification_result' &&
+    metadata.verification_id
+  ) {
+    const { count } = await supabase
+      .from('message_logs')
+      .select('id', { count: 'exact', head: true })
+      .eq('member_id', memberId)
+      .eq('template_key', 'step_verification_result')
+      .eq('metadata->>verification_id', String(metadata.verification_id))
+      .in('status', ['sent', 'skipped'])
+    return (count ?? 0) > 0
+  }
+
   return false
 }
 
@@ -135,6 +149,9 @@ export async function sendMemberNotification(
         amount,
         sessions,
         daysLeft: Number(metadata.days_left ?? 0),
+        approved: metadata.approved === '1' || metadata.approved === 1,
+        reason: String(metadata.reason ?? ''),
+        scheduledAt: String(metadata.scheduled_at ?? ''),
       },
     )
 

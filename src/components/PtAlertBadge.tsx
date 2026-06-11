@@ -24,7 +24,11 @@ type Props = {
 }
 
 export function PtAlertBadge({ member }: Props) {
-  const level = getPtAlertLevel(member.remaining_sessions, member.status)
+  const level = getPtAlertLevel(
+    member.remaining_sessions,
+    member.status,
+    member.total_sessions,
+  )
   if (!level) return null
 
   const { className, label } = styles[level]

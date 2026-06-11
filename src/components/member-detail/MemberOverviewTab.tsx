@@ -14,6 +14,7 @@ import { extendMemberPeriod } from '../../api/period'
 import { SESSION_DAYS_PER_SESSION } from '../../constants/session'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/theme'
 import { MEMBER_STATUS_LABELS } from '../../types/database'
+import { isUnregisteredMember } from '../../utils/renewal'
 import { useMemberDetail } from './MemberDetailContext'
 import { formatDateTime, ProfileField } from './ui'
 
@@ -135,14 +136,33 @@ export function MemberOverviewTab() {
         </dl>
       </section>
 
+      {isUnregisteredMember(member) && (
+        <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+          <p className="font-semibold">미등록 회원 (자가가입)</p>
+          <p className="mt-1">
+            PT·결제 탭에서 첫 결제를 등록해 주세요.
+          </p>
+          <Link
+            to={`${basePath}/pt`}
+            className="mt-2 inline-block text-sm font-semibold text-sky-700 underline"
+          >
+            PT·결제로 이동 →
+          </Link>
+        </div>
+      )}
+
       <section className="grid gap-3 sm:grid-cols-2">
         <Link
           to={`${basePath}/pt`}
-          className={`${cardClass} card-pad block transition hover:border-gold/50`}
+          className={`${cardClass} card-pad block transition hover:border-gold/50 ${
+            isUnregisteredMember(member) ? 'ring-2 ring-sky-300/60' : ''
+          }`}
         >
           <p className="text-sm font-semibold text-charcoal">PT · 결제</p>
           <p className="mt-1 text-xs text-muted">
-            결제 {payments.length}건 · 잔여 {member.remaining_sessions}회
+            {isUnregisteredMember(member)
+              ? '첫 결제·PT 횟수 등록 필요'
+              : `결제 ${payments.length}건 · 잔여 ${member.remaining_sessions}회`}
           </p>
         </Link>
         <Link

@@ -9,6 +9,7 @@ type Props = {
 const filters: { id: RenewalFilter; label: string }[] = [
   { id: 'all', label: '전체' },
   { id: 'active', label: '활성' },
+  { id: 'unregistered', label: '미등록' },
   { id: 'renewal', label: '재등록' },
   { id: 'expiring', label: '만료 임박' },
   { id: 'terminated', label: '종료' },

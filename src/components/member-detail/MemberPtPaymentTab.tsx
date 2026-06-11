@@ -85,8 +85,28 @@ export function MemberPtPaymentTab() {
     }
   }
 
+  const needsFirstPayment = member.total_sessions === 0
+
   return (
     <div className="space-y-5">
+      {needsFirstPayment && (
+        <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-4 sm:px-5">
+          <p className="text-sm font-semibold text-sky-900">
+            자가가입 회원 — 첫 PT 등록이 필요합니다
+          </p>
+          <p className="mt-1 text-sm text-sky-800/90">
+            아래 「결제 등록」에서 결제 금액과 PT 횟수를 입력하세요.
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowPaymentModal(true)}
+            className={`mt-3 ${btnPrimary}`}
+          >
+            첫 결제 등록
+          </button>
+        </div>
+      )}
+
       <section className={`${cardClass} card-pad`}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-base font-semibold text-charcoal">PT 정보</h3>

@@ -5,10 +5,16 @@ import { addDays } from './dates'
 export type RenewalFilter =
   | 'all'
   | 'active'
+  | 'unregistered'
   | 'renewal'
   | 'urgent'
   | 'expiring'
   | 'terminated'
+
+/** 자가가입 등 PT 미등록 회원 (결제·세션 0) */
+export function isUnregisteredMember(member: Member): boolean {
+  return member.status !== 'terminated' && member.total_sessions === 0
+}
 
 export type PtAlertLevel = 'critical' | 'urgent' | 'warning'
 
@@ -24,8 +30,11 @@ const EXPIRING_DAYS = 7
 export function getPtAlertLevel(
   remaining: number,
   status: Member['status'],
+  totalSessions?: number,
 ): PtAlertLevel | null {
-  if (status === 'terminated' || remaining > 5) return null
+  if (status === 'terminated') return null
+  if ((totalSessions ?? remaining) === 0) return null
+  if (remaining > 5) return null
   if (remaining <= 1) return 'critical'
   if (remaining <= 3) return 'urgent'
   return 'warning'
@@ -45,17 +54,25 @@ export function isExpiringSoon(
 
 export function isRenewalTarget(member: Member): boolean {
   return (
-    member.status !== 'terminated' && member.remaining_sessions <= 5
+    member.status !== 'terminated' &&
+    member.total_sessions > 0 &&
+    member.remaining_sessions <= 5
   )
 }
 
 export function computeRenewalStats(members: Member[]): RenewalStats {
   return {
     warningCount: members.filter(
-      (m) => m.status !== 'terminated' && m.remaining_sessions <= 5,
+      (m) =>
+        m.status !== 'terminated' &&
+        m.total_sessions > 0 &&
+        m.remaining_sessions <= 5,
     ).length,
     urgentCount: members.filter(
-      (m) => m.status !== 'terminated' && m.remaining_sessions <= 3,
+      (m) =>
+        m.status !== 'terminated' &&
+        m.total_sessions > 0 &&
+        m.remaining_sessions <= 3,
     ).length,
     expiringCount: members.filter((m) => isExpiringSoon(m.expires_at, m.status))
       .length,
@@ -85,11 +102,16 @@ export function applyRenewalFilter(
   switch (filter) {
     case 'active':
       return members.filter((m) => m.status === 'active')
+    case 'unregistered':
+      return members.filter(isUnregisteredMember)
     case 'renewal':
       return members.filter(isRenewalTarget)
     case 'urgent':
       return members.filter(
-        (m) => m.status !== 'terminated' && m.remaining_sessions <= 3,
+        (m) =>
+          m.status !== 'terminated' &&
+          m.total_sessions > 0 &&
+          m.remaining_sessions <= 3,
       )
     case 'expiring':
       return members.filter((m) => isExpiringSoon(m.expires_at, m.status))

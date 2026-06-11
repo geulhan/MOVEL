@@ -69,7 +69,12 @@ export type PaymentHistory = {
   created_at: string
 }
 
-export type MessageTemplateKey = 'welcome' | 'payment_done' | 'renewal'
+export type MessageTemplateKey =
+  | 'welcome'
+  | 'payment_done'
+  | 'renewal'
+  | 'step_verification_result'
+  | 'pt_reminder'
 
 export type MessageLogStatus = 'pending' | 'sent' | 'failed' | 'skipped'
 
@@ -79,6 +84,8 @@ export const MESSAGE_TEMPLATE_LABELS: Record<MessageTemplateKey, string> = {
   welcome: '신규 가입 환영',
   payment_done: '결제 완료',
   renewal: '갱신 안내',
+  step_verification_result: '만보 인증 결과',
+  pt_reminder: 'PT 예약 리마인더',
 }
 
 export const MESSAGE_STATUS_LABELS: Record<MessageLogStatus, string> = {

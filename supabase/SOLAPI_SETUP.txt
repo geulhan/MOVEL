@@ -1,6 +1,23 @@
 솔라피 + MOVEL 알림 연동 가이드
 ================================
 
+[검수 전에 할 일]
+1) Supabase SQL 실행 (아직 안 했다면 순서대로)
+   - migration_016_notifications.sql
+   - migration_017_member_self_register.sql
+   - migration_018_admin_reset_member_password.sql
+   - migration_019_pre_solapi_fixes.sql
+
+2) Edge Function 배포 + Secrets (MESSAGING_ENABLED=false 로 시작)
+   NOTIFICATION_INTERNAL_SECRET, SITE_URL, SOLAPI_API_KEY/SECRET, SOLAPI_PF_ID, SOLAPI_FROM_NUMBER
+
+3) Vercel: VITE_NOTIFICATION_TRIGGER_KEY = NOTIFICATION_INTERNAL_SECRET 와 동일
+
+4) 관리자 → 알림 발송 에서 skipped 로그 확인 (실발송 없이 연동 테스트)
+
+5) 솔라피 템플릿 심사 대기 중에도 앱 기능은 위 SQL까지 적용하면 사용 가능
+
+
 1) 솔라피 가입
    https://solapi.com
 

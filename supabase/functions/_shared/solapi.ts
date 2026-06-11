@@ -18,6 +18,9 @@ export function getSolapiConfig(): SolapiConfig {
       welcome: Deno.env.get('SOLAPI_TEMPLATE_WELCOME') ?? '',
       payment_done: Deno.env.get('SOLAPI_TEMPLATE_PAYMENT') ?? '',
       renewal: Deno.env.get('SOLAPI_TEMPLATE_RENEWAL') ?? '',
+      step_verification_result:
+        Deno.env.get('SOLAPI_TEMPLATE_STEP_RESULT') ?? '',
+      pt_reminder: Deno.env.get('SOLAPI_TEMPLATE_PT_REMINDER') ?? '',
     },
     enabled: (Deno.env.get('MESSAGING_ENABLED') ?? 'false').toLowerCase() === 'true',
     siteUrl: (Deno.env.get('SITE_URL') ?? 'https://movel.vercel.app').replace(

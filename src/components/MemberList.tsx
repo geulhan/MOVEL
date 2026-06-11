@@ -2,6 +2,7 @@ import { formatCurrency, formatDate, formatPhone, isExpired } from '../api/membe
 import { btnOutline } from '../styles/theme'
 import type { Member, MemberStatus, Trainer } from '../types/database'
 import { MEMBER_STATUS_LABELS } from '../types/database'
+import { isUnregisteredMember } from '../utils/renewal'
 import { PtAlertBadge } from './PtAlertBadge'
 import { SessionCount } from './SessionCount'
 
@@ -64,6 +65,7 @@ export function MemberList({
             </thead>
             <tbody className="divide-y divide-gold/15">
               {members.map((member) => {
+                const unregistered = isUnregisteredMember(member)
                 const noSessions = member.remaining_sessions <= 0
                 const expired =
                   member.expires_at !== null && isExpired(member.expires_at)
@@ -82,7 +84,13 @@ export function MemberList({
                         >
                           {member.name}
                         </button>
-                        <PtAlertBadge member={member} />
+                        {unregistered ? (
+                          <span className="inline-flex shrink-0 rounded-full border border-sky-300/60 bg-sky-100 px-1.5 py-0.5 text-[10px] font-bold whitespace-nowrap text-sky-800">
+                            미등록
+                          </span>
+                        ) : (
+                          <PtAlertBadge member={member} />
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-3.5 whitespace-nowrap text-charcoal/70 tabular-nums">

@@ -1,6 +1,7 @@
--- 회원 페이지 자가 가입 (register_member RPC)
+-- 솔라피 검수 전 수정: 자가가입 비밀번호, 알림 템플릿 키 확장
 -- Supabase SQL Editor에서 실행하세요.
 
+-- 1) register_member: credentials INSERT ON CONFLICT (트리거 없어도 비밀번호 저장)
 create or replace function public.register_member(
   p_name text,
   p_phone text,
@@ -84,5 +85,17 @@ exception
 end;
 $$;
 
-revoke all on function public.register_member(text, text, text) from public;
-grant execute on function public.register_member(text, text, text) to anon, authenticated;
+-- 2) message_logs: 추후 알림톡 템플릿용 키 확장
+alter table public.message_logs
+  drop constraint if exists message_logs_template_key_check;
+
+alter table public.message_logs
+  add constraint message_logs_template_key_check check (
+    template_key in (
+      'welcome',
+      'payment_done',
+      'renewal',
+      'step_verification_result',
+      'pt_reminder'
+    )
+  );
