@@ -38,9 +38,12 @@ export function AdminLayout() {
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold">
             Admin
           </p>
-          <h1 className="mt-1.5 truncate text-base font-bold text-cream">
+          <Link
+            to="/admin"
+            className="mt-1.5 block truncate text-base font-bold text-cream transition hover:text-gold"
+          >
             모벨 퍼포먼스 트레이닝
-          </h1>
+          </Link>
         </div>
         <nav className="flex flex-1 flex-col gap-0.5 p-3">
           {navItems.map((item) => (
@@ -90,9 +93,12 @@ export function AdminLayout() {
         {/* 모바일 헤더 */}
         <header className="border-b border-gold/30 bg-charcoal lg:hidden">
           <div className="flex items-center justify-between gap-3 px-4 py-3">
-            <h1 className="min-w-0 truncate text-sm font-bold text-cream">
+            <Link
+              to="/admin"
+              className="min-w-0 truncate text-sm font-bold text-cream transition hover:text-gold"
+            >
               모벨 퍼포먼스 트레이닝
-            </h1>
+            </Link>
             <div className="flex min-w-0 shrink items-center gap-1.5">
               <MemberPortalLink className="!px-2.5 !py-1.5 !text-[11px]" />
               <button
