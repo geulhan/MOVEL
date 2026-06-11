@@ -156,7 +156,7 @@ export function MemberRewardsSection({ memberId, refreshToken }: Props) {
       setPipActive(ok)
       if (!ok) {
         setError(
-          '이 브라우저/기기에서는 PiP를 지원하지 않습니다. 전체화면 또는 분할 화면을 이용해 주세요.',
+          '코드 창을 열지 못했습니다. 「인증코드 전체화면」을 이용하거나 분할 화면으로 캡처해 주세요.',
         )
       }
     } catch (err) {
@@ -322,7 +322,7 @@ export function MemberRewardsSection({ memberId, refreshToken }: Props) {
         <h4 className="text-sm font-bold text-charcoal">오늘 인증하기</h4>
         <p className="mt-1 text-xs leading-relaxed text-muted">
           건강앱에는 MOVEL 코드가 없습니다.{' '}
-          <strong className="text-charcoal">「코드 PiP 창」</strong> 또는 분할
+          <strong className="text-charcoal">「코드 떠있는 창」</strong> 또는 분할
           화면으로 코드와 건강앱을 한 화면에 담아 스크린샷 후 갤러리에서
           업로드하세요.
         </p>

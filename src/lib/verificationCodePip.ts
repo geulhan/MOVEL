@@ -162,6 +162,8 @@ function openOverlayPiP(code: string, dateLabel: string): boolean {
 export function getVerificationCodePipMode(): VerificationCodePipMode {
   if (typeof window === 'undefined') return 'none'
   if ('documentPictureInPicture' in window) return 'document'
+  // 모바일·태블릿: 네이티브 PiP보다 화면 위 플로팅 창이 안정적
+  if (isTouchDevice()) return 'overlay'
   if (
     typeof HTMLVideoElement !== 'undefined' &&
     document.pictureInPictureEnabled &&
@@ -169,7 +171,6 @@ export function getVerificationCodePipMode(): VerificationCodePipMode {
   ) {
     return 'video'
   }
-  if (isTouchDevice()) return 'overlay'
   return 'none'
 }
 
@@ -196,10 +197,22 @@ export async function openVerificationCodePiP(
   await closeVerificationCodePiP()
 
   if (mode === 'document') {
-    return openDocumentPiP(code, dateLabel)
+    try {
+      const ok = await openDocumentPiP(code, dateLabel)
+      if (ok) return true
+    } catch {
+      /* fallback */
+    }
+    return openOverlayPiP(code, dateLabel)
   }
   if (mode === 'video') {
-    return openVideoPiP(code, dateLabel)
+    try {
+      const ok = await openVideoPiP(code, dateLabel)
+      if (ok) return true
+    } catch {
+      /* fallback */
+    }
+    return openOverlayPiP(code, dateLabel)
   }
   return openOverlayPiP(code, dateLabel)
 }
@@ -310,9 +323,9 @@ export function verificationCodePipHelpText(mode: VerificationCodePipMode): stri
     case 'document':
       return '코드를 작은 창(PiP)으로 띄운 뒤 건강앱 화면과 함께 캡처할 수 있습니다.'
     case 'video':
-      return '코드를 작은 플로팅 창으로 띄울 수 있습니다. (일부 Android에서 지원)'
+      return '코드를 작은 플로팅 창으로 띄울 수 있습니다.'
     case 'overlay':
-      return '아이폰 등에서는 코드를 화면 위 작은 창으로 띄울 수 있습니다. 건강앱으로 이동한 뒤 함께 캡처하세요.'
+      return '「코드 떠있는 창」을 누르면 화면 위에 코드가 떠 있습니다. 건강앱으로 이동한 뒤 함께 캡처하세요.'
     default:
       return '이 브라우저는 PiP를 지원하지 않습니다. 전체화면 또는 분할 화면을 이용해 주세요.'
   }

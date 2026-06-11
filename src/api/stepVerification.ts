@@ -1,4 +1,8 @@
 import { analyzeStepCaptureImage } from '../lib/ocr/stepImageOcr'
+import {
+  normalizeVerificationCode,
+  verificationCodeMatchesCapture,
+} from '../lib/ocr/verificationCodeMatch'
 import { supabase } from '../lib/supabase'
 import { todayDateString } from './members'
 import { awardStepRewardsFromVerification, hasApprovedStepsToday } from './rewards'
@@ -35,10 +39,7 @@ function generateCode(): string {
   return `MOVEL-${num}`
 }
 
-function normalizeCode(code: string): string {
-  const m = code.toUpperCase().replace(/\s/g, '').match(/MOVEL-?(\d{4})/)
-  return m ? `MOVEL-${m[1]}` : code.toUpperCase().trim()
-}
+const normalizeCode = normalizeVerificationCode
 
 /** 오늘 인증코드 조회 (없으면 생성) */
 export async function getTodayVerificationCode(
@@ -165,12 +166,14 @@ export async function submitStepVerification(
   const extractedCode = ocr.extracted_code
     ? normalizeCode(ocr.extracted_code)
     : null
-  const codeMatch =
-    extractedCode !== null &&
-    normalizeCode(extractedCode) === normalizeCode(expectedCode)
+  const codeMatch = verificationCodeMatchesCapture(
+    expectedCode,
+    extractedCode,
+    ocr.rawText,
+  )
 
   const extractedDate = ocr.extracted_date ?? today
-  const dateMatch = extractedDate === today
+  const dateMatch = extractedDate === today || ocr.extracted_date == null
 
   const stepExtracted =
     ocr.extracted_step_count !== null && ocr.extracted_step_count > 0
@@ -226,12 +229,20 @@ export async function submitStepVerification(
     )
   }
 
+  let message = approved
+    ? `${ocr.extracted_step_count!.toLocaleString()}보 인증 완료 · 리워드가 적립되었습니다.`
+    : reason ?? '인증이 반려되었습니다.'
+
+  if (!approved && !codeMatch) {
+    message += extractedCode
+      ? ` (인식된 코드: ${extractedCode})`
+      : ' (캡처에서 MOVEL 코드를 찾지 못했습니다. 코드 글자가 선명하게 보이게 다시 캡처해 주세요.)'
+  }
+
   return {
     verification,
     approved,
-    message: approved
-      ? `${ocr.extracted_step_count!.toLocaleString()}보 인증 완료 · 리워드가 적립되었습니다.`
-      : reason ?? '인증이 반려되었습니다.',
+    message,
   }
 }
 
