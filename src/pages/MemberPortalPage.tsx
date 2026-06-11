@@ -21,6 +21,7 @@ import {
 import { SiteUrlCopy } from '../components/SiteUrlCopy'
 import { MemberMyPageSection } from '../components/MemberMyPageSection'
 import { getMemberPortalUrl } from '../lib/siteUrl'
+import { closeVerificationCodePiP } from '../lib/verificationCodePip'
 import { MemberLayout } from '../components/layouts/MemberLayout'
 import { btnGold, btnPrimary, cardClass, inputClass } from '../styles/theme'
 import type { Member } from '../types/database'
@@ -125,6 +126,7 @@ export default function MemberPortalPage() {
   }
 
   function handleLogout() {
+    void closeVerificationCodePiP()
     clearMemberSession()
     setMember(null)
     setLoginPhone('')

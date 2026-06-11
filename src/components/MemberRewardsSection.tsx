@@ -22,7 +22,9 @@ import { formatDate, todayDateString } from '../api/members'
 import { formatSupabaseError } from '../lib/errors'
 import {
   closeVerificationCodePiP,
+  getActiveVerificationCodePipMode,
   getVerificationCodePipMode,
+  initVerificationCodePipLifecycle,
   isVerificationCodePipActive,
   openVerificationCodePiP,
   subscribeVerificationCodeOverlayClose,
@@ -124,15 +126,20 @@ export function MemberRewardsSection({ memberId, refreshToken }: Props) {
   }, [load, refreshToken])
 
   useEffect(() => {
+    initVerificationCodePipLifecycle()
+
     function syncPipState() {
       setPipActive(isVerificationCodePipActive())
     }
+
+    syncPipState()
+    document.addEventListener('visibilitychange', syncPipState)
     document.addEventListener('leavepictureinpicture', syncPipState)
     const unsubscribeOverlay = subscribeVerificationCodeOverlayClose(syncPipState)
     return () => {
+      document.removeEventListener('visibilitychange', syncPipState)
       document.removeEventListener('leavepictureinpicture', syncPipState)
       unsubscribeOverlay()
-      void closeVerificationCodePiP()
     }
   }, [])
 
@@ -369,7 +376,10 @@ export function MemberRewardsSection({ memberId, refreshToken }: Props) {
             >
               {pipLoading
                 ? '창 여는 중…'
-                : verificationCodePipButtonLabel(pipMode, pipActive)}
+                : verificationCodePipButtonLabel(
+                    pipActive ? getActiveVerificationCodePipMode() : pipMode,
+                    pipActive,
+                  )}
             </button>
             <button
               type="button"

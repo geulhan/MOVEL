@@ -2,17 +2,71 @@
 export type VerificationCodePipMode = 'document' | 'video' | 'overlay' | 'none'
 
 const OVERLAY_CLOSE_EVENT = 'mobel-verification-overlay-close'
+const OVERLAY_STORAGE_KEY = 'mobel_overlay_pip'
+
+type OverlayState = {
+  code: string
+  dateLabel: string
+  top?: number
+  left?: number
+}
 
 let pipVideo: HTMLVideoElement | null = null
 let pipCanvas: HTMLCanvasElement | null = null
 let pipDrawTimer: ReturnType<typeof setInterval> | null = null
 let overlayEl: HTMLDivElement | null = null
+let activePipKind: VerificationCodePipMode | null = null
+let lifecycleBound = false
 
 function isTouchDevice(): boolean {
   return (
     typeof window !== 'undefined' &&
     ('ontouchstart' in window || navigator.maxTouchPoints > 0)
   )
+}
+
+function isIOS(): boolean {
+  if (typeof navigator === 'undefined') return false
+  return (
+    /iPad|iPhone|iPod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  )
+}
+
+function isAndroid(): boolean {
+  return /Android/i.test(navigator.userAgent)
+}
+
+function supportsVideoPiP(): boolean {
+  return (
+    typeof HTMLVideoElement !== 'undefined' &&
+    document.pictureInPictureEnabled &&
+    typeof HTMLCanvasElement.prototype.captureStream === 'function'
+  )
+}
+
+function persistOverlayState(state: OverlayState | null): void {
+  try {
+    if (state) {
+      sessionStorage.setItem(OVERLAY_STORAGE_KEY, JSON.stringify(state))
+    } else {
+      sessionStorage.removeItem(OVERLAY_STORAGE_KEY)
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+function readOverlayState(): OverlayState | null {
+  try {
+    const raw = sessionStorage.getItem(OVERLAY_STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as OverlayState
+    if (!parsed.code || !parsed.dateLabel) return null
+    return parsed
+  } catch {
+    return null
+  }
 }
 
 function drawCodeOnCanvas(
@@ -51,13 +105,31 @@ function cleanupVideoPiP(): void {
     pipVideo = null
   }
   pipCanvas = null
+  if (activePipKind === 'video') activePipKind = null
 }
 
-function cleanupOverlayPiP(): void {
+function cleanupOverlayPiP(notify = true): void {
+  if (overlayEl) {
+    overlayEl.remove()
+    overlayEl = null
+  }
+  persistOverlayState(null)
+  if (activePipKind === 'overlay') activePipKind = null
+  if (notify) {
+    document.dispatchEvent(new CustomEvent(OVERLAY_CLOSE_EVENT))
+  }
+}
+
+function saveOverlayPosition(): void {
   if (!overlayEl) return
-  overlayEl.remove()
-  overlayEl = null
-  document.dispatchEvent(new CustomEvent(OVERLAY_CLOSE_EVENT))
+  const state = readOverlayState()
+  if (!state) return
+  const rect = overlayEl.getBoundingClientRect()
+  persistOverlayState({
+    ...state,
+    top: Math.round(rect.top),
+    left: Math.round(rect.left),
+  })
 }
 
 function attachOverlayDrag(el: HTMLElement, handle: HTMLElement): void {
@@ -100,6 +172,7 @@ function attachOverlayDrag(el: HTMLElement, handle: HTMLElement): void {
     if (!dragging) return
     dragging = false
     handle.releasePointerCapture(e.pointerId)
+    saveOverlayPosition()
   }
 
   handle.addEventListener('pointerdown', onPointerDown)
@@ -108,8 +181,15 @@ function attachOverlayDrag(el: HTMLElement, handle: HTMLElement): void {
   handle.addEventListener('pointercancel', onPointerUp)
 }
 
-function openOverlayPiP(code: string, dateLabel: string): boolean {
-  cleanupOverlayPiP()
+function mountOverlayElement(
+  code: string,
+  dateLabel: string,
+  position?: Pick<OverlayState, 'top' | 'left'>,
+): boolean {
+  if (overlayEl) {
+    overlayEl.remove()
+    overlayEl = null
+  }
 
   overlayEl = document.createElement('div')
   overlayEl.id = 'mobel-verification-code-overlay'
@@ -119,7 +199,7 @@ function openOverlayPiP(code: string, dateLabel: string): boolean {
     'position:fixed',
     'top:72px',
     'right:12px',
-    'z-index:99999',
+    'z-index:2147483646',
     'width:min(168px, calc(100vw - 24px))',
     'border-radius:14px',
     'background:#1c1c1c',
@@ -129,7 +209,14 @@ function openOverlayPiP(code: string, dateLabel: string): boolean {
     'font-family:Pretendard,"Apple SD Gothic Neo",sans-serif',
     'touch-action:none',
     'user-select:none',
+    '-webkit-transform:translateZ(0)',
   ].join(';')
+
+  if (position?.top != null && position.left != null) {
+    overlayEl.style.top = `${position.top}px`
+    overlayEl.style.left = `${position.left}px`
+    overlayEl.style.right = 'auto'
+  }
 
   overlayEl.innerHTML = `
     <div data-drag-handle style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:rgba(200,184,130,0.12);cursor:grab;">
@@ -139,7 +226,7 @@ function openOverlayPiP(code: string, dateLabel: string): boolean {
     <div style="padding:12px 10px 14px;text-align:center;color:#f5f0e8;">
       <div style="font-size:24px;font-weight:700;letter-spacing:0.1em;color:#c8b882;">${code}</div>
       <div style="margin-top:8px;font-size:11px;color:rgba(245,240,232,0.7);">${dateLabel}</div>
-      <div style="margin-top:10px;font-size:10px;line-height:1.45;color:rgba(245,240,232,0.45);">건강앱으로 이동한 뒤<br/>함께 캡처하세요</div>
+      <div style="margin-top:10px;font-size:10px;line-height:1.45;color:rgba(245,240,232,0.45);">건강앱과 함께<br/>캡처하세요</div>
     </div>
   `
 
@@ -156,28 +243,70 @@ function openOverlayPiP(code: string, dateLabel: string): boolean {
 
   attachOverlayDrag(overlayEl, handle)
   document.body.appendChild(overlayEl)
+  activePipKind = 'overlay'
   return true
+}
+
+function openOverlayPiP(
+  code: string,
+  dateLabel: string,
+  position?: Pick<OverlayState, 'top' | 'left'>,
+): boolean {
+  persistOverlayState({ code, dateLabel, ...position })
+  return mountOverlayElement(code, dateLabel, position)
+}
+
+function restoreOverlayIfNeeded(): void {
+  if (
+    document.pictureInPictureElement != null ||
+    window.documentPictureInPicture?.window
+  ) {
+    return
+  }
+
+  const state = readOverlayState()
+  if (!state) return
+
+  if (overlayEl && document.body.contains(overlayEl)) return
+
+  mountOverlayElement(state.code, state.dateLabel, state)
+}
+
+function bindOverlayLifecycle(): void {
+  if (lifecycleBound || typeof document === 'undefined') return
+  lifecycleBound = true
+
+  const tryRestore = () => {
+    if (document.visibilityState === 'visible') {
+      restoreOverlayIfNeeded()
+    }
+  }
+
+  document.addEventListener('visibilitychange', tryRestore)
+  window.addEventListener('pageshow', tryRestore)
+  window.addEventListener('focus', tryRestore)
 }
 
 export function getVerificationCodePipMode(): VerificationCodePipMode {
   if (typeof window === 'undefined') return 'none'
   if ('documentPictureInPicture' in window) return 'document'
-  // 모바일·태블릿: 네이티브 PiP보다 화면 위 플로팅 창이 안정적
-  if (isTouchDevice()) return 'overlay'
-  if (
-    typeof HTMLVideoElement !== 'undefined' &&
-    document.pictureInPictureEnabled &&
-    typeof HTMLCanvasElement.prototype.captureStream === 'function'
-  ) {
-    return 'video'
-  }
+  // Android: 네이티브 PiP는 다른 앱 위에도 유지됨
+  if (isAndroid() && supportsVideoPiP()) return 'video'
+  if (isIOS() || (isTouchDevice() && !supportsVideoPiP())) return 'overlay'
+  if (supportsVideoPiP()) return 'video'
   return 'none'
+}
+
+export function getActiveVerificationCodePipMode(): VerificationCodePipMode {
+  if (activePipKind) return activePipKind
+  return getVerificationCodePipMode()
 }
 
 export function isVerificationCodePipActive(): boolean {
   if (window.documentPictureInPicture?.window) return true
   if (document.pictureInPictureElement != null) return true
-  return overlayEl != null
+  if (overlayEl && document.body.contains(overlayEl)) return true
+  return readOverlayState() != null
 }
 
 export function subscribeVerificationCodeOverlayClose(
@@ -187,6 +316,11 @@ export function subscribeVerificationCodeOverlayClose(
   return () => document.removeEventListener(OVERLAY_CLOSE_EVENT, listener)
 }
 
+export function initVerificationCodePipLifecycle(): void {
+  bindOverlayLifecycle()
+  restoreOverlayIfNeeded()
+}
+
 export async function openVerificationCodePiP(
   code: string,
   dateLabel: string,
@@ -194,6 +328,7 @@ export async function openVerificationCodePiP(
   const mode = getVerificationCodePipMode()
   if (mode === 'none') return false
 
+  bindOverlayLifecycle()
   await closeVerificationCodePiP()
 
   if (mode === 'document') {
@@ -205,6 +340,7 @@ export async function openVerificationCodePiP(
     }
     return openOverlayPiP(code, dateLabel)
   }
+
   if (mode === 'video') {
     try {
       const ok = await openVideoPiP(code, dateLabel)
@@ -214,6 +350,7 @@ export async function openVerificationCodePiP(
     }
     return openOverlayPiP(code, dateLabel)
   }
+
   return openOverlayPiP(code, dateLabel)
 }
 
@@ -241,6 +378,7 @@ async function openDocumentPiP(
     </div>
   `
 
+  activePipKind = 'document'
   return true
 }
 
@@ -277,6 +415,7 @@ async function openVideoPiP(
   }
 
   await pipVideo.requestPictureInPicture()
+  activePipKind = 'video'
 
   pipDrawTimer = setInterval(() => {
     if (!pipCanvas) return
@@ -284,9 +423,14 @@ async function openVideoPiP(
     if (c) drawCodeOnCanvas(c, width, height, code, dateLabel)
   }, 1000)
 
-  pipVideo.addEventListener('leavepictureinpicture', cleanupVideoPiP, {
-    once: true,
-  })
+  pipVideo.addEventListener(
+    'leavepictureinpicture',
+    () => {
+      cleanupVideoPiP()
+      document.dispatchEvent(new CustomEvent(OVERLAY_CLOSE_EVENT))
+    },
+    { once: true },
+  )
 
   return true
 }
@@ -306,16 +450,18 @@ export async function closeVerificationCodePiP(): Promise<void> {
 
   cleanupVideoPiP()
   cleanupOverlayPiP()
+  activePipKind = null
 }
 
 export function verificationCodePipButtonLabel(
   mode: VerificationCodePipMode,
   active: boolean,
 ): string {
+  const kind = active ? getActiveVerificationCodePipMode() : mode
   if (active) {
-    return mode === 'overlay' ? '떠있는 창 닫기' : 'PiP 창 닫기'
+    return kind === 'overlay' ? '떠있는 창 닫기' : 'PiP 창 닫기'
   }
-  return mode === 'overlay' ? '코드 떠있는 창' : '코드 PiP 창'
+  return kind === 'overlay' ? '코드 떠있는 창' : '코드 PiP 창'
 }
 
 export function verificationCodePipHelpText(mode: VerificationCodePipMode): string {
@@ -323,9 +469,11 @@ export function verificationCodePipHelpText(mode: VerificationCodePipMode): stri
     case 'document':
       return '코드를 작은 창(PiP)으로 띄운 뒤 건강앱 화면과 함께 캡처할 수 있습니다.'
     case 'video':
-      return '코드를 작은 플로팅 창으로 띄울 수 있습니다.'
+      return '「코드 PiP 창」을 누르면 다른 앱(건강앱)으로 이동해도 코드 창이 화면에 남습니다.'
     case 'overlay':
-      return '「코드 떠있는 창」을 누르면 화면 위에 코드가 떠 있습니다. 건강앱으로 이동한 뒤 함께 캡처하세요.'
+      return isIOS()
+        ? '분할 화면으로 모벨과 건강앱을 함께 띄운 뒤 캡처하세요. 다른 앱으로 나갔다 돌아오면 창이 자동 복원됩니다.'
+        : '「코드 떠있는 창」을 띄운 뒤 건강앱과 함께 보이게 캡처하세요. 화면 복귀 시 창이 다시 나타납니다.'
     default:
       return '이 브라우저는 PiP를 지원하지 않습니다. 전체화면 또는 분할 화면을 이용해 주세요.'
   }
