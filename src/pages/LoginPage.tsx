@@ -1,9 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { loginAdmin } from '../api/adminAuth'
 import { formatSupabaseError } from '../lib/errors'
 import { isAdminAuthenticated } from '../lib/adminSession'
+import {
+  clearRememberedAdminLogin,
+  loadRememberedAdminLogin,
+  saveRememberedAdminLogin,
+} from '../lib/rememberLogin'
 import { btnPrimary, cardClass, inputClass } from '../styles/theme'
 
 type LoginLocationState = {
@@ -18,8 +23,17 @@ export default function LoginPage() {
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [rememberLogin, setRememberLogin] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const saved = loadRememberedAdminLogin()
+    if (!saved) return
+    setUsername(saved.loginId)
+    setPassword(saved.password)
+    setRememberLogin(true)
+  }, [])
 
   if (isAdminAuthenticated()) {
     return <Navigate to={redirectTo} replace />
@@ -37,6 +51,11 @@ export default function LoginPage() {
     setLoading(true)
     try {
       await loginAdmin(username, password)
+      if (rememberLogin) {
+        saveRememberedAdminLogin(username, password)
+      } else {
+        clearRememberedAdminLogin()
+      }
       navigate(redirectTo, { replace: true })
     } catch (err) {
       setError(
@@ -90,6 +109,17 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 disabled={loading}
               />
+            </label>
+
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-charcoal/80">
+              <input
+                type="checkbox"
+                checked={rememberLogin}
+                onChange={(e) => setRememberLogin(e.target.checked)}
+                disabled={loading}
+                className="h-4 w-4 rounded border-gold/50 text-charcoal focus:ring-gold/40"
+              />
+              아이디·비밀번호 기억하기
             </label>
 
             <button

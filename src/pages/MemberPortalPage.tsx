@@ -22,6 +22,11 @@ import { SiteUrlCopy } from '../components/SiteUrlCopy'
 import { MemberMyPageSection } from '../components/MemberMyPageSection'
 import { getMemberPortalUrl } from '../lib/siteUrl'
 import { closeVerificationCodePiP } from '../lib/verificationCodePip'
+import {
+  clearRememberedMemberLogin,
+  loadRememberedMemberLogin,
+  saveRememberedMemberLogin,
+} from '../lib/rememberLogin'
 import { MemberLayout } from '../components/layouts/MemberLayout'
 import { btnGold, btnPrimary, cardClass, inputClass } from '../styles/theme'
 import type { Member } from '../types/database'
@@ -40,6 +45,7 @@ export default function MemberPortalPage() {
   const [loginPassword, setLoginPassword] = useState('')
   const [loginError, setLoginError] = useState<string | null>(null)
   const [loginLoading, setLoginLoading] = useState(false)
+  const [rememberLogin, setRememberLogin] = useState(false)
   const [tab, setTab] = useState<Tab>('home')
 
   const [todayAttendance, setTodayAttendance] = useState<AttendanceLog | null>(
@@ -88,6 +94,15 @@ export default function MemberPortalPage() {
   }, [])
 
   useEffect(() => {
+    const saved = loadRememberedMemberLogin()
+    if (saved) {
+      setLoginPhone(saved.loginId)
+      setLoginPassword(saved.password)
+      setRememberLogin(true)
+    }
+  }, [])
+
+  useEffect(() => {
     const id = getMemberSession()
     if (!id) {
       setLoading(false)
@@ -114,7 +129,12 @@ export default function MemberPortalPage() {
       const { memberId } = await loginMember(loginPhone, loginPassword)
       const loggedInMember = await fetchMemberById(memberId)
       setMember(loggedInMember)
-      setLoginPassword('')
+      if (rememberLogin) {
+        saveRememberedMemberLogin(loginPhone, loginPassword)
+      } else {
+        clearRememberedMemberLogin()
+        setLoginPassword('')
+      }
       void loadMemberData(memberId)
     } catch (err) {
       setLoginError(
@@ -129,8 +149,9 @@ export default function MemberPortalPage() {
     void closeVerificationCodePiP()
     clearMemberSession()
     setMember(null)
-    setLoginPhone('')
-    setLoginPassword('')
+    const saved = rememberLogin ? loadRememberedMemberLogin() : null
+    setLoginPhone(saved?.loginId ?? '')
+    setLoginPassword(saved?.password ?? '')
     setTab('home')
   }
 
@@ -217,6 +238,16 @@ export default function MemberPortalPage() {
                 maxLength={32}
                 disabled={loginLoading}
               />
+            </label>
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-charcoal/80">
+              <input
+                type="checkbox"
+                checked={rememberLogin}
+                onChange={(e) => setRememberLogin(e.target.checked)}
+                disabled={loginLoading}
+                className="h-4 w-4 rounded border-gold/50 text-charcoal focus:ring-gold/40"
+              />
+              아이디·비밀번호 기억하기
             </label>
             <button
               type="submit"
