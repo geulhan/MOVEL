@@ -32,7 +32,7 @@ import {
   verificationCodePipButtonLabel,
   verificationCodePipHelpText,
 } from '../lib/verificationCodePip'
-import { isIOS } from '../lib/device'
+import { useClientDevice } from '../hooks/useClientDevice'
 import { VerificationCodeFullscreen } from './VerificationCodeFullscreen'
 import { IosStepVerificationUpload } from './IosStepVerificationUpload'
 import { btnGold, btnOutline, cardClass } from '../styles/theme'
@@ -100,7 +100,9 @@ export function MemberRewardsSection({ memberId, refreshToken }: Props) {
   const [pipActive, setPipActive] = useState(false)
   const [pipLoading, setPipLoading] = useState(false)
   const pipMode = getVerificationCodePipMode()
-  const iosDevice = isIOS()
+  const device = useClientDevice()
+  const showMobileEasyUpload =
+    !device.ready || device.isMobile
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -333,38 +335,40 @@ export function MemberRewardsSection({ memberId, refreshToken }: Props) {
       {/* 오늘 인증하기 */}
       <section className={`${cardClass} p-5 sm:p-6`}>
         <h4 className="text-sm font-bold text-charcoal">오늘 인증하기</h4>
-        {!iosDevice && (
-          <>
-            <p className="mt-1 text-xs leading-relaxed text-muted">
-              건강앱에는 MOVEL 코드가 없습니다.{' '}
-              <strong className="text-charcoal">「코드 PiP 창」</strong> 또는 분할
-              화면으로 코드와 건강앱을 한 화면에 담아 스크린샷 후 갤러리에서
-              업로드하세요.
-            </p>
-            <p className="mt-1 text-[11px] text-amber-800">
-              {verificationCodePipHelpText(pipMode)}
-            </p>
-          </>
+        <p className="mt-1 text-xs leading-relaxed text-muted">
+          건강앱에는 MOVEL 코드가 없습니다.{' '}
+          {pipMode !== 'none' ? (
+            <>
+              <strong className="text-charcoal">「코드 PiP/떠있는 창」</strong>
+              이나{' '}
+            </>
+          ) : null}
+          <strong className="text-charcoal">모바일 간편 인증</strong>으로
+          건강앱 캡처 + 코드를 한 번에 제출할 수 있습니다.
+        </p>
+        {pipMode !== 'none' && (
+          <p className="mt-1 text-[11px] text-amber-800">
+            {verificationCodePipHelpText(pipMode)}
+          </p>
         )}
 
-        {!iosDevice && (
-          <details className="mt-3 rounded-lg border border-gold/25 bg-cream/40 px-3 py-2 text-xs text-charcoal/80">
-            <summary className="cursor-pointer font-bold text-charcoal">
-              캡처 방법 (분할 화면)
-            </summary>
-            <ul className="mt-2 list-inside list-disc space-y-1 leading-relaxed">
-              <li>
-                <strong>갤럭시:</strong> 최근 앱 → 모벨 + 삼성헬스 아이콘 길게
-                눌러「분할 화면 보기」
-              </li>
-              <li>
-                <strong>공통:</strong> 캡처에{' '}
-                <strong>오늘 걸음수 + MOVEL-코드 + 오늘 날짜</strong>가 보여야
-                승인됩니다
-              </li>
-            </ul>
-          </details>
-        )}
+        <details className="mt-3 rounded-lg border border-gold/25 bg-cream/40 px-3 py-2 text-xs text-charcoal/80">
+          <summary className="cursor-pointer font-bold text-charcoal">
+            캡처 방법 더보기
+          </summary>
+          <ul className="mt-2 list-inside list-disc space-y-1 leading-relaxed">
+            <li>
+              <strong>아이폰:</strong> 「모바일 간편 인증」→ 건강앱 스크린샷 1장
+            </li>
+            <li>
+              <strong>갤럭시:</strong> 「코드 PiP 창」또는 분할 화면 캡처
+            </li>
+            <li>
+              <strong>공통:</strong> 인증 기준{' '}
+              <strong>7,000보 이상</strong> · 오늘 날짜
+            </li>
+          </ul>
+        </details>
 
         <div className="mt-4 rounded-xl border-2 border-dashed border-gold/50 bg-charcoal px-4 py-5 text-center">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-gold/80">
@@ -377,11 +381,11 @@ export function MemberRewardsSection({ memberId, refreshToken }: Props) {
             캡처 화면에 이 코드가 보여야 합니다
           </p>
           <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-center">
-            {!iosDevice && (
+            {pipMode !== 'none' && (
               <button
                 type="button"
                 onClick={() => void handleTogglePip()}
-                disabled={!todayCode || pipLoading || pipMode === 'none'}
+                disabled={!todayCode || pipLoading}
                 className={
                   pipActive ? `sm:flex-1 ${btnGold}` : `sm:flex-1 ${btnOutline}`
                 }
@@ -420,55 +424,77 @@ export function MemberRewardsSection({ memberId, refreshToken }: Props) {
               </span>
             )}
           </div>
-        ) : iosDevice ? (
-          <>
-            <IosStepVerificationUpload
-              todayCode={todayCode}
-              dateLabel={formatDate(todayDateString())}
-              uploading={uploading}
-              ocrProgress={ocrProgress}
-              onOpenFullscreen={() => setShowCodeFullscreen(true)}
-              onSubmit={async (file, options) => {
-                await handleImageSelect(file, undefined, options)
-              }}
-            />
-            {todayVerification?.status === 'rejected' && (
-              <p className="mt-2 text-xs text-red-600">
-                최근 반려: {todayVerification.rejection_reason}
-              </p>
-            )}
-          </>
         ) : (
-          <div className="mt-4 space-y-2">
-            <label
-              className={`flex w-full cursor-pointer items-center justify-center rounded-lg px-5 py-3 text-sm font-bold text-charcoal transition ${
-                uploading
-                  ? 'pointer-events-none bg-gold/40 opacity-70'
-                  : `${btnGold} hover:bg-gold-dark`
-              }`}
-            >
-              {uploading
-                ? ocrProgress !== null
-                  ? `OCR 분석 중… ${ocrProgress}%`
-                  : '업로드 중…'
-                : '갤러리에서 사진 선택'}
-              <input
-                type="file"
-                accept={GALLERY_IMAGE_ACCEPT}
-                className="sr-only"
-                disabled={uploading}
-                onChange={(e) =>
-                  void handleImageSelect(
-                    e.target.files?.[0] ?? null,
-                    e.target,
-                  )
-                }
+          <div className="mt-4 space-y-3">
+            {showMobileEasyUpload && (
+              <IosStepVerificationUpload
+                todayCode={todayCode}
+                dateLabel={formatDate(todayDateString())}
+                isApple={device.isIOS}
+                uploading={uploading}
+                ocrProgress={ocrProgress}
+                onOpenFullscreen={() => setShowCodeFullscreen(true)}
+                onSubmit={async (file, options) => {
+                  await handleImageSelect(file, undefined, options)
+                }}
               />
-            </label>
-            <p className="text-center text-[11px] leading-relaxed text-muted">
-              분할 화면 <strong className="text-charcoal">스크린샷</strong>을
-              갤러리에서 선택해 업로드하세요.
-            </p>
+            )}
+
+            {!showMobileEasyUpload && (
+              <label
+                className={`flex w-full cursor-pointer items-center justify-center rounded-lg px-5 py-3 text-sm font-bold text-charcoal transition ${
+                  uploading
+                    ? 'pointer-events-none bg-gold/40 opacity-70'
+                    : `${btnGold} hover:bg-gold-dark`
+                }`}
+              >
+                {uploading
+                  ? ocrProgress !== null
+                    ? `OCR 분석 중… ${ocrProgress}%`
+                    : '업로드 중…'
+                  : '갤러리에서 사진 선택'}
+                <input
+                  type="file"
+                  accept={GALLERY_IMAGE_ACCEPT}
+                  className="sr-only"
+                  disabled={uploading}
+                  onChange={(e) =>
+                    void handleImageSelect(
+                      e.target.files?.[0] ?? null,
+                      e.target,
+                    )
+                  }
+                />
+              </label>
+            )}
+
+            {showMobileEasyUpload && (
+              <details className="rounded-lg border border-gold/25 bg-white px-3 py-2 text-xs">
+                <summary className="cursor-pointer font-bold text-charcoal">
+                  분할 화면 한 장으로 업로드
+                </summary>
+                <label
+                  className={`mt-2 flex w-full cursor-pointer items-center justify-center rounded-lg border border-gold/50 bg-white px-4 py-2.5 text-sm font-bold text-charcoal ${
+                    uploading ? 'pointer-events-none opacity-60' : ''
+                  }`}
+                >
+                  갤러리에서 사진 선택
+                  <input
+                    type="file"
+                    accept={GALLERY_IMAGE_ACCEPT}
+                    className="sr-only"
+                    disabled={uploading}
+                    onChange={(e) =>
+                      void handleImageSelect(
+                        e.target.files?.[0] ?? null,
+                        e.target,
+                      )
+                    }
+                  />
+                </label>
+              </details>
+            )}
+
             {todayVerification?.status === 'rejected' && (
               <p className="text-xs text-red-600">
                 최근 반려: {todayVerification.rejection_reason}

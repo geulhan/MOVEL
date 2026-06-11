@@ -21,10 +21,22 @@ export type StepOcrParseResult = {
   error?: string
 }
 
+export type StepOcrOptions = {
+  /** 합성 이미지에서 건강앱 영역(상단)만 OCR */
+  healthRegionOnly?: boolean
+  /** 코드 자동 합성 시 걸음수 후보에서 제외할 4자리 */
+  excludeCodeDigits?: string
+}
+
+type ParseOptions = {
+  excludeCodeDigits?: string
+}
+
 /** OCR 원문에서 걸음수·날짜·시간·코드 추출 */
 export function parseStepCaptureText(
   rawText: string,
   confidence: number,
+  parseOptions?: ParseOptions,
 ): StepOcrParseResult {
   const text = rawText.replace(/\r/g, '\n')
   const normalized = text.replace(/\s+/g, ' ')
@@ -33,7 +45,10 @@ export function parseStepCaptureText(
   const extracted_code =
     codeCandidates[0] != null ? normalizeVerificationCode(codeCandidates[0]) : null
 
-  const extracted_step_count = extractStepCount(normalized)
+  const extracted_step_count = extractStepCount(
+    normalized,
+    parseOptions?.excludeCodeDigits,
+  )
   const extracted_date = extractDate(text)
   const extracted_time = extractTime(normalized)
 
@@ -52,12 +67,16 @@ export function parseStepCaptureText(
   }
 }
 
-function extractStepCount(text: string): number | null {
+function extractStepCount(
+  text: string,
+  excludeCodeDigits?: string,
+): number | null {
   const labeled = [
-    /(?:걸음|보|steps?)\s*[:：]?\s*([\d,.\s]+)/gi,
+    /(?:걸음|보|steps?|step\s*count)\s*[:：]?\s*([\d,.\s]+)/gi,
     /([\d,]+)\s*(?:걸음|보|steps?)/gi,
     /오늘\s*([\d,]+)/gi,
     /([\d,]+)\s*\/\s*[\d,]+/gi,
+    /(?:이동|활동)\s*[:：]?\s*([\d,]+)/gi,
   ]
 
   const candidates: number[] = []
@@ -71,14 +90,20 @@ function extractStepCount(text: string): number | null {
     }
   }
 
-  const plainNumbers = text.match(/\b([\d]{1,3}(?:[,\s]\d{3})+)\b/g) ?? []
+  const plainNumbers =
+    text.match(/\b(\d{1,3}(?:[,\s]\d{3})+|\d{4,6})\b/g) ?? []
   for (const chunk of plainNumbers) {
     const n = parseInt(chunk.replace(/[^\d]/g, ''), 10)
     if (n >= 1000 && n <= 100000) candidates.push(n)
   }
 
-  if (candidates.length === 0) return null
-  return Math.max(...candidates)
+  const filtered = candidates.filter((n) => {
+    if (excludeCodeDigits && String(n) === excludeCodeDigits) return false
+    return true
+  })
+
+  if (filtered.length === 0) return null
+  return Math.max(...filtered)
 }
 
 function extractDate(text: string): string | null {
@@ -117,15 +142,36 @@ function extractTime(text: string): string | null {
   return null
 }
 
-async function prepareImageForOcr(file: File): Promise<File | Blob> {
+function enhanceContrastForOcr(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+): void {
+  const imageData = ctx.getImageData(0, 0, width, height)
+  const pixels = imageData.data
+  for (let i = 0; i < pixels.length; i += 4) {
+    const gray =
+      0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2]
+    const boosted = gray < 140 ? gray * 0.82 : Math.min(255, gray * 1.18)
+    pixels[i] = pixels[i + 1] = pixels[i + 2] = boosted
+  }
+  ctx.putImageData(imageData, 0, 0)
+}
+
+async function prepareImageForOcr(
+  file: File,
+  options?: { cropTopRatio?: number },
+): Promise<File | Blob> {
   if (typeof createImageBitmap !== 'function') return file
 
   try {
     const bitmap = await createImageBitmap(file)
+    const cropRatio = options?.cropTopRatio ?? 1
     const longest = Math.max(bitmap.width, bitmap.height)
-    const scale = longest < 1800 ? Math.min(2.5, 1800 / longest) : 1
+    const scale = longest < 2000 ? Math.min(3, 2000 / longest) : 1
     const width = Math.round(bitmap.width * scale)
-    const height = Math.round(bitmap.height * scale)
+    const fullHeight = Math.round(bitmap.height * scale)
+    const height = Math.round(fullHeight * cropRatio)
 
     const canvas = document.createElement('canvas')
     canvas.width = width
@@ -133,11 +179,12 @@ async function prepareImageForOcr(file: File): Promise<File | Blob> {
     const ctx = canvas.getContext('2d')
     if (!ctx) return file
 
-    ctx.drawImage(bitmap, 0, 0, width, height)
+    ctx.drawImage(bitmap, 0, 0, bitmap.width, bitmap.height * cropRatio, 0, 0, width, height)
     bitmap.close()
+    enhanceContrastForOcr(ctx, width, height)
 
     const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, 'image/jpeg', 0.92),
+      canvas.toBlob(resolve, 'image/jpeg', 0.94),
     )
     return blob ?? file
   } catch {
@@ -149,10 +196,13 @@ async function prepareImageForOcr(file: File): Promise<File | Blob> {
 export async function analyzeStepCaptureImage(
   file: File,
   onProgress?: (pct: number) => void,
+  options?: StepOcrOptions,
 ): Promise<StepOcrParseResult> {
   try {
-    const prepared = await prepareImageForOcr(file)
-    const { createWorker } = await import('tesseract.js')
+    const prepared = await prepareImageForOcr(file, {
+      cropTopRatio: options?.healthRegionOnly ? 0.72 : undefined,
+    })
+    const { createWorker, PSM } = await import('tesseract.js')
     const worker = await createWorker('kor+eng', undefined, {
       logger: (m) => {
         if (m.status === 'recognizing text' && onProgress) {
@@ -161,12 +211,18 @@ export async function analyzeStepCaptureImage(
       },
     })
 
+    await worker.setParameters({
+      tessedit_pageseg_mode: PSM.AUTO,
+    })
+
     const { data } = await worker.recognize(prepared)
     await worker.terminate()
 
     const confidence = (data.confidence ?? 0) / 100
 
-    return parseStepCaptureText(data.text, confidence)
+    return parseStepCaptureText(data.text, confidence, {
+      excludeCodeDigits: options?.excludeCodeDigits,
+    })
   } catch (err) {
     return {
       success: false,

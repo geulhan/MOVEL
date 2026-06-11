@@ -186,7 +186,11 @@ export async function submitStepVerification(
     .from('step-verifications')
     .getPublicUrl(imagePath)
 
-  const ocr = await analyzeStepCaptureImage(file, onOcrProgress)
+  const codeDigits = expectedCode.match(/(\d{4})$/)?.[1]
+  const ocr = await analyzeStepCaptureImage(file, onOcrProgress, {
+    healthRegionOnly: options?.codeTrusted === true,
+    excludeCodeDigits: options?.codeTrusted ? codeDigits : undefined,
+  })
 
   const extractedCode = ocr.extracted_code
     ? normalizeCode(ocr.extracted_code)

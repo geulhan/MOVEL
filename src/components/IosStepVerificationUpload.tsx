@@ -12,6 +12,7 @@ const GALLERY_IMAGE_ACCEPT =
 type Props = {
   todayCode: string
   dateLabel: string
+  isApple?: boolean
   uploading: boolean
   ocrProgress: number | null
   disabled?: boolean
@@ -27,6 +28,7 @@ type IosMode = 'auto' | 'manual'
 export function IosStepVerificationUpload({
   todayCode,
   dateLabel,
+  isApple = true,
   uploading,
   ocrProgress,
   disabled,
@@ -83,10 +85,12 @@ export function IosStepVerificationUpload({
   return (
     <div className="mt-4 space-y-3 rounded-xl border border-gold/35 bg-cream/50 p-4">
       <div>
-        <p className="text-sm font-bold text-charcoal">아이폰 인증</p>
+        <p className="text-sm font-bold text-charcoal">모바일 간편 인증</p>
         <p className="mt-1 text-xs leading-relaxed text-muted">
-          아이폰은 분할 화면이 안 됩니다. 건강앱 스크린샷만 올리면 MOVEL이
-          코드를 자동으로 붙여 줍니다. 인증은{' '}
+          {isApple
+            ? '아이폰은 분할 화면이 안 됩니다. 건강앱 스크린샷만 올리면'
+            : '분할 화면이 어려우면 건강앱 스크린샷만 올려도'}{' '}
+          MOVEL이 코드를 자동으로 붙여 줍니다. 인증은{' '}
           <strong className="text-charcoal">
             {MIN_STEPS_FOR_VERIFICATION.toLocaleString()}보 이상
           </strong>
@@ -95,7 +99,10 @@ export function IosStepVerificationUpload({
       </div>
 
       <ol className="list-inside list-decimal space-y-1 text-xs leading-relaxed text-charcoal/85">
-        <li>건강(Apple 건강) 앱에서 <strong>오늘 걸음수</strong> 화면 캡처</li>
+        <li>
+          {isApple ? 'Apple 건강' : '삼성헬스·건강앱'}에서{' '}
+          <strong>오늘 걸음수</strong> 화면 캡처
+        </li>
         <li>아래에서 건강앱 사진 선택 → 코드 자동 합성 후 인증</li>
       </ol>
 
