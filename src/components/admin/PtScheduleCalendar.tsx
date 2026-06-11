@@ -3,6 +3,7 @@ import { fetchMembers } from '../../api/members'
 import { fetchTrainers } from '../../api/trainers'
 import {
   createSchedule,
+  DEFAULT_PT_DURATION_MINUTES,
   deleteSchedule,
   fetchSchedulesInRange,
   updateScheduleStatus,
@@ -65,7 +66,6 @@ export function PtScheduleCalendar({ onToast }: Props) {
   const [formMemberId, setFormMemberId] = useState('')
   const [formTrainerId, setFormTrainerId] = useState('')
   const [formTime, setFormTime] = useState('10:00')
-  const [formDuration, setFormDuration] = useState(60)
   const [formNote, setFormNote] = useState('')
 
   const range = useMemo(() => {
@@ -157,7 +157,7 @@ export function PtScheduleCalendar({ onToast }: Props) {
         member_id: formMemberId,
         trainer_id: formTrainerId || member?.trainer_id || null,
         scheduled_at: toLocalIso(selectedDate, formTime),
-        duration_minutes: formDuration,
+        duration_minutes: DEFAULT_PT_DURATION_MINUTES,
         note: formNote,
       })
       onToast?.(`${member?.name ?? '회원'} PT 예약 등록`)
@@ -447,15 +447,13 @@ export function PtScheduleCalendar({ onToast }: Props) {
                 </label>
                 <label className="block min-w-0 text-sm">
                   <span className="mb-1 block font-medium text-charcoal/70">
-                    분
+                    수업 시간
                   </span>
                   <input
-                    type="number"
-                    min={30}
-                    step={15}
-                    value={formDuration}
-                    onChange={(e) => setFormDuration(Number(e.target.value))}
-                    className={inputClass}
+                    type="text"
+                    readOnly
+                    value={`${DEFAULT_PT_DURATION_MINUTES}분`}
+                    className={`${inputClass} bg-cream text-charcoal/80`}
                   />
                 </label>
               </div>

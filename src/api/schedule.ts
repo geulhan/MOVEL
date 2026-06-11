@@ -1,6 +1,8 @@
 import { supabase } from '../lib/supabase'
 import { isSameLocalDay } from '../utils/date'
 
+export const DEFAULT_PT_DURATION_MINUTES = 50
+
 export type ScheduleStatus = 'scheduled' | 'completed' | 'cancelled' | 'no_show'
 
 export type PtSchedule = {
@@ -43,7 +45,7 @@ export async function createSchedule(input: {
     member_id: input.member_id,
     trainer_id: input.trainer_id || null,
     scheduled_at: input.scheduled_at,
-    duration_minutes: input.duration_minutes ?? 60,
+    duration_minutes: input.duration_minutes ?? DEFAULT_PT_DURATION_MINUTES,
     note: input.note?.trim() || null,
     status: 'scheduled' as const,
   }

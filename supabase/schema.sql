@@ -141,7 +141,7 @@ create table if not exists public.pt_schedules (
   member_id uuid not null references public.members (id) on delete cascade,
   trainer_id uuid references public.trainers (id) on delete set null,
   scheduled_at timestamptz not null,
-  duration_minutes integer not null default 60 check (duration_minutes > 0),
+  duration_minutes integer not null default 50 check (duration_minutes > 0),
   status text not null default 'scheduled'
     check (status in ('scheduled', 'completed', 'cancelled', 'no_show')),
   note text,
