@@ -18,6 +18,7 @@ import {
 import { getRemainingSessionsClass } from '../../utils/sessions'
 import { useMemberDetail } from './MemberDetailContext'
 import { PaymentFormModal } from './PaymentFormModal'
+import { PaymentRequestModal } from './PaymentRequestModal'
 import { PtUsageBar } from './ui'
 
 export function MemberPtPaymentTab() {
@@ -30,6 +31,7 @@ export function MemberPtPaymentTab() {
     setError,
   } = useMemberDetail()
   const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [showRequestModal, setShowRequestModal] = useState(false)
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null)
   const [editPaidAt, setEditPaidAt] = useState('')
   const [editAmount, setEditAmount] = useState('')
@@ -218,13 +220,22 @@ export function MemberPtPaymentTab() {
             <h3 className="text-base font-semibold text-charcoal">결제 내역</h3>
             <p className="mt-0.5 text-xs text-muted">최신순 · 수정 가능</p>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowPaymentModal(true)}
-            className={btnPrimary}
-          >
-            결제 등록
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setShowRequestModal(true)}
+              className={btnOutline}
+            >
+              결제 요청 보내기
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowPaymentModal(true)}
+              className={btnPrimary}
+            >
+              결제 등록
+            </button>
+          </div>
         </div>
         {payments.length === 0 ? (
           <p className="px-6 py-10 text-center text-sm text-muted">
@@ -334,6 +345,14 @@ export function MemberPtPaymentTab() {
         memberId={memberId}
         open={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
+        onSuccess={reload}
+        onError={setError}
+      />
+      <PaymentRequestModal
+        memberId={memberId}
+        memberName={member.name}
+        open={showRequestModal}
+        onClose={() => setShowRequestModal(false)}
         onSuccess={reload}
         onError={setError}
       />

@@ -59,6 +59,8 @@ export type PeriodExtension = {
   created_at: string
 }
 
+export type PaymentHistorySource = 'admin' | 'payment_request' | 'pg'
+
 export type PaymentHistory = {
   id: string
   member_id: string
@@ -66,7 +68,34 @@ export type PaymentHistory = {
   sessions: number
   paid_at: string
   note: string | null
+  source?: PaymentHistorySource
+  payment_request_id?: string | null
   created_at: string
+}
+
+export type PaymentRequestStatus = 'pending' | 'paid' | 'cancelled' | 'expired'
+
+export type PaymentRequest = {
+  id: string
+  member_id: string
+  status: PaymentRequestStatus
+  package_id: string | null
+  label: string
+  sessions: number
+  list_amount: number
+  amount: number
+  discount_amount: number
+  discount_note: string | null
+  note: string | null
+  payment_history_id: string | null
+  pg_provider: string | null
+  pg_order_id: string | null
+  pg_payment_key: string | null
+  expires_at: string | null
+  paid_at: string | null
+  created_by: string
+  created_at: string
+  updated_at: string
 }
 
 export type MessageTemplateKey =
@@ -351,8 +380,48 @@ export type Database = {
           sessions: number
           paid_at: string
           note?: string | null
+          source?: PaymentHistorySource
+          payment_request_id?: string | null
         },
-        { paid_at?: string; amount?: number; sessions?: number }
+        {
+          paid_at?: string
+          amount?: number
+          sessions?: number
+          source?: PaymentHistorySource
+          payment_request_id?: string | null
+        }
+      >
+      payment_requests: TableDef<
+        PaymentRequest,
+        {
+          member_id: string
+          status?: PaymentRequestStatus
+          package_id?: string | null
+          label: string
+          sessions: number
+          list_amount: number
+          amount: number
+          discount_amount?: number
+          discount_note?: string | null
+          note?: string | null
+          payment_history_id?: string | null
+          pg_provider?: string | null
+          pg_order_id?: string | null
+          pg_payment_key?: string | null
+          expires_at?: string | null
+          paid_at?: string | null
+          created_by?: string
+        },
+        {
+          status?: PaymentRequestStatus
+          payment_history_id?: string | null
+          pg_provider?: string | null
+          pg_order_id?: string | null
+          pg_payment_key?: string | null
+          expires_at?: string | null
+          paid_at?: string | null
+          updated_at?: string
+        }
       >
       message_logs: TableDef<
         MessageLog,

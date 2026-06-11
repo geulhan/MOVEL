@@ -16,6 +16,7 @@ import AttendancePage from './pages/admin/AttendancePage'
 import TrainersPage from './pages/admin/TrainersPage'
 import RewardsPage from './pages/admin/RewardsPage'
 import MessagesPage from './pages/admin/MessagesPage'
+import PaymentsPage from './pages/admin/PaymentsPage'
 import MemberPortalPage from './pages/MemberPortalPage'
 import TrainerPortalPage from './pages/TrainerPortalPage'
 import HomePage from './pages/HomePage'
@@ -48,6 +49,7 @@ export default function App() {
             <Route path="trainers" element={<TrainersPage />} />
             <Route path="rewards" element={<RewardsPage />} />
             <Route path="messages" element={<MessagesPage />} />
+            <Route path="payments" element={<PaymentsPage />} />
           </Route>
         </Route>
         <Route path="/member/:memberId" element={<MemberAdminDetailRedirect />} />

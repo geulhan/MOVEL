@@ -31,12 +31,20 @@ import { MemberLayout } from '../components/layouts/MemberLayout'
 import { btnGold, btnPrimary, cardClass, inputClass } from '../styles/theme'
 import type { Member } from '../types/database'
 import { MEMBER_STATUS_LABELS } from '../types/database'
+import { MemberPaymentSection } from '../components/member/MemberPaymentSection'
 import { MemberRewardsSection } from '../components/MemberRewardsSection'
 import { PullToRefresh } from '../components/PullToRefresh'
 import { MemberScheduleSection } from '../components/MemberScheduleSection'
 import { SessionCount } from '../components/SessionCount'
 
-type Tab = 'home' | 'schedule' | 'attendance' | 'journal' | 'rewards' | 'mypage'
+type Tab =
+  | 'home'
+  | 'payment'
+  | 'schedule'
+  | 'attendance'
+  | 'journal'
+  | 'rewards'
+  | 'mypage'
 type AuthMode = 'login' | 'signup'
 
 export default function MemberPortalPage() {
@@ -458,6 +466,7 @@ export default function MemberPortalPage() {
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'home', label: '내 정보' },
+    { id: 'payment', label: '결제' },
     { id: 'schedule', label: '수업 일정' },
     { id: 'attendance', label: '출석' },
     { id: 'journal', label: '운동일지' },
@@ -645,6 +654,10 @@ export default function MemberPortalPage() {
           </div>
         </section>
       )}
+
+        {tab === 'payment' && member && (
+          <MemberPaymentSection memberId={member.id} />
+        )}
 
         {tab === 'rewards' && member && (
           <MemberRewardsSection

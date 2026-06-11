@@ -1,0 +1,24 @@
+MOVEL 결제 시스템 가이드
+======================
+
+[현재 구현 — Phase 2-A]
+1) PT 기본 가격 (관리자 → 결제 관리 → 기본 가격)
+2) 회원별 결제 요청 + 할인 (회원 상세 → PT·결제 → 결제 요청 보내기)
+3) 회원 앱 → 결제 탭에서 요청 확인
+4) 오프라인 결제 완료 시 관리자 → 결제 관리 → 결제 완료 처리
+
+[Supabase SQL]
+migration_020_payment_system.sql 실행
+
+[다음 단계 — Phase 2-B 토스페이먼츠]
+1) 토스페이먼츠 가맹점 신청 (테스트 키 먼저)
+2) Vercel: VITE_TOSS_CLIENT_KEY (클라이언트 키)
+3) Supabase Secrets: TOSS_SECRET_KEY
+4) Edge Function payment-confirm (웹훅 + 승인)
+5) 회원 앱 결제 탭 「결제하기」 버튼 연동
+6) MILE 차감: redeemMilesForPayment() 결제 확정 시 호출
+
+[흐름]
+관리자: 기본 가격 설정 → 할인가 포함 결제 요청
+회원: 결제 탭 확인 → (PG) 결제 또는 센터 방문
+시스템: payment_requests.paid → payment_history → PT 반영 + 알림톡
