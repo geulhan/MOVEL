@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   getDefaultMemberPasswordHint,
   resetMemberPasswordToDefault,
 } from '../../api/memberAuth'
 import {
+  deleteMember,
   formatCurrency,
   formatDate,
   formatPhone,
@@ -19,6 +20,7 @@ import { useMemberDetail } from './MemberDetailContext'
 import { formatDateTime, ProfileField } from './ui'
 
 export function MemberOverviewTab() {
+  const navigate = useNavigate()
   const {
     member,
     memberId,
@@ -33,6 +35,7 @@ export function MemberOverviewTab() {
   const [extendNote, setExtendNote] = useState('')
   const [extendSaving, setExtendSaving] = useState(false)
   const [resettingPassword, setResettingPassword] = useState(false)
+  const [deletingMember, setDeletingMember] = useState(false)
   const [passwordResetMessage, setPasswordResetMessage] = useState<string | null>(
     null,
   )
@@ -65,6 +68,34 @@ export function MemberOverviewTab() {
       )
     } finally {
       setResettingPassword(false)
+    }
+  }
+
+  async function handleDeleteMember() {
+    const confirmed = window.confirm(
+      `${member!.name}님을 삭제할까요?\n\n결제·출석·메모·운동일지 등 연관 데이터가 모두 삭제되며 되돌릴 수 없습니다.`,
+    )
+    if (!confirmed) return
+
+    const typed = window.prompt(
+      `삭제를 확인하려면 회원 이름 "${member!.name}"을(를) 그대로 입력하세요.`,
+    )
+    if (typed?.trim() !== member!.name) {
+      if (typed !== null) {
+        setError('이름이 일치하지 않아 삭제가 취소되었습니다.')
+      }
+      return
+    }
+
+    setDeletingMember(true)
+    setError(null)
+    try {
+      await deleteMember(memberId)
+      navigate('/admin/members', { replace: true })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '회원 삭제에 실패했습니다.')
+    } finally {
+      setDeletingMember(false)
     }
   }
 
@@ -259,6 +290,22 @@ export function MemberOverviewTab() {
             )}
           </div>
         )}
+      </section>
+
+      <section className="rounded-xl border border-red-200 bg-red-50/40 p-5 sm:p-6">
+        <h3 className="text-sm font-semibold text-red-800">위험 구역</h3>
+        <p className="mt-1 text-sm text-red-700/90">
+          회원을 삭제하면 결제·출석·메모·운동일지·로그인 정보가 함께
+          삭제됩니다. 알림 발송 이력은 회원 연결만 해제됩니다.
+        </p>
+        <button
+          type="button"
+          onClick={() => void handleDeleteMember()}
+          disabled={deletingMember}
+          className="mt-4 rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
+        >
+          {deletingMember ? '삭제 중…' : '회원 삭제'}
+        </button>
       </section>
     </div>
   )

@@ -108,6 +108,12 @@ export async function updateMemberTrainer(
   return normalizeMember(data)
 }
 
+/** 관리자: 회원 및 연관 데이터 삭제 (DB cascade) */
+export async function deleteMember(memberId: string): Promise<void> {
+  const { error } = await supabase.from('members').delete().eq('id', memberId)
+  if (error) throw error
+}
+
 export async function updateMemberStatus(
   memberId: string,
   status: MemberStatus,
