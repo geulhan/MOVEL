@@ -1,12 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { fetchMemberById } from '../api/memberDetail'
 import { formatDate, formatPhone, isExpired } from '../api/members'
-import {
-  fetchMemberSchedules,
-  getTodayScheduledPts,
-  hasScheduledPtToday,
-  type PtSchedule,
-} from '../api/schedule'
 import { loginMember, registerMember } from '../api/memberAuth'
 import {
   checkIn,
@@ -67,7 +61,6 @@ export default function MemberPortalPage() {
   const [recentAttendance, setRecentAttendance] = useState<AttendanceLog[]>(
     [],
   )
-  const [schedules, setSchedules] = useState<PtSchedule[]>([])
   const [checkInLoading, setCheckInLoading] = useState(false)
   const [portalError, setPortalError] = useState<string | null>(null)
   const [refreshToken, setRefreshToken] = useState(0)
@@ -90,12 +83,6 @@ export default function MemberPortalPage() {
       setRecentAttendance([])
     }
 
-    try {
-      const scheduleList = await fetchMemberSchedules(memberId)
-      setSchedules(scheduleList)
-    } catch {
-      setSchedules([])
-    }
   }, [])
 
   useEffect(() => {
@@ -444,16 +431,8 @@ export default function MemberPortalPage() {
     )
   }
 
-  const todaySchedules = getTodayScheduledPts(schedules)
-  const hasTodayPt = hasScheduledPtToday(schedules)
   const memberExpired =
     member.expires_at != null && isExpired(member.expires_at)
-  const canCheckIn =
-    !todayAttendance &&
-    member.status === 'active' &&
-    member.remaining_sessions > 0 &&
-    !memberExpired &&
-    hasTodayPt
 
   const navTabs: { id: Exclude<Tab, 'home'>; label: string }[] = [
     { id: 'schedule', label: '수업 일정' },
@@ -563,16 +542,13 @@ export default function MemberPortalPage() {
         <MemberScheduleSection
           memberId={member.id}
           checkIn={{
-            todaySchedules,
             todayAttendance,
             recentAttendance,
-            canCheckIn,
             checkInLoading,
             onCheckIn: () => void handleCheckIn(),
             memberStatus: member.status,
             remainingSessions: member.remaining_sessions,
             memberExpired,
-            hasTodayPt,
           }}
         />
       )}

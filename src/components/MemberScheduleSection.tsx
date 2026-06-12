@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   fetchMemberSchedules,
   getTodayScheduledPts,
+  hasScheduledPtToday,
   scheduleStatusLabel,
   type PtSchedule,
 } from '../api/schedule'
@@ -22,22 +23,134 @@ function formatScheduleDateTime(iso: string): string {
   })
 }
 
+function formatCheckedInAt(iso: string): string {
+  return new Date(iso).toLocaleString('ko-KR')
+}
+
+function getFutureScheduledPts(schedules: PtSchedule[]): PtSchedule[] {
+  const now = new Date()
+  return schedules
+    .filter(
+      (s) =>
+        s.status === 'scheduled' &&
+        !isSameLocalDay(s.scheduled_at) &&
+        new Date(s.scheduled_at) > now,
+    )
+    .sort(
+      (a, b) =>
+        new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime(),
+    )
+}
+
 type CheckInProps = {
-  todaySchedules: PtSchedule[]
   todayAttendance: AttendanceLog | null
   recentAttendance: AttendanceLog[]
-  canCheckIn: boolean
   checkInLoading: boolean
   onCheckIn: () => void
   memberStatus: MemberStatus
   remainingSessions: number
   memberExpired: boolean
-  hasTodayPt: boolean
 }
 
 type Props = {
   memberId: string
   checkIn?: CheckInProps
+}
+
+type ScheduleCardProps = {
+  schedule: PtSchedule
+  attended?: boolean
+  checkedInAt?: string | null
+  showCheckIn?: boolean
+  checkInLoading?: boolean
+  canCheckIn?: boolean
+  onCheckIn?: () => void
+  checkInBlockReason?: string | null
+}
+
+function ScheduleCard({
+  schedule,
+  attended = false,
+  checkedInAt,
+  showCheckIn = false,
+  checkInLoading = false,
+  canCheckIn = false,
+  onCheckIn,
+  checkInBlockReason,
+}: ScheduleCardProps) {
+  return (
+    <li
+      className={`rounded-xl border p-4 ${
+        attended
+          ? 'border-emerald-200 bg-emerald-50/60'
+          : 'border-gold/30 bg-cream/50'
+      }`}
+    >
+      <p className="font-semibold text-charcoal tabular-nums">
+        {formatScheduleDateTime(schedule.scheduled_at)}
+      </p>
+      <p className="mt-1 text-sm text-charcoal/70">
+        {schedule.trainer_name ?? '트레이너 미지정'} · {schedule.duration_minutes}
+        분
+      </p>
+      {schedule.note && (
+        <p className="mt-1 truncate text-xs text-charcoal/55">{schedule.note}</p>
+      )}
+
+      {attended ? (
+        <div className="mt-3">
+          <span className="inline-block rounded-full bg-emerald-600/15 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-800">
+            ✓ 출석 완료
+          </span>
+          {checkedInAt && (
+            <p className="mt-1 text-xs text-muted tabular-nums">
+              {formatCheckedInAt(checkedInAt)}
+            </p>
+          )}
+        </div>
+      ) : (
+        <span className="mt-2 inline-block rounded-full bg-gold/25 px-2 py-0.5 text-[11px] font-semibold text-charcoal">
+          {scheduleStatusLabel(schedule.status)}
+        </span>
+      )}
+
+      {showCheckIn && !attended && (
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={onCheckIn}
+            disabled={checkInLoading || !canCheckIn}
+            className={`w-full ${btnGold}`}
+          >
+            {checkInLoading ? '처리 중…' : '출석하기 (PT 1회 차감)'}
+          </button>
+          {checkInBlockReason && (
+            <p className="mt-2 text-xs text-red-600">{checkInBlockReason}</p>
+          )}
+        </div>
+      )}
+    </li>
+  )
+}
+
+function resolveCheckInBlockReason(
+  checkIn: CheckInProps,
+  hasTodayPt: boolean,
+): string | null {
+  if (checkIn.todayAttendance) return null
+  if (checkIn.memberStatus !== 'active') {
+    return '활성 회원만 출석할 수 있습니다.'
+  }
+  if (checkIn.remainingSessions <= 0) {
+    return '잔여 PT가 없어 출석할 수 없습니다.'
+  }
+  if (checkIn.memberExpired) {
+    return '회원권 만료일이 지나 출석할 수 없습니다.'
+  }
+  if (!hasTodayPt) {
+    return '오늘 PT 예약이 있어야 출석할 수 있습니다.'
+  }
+  return null
 }
 
 export function MemberScheduleSection({ memberId, checkIn }: Props) {
@@ -74,186 +187,123 @@ export function MemberScheduleSection({ memberId, checkIn }: Props) {
     void load()
   }, [load])
 
-  const todaySchedules =
-    checkIn?.todaySchedules ?? getTodayScheduledPts(schedules)
+  const todaySchedules = getTodayScheduledPts(schedules)
+  const futureSchedules = getFutureScheduledPts(schedules)
+  const hasTodayPt = hasScheduledPtToday(schedules)
+  const attendedToday = Boolean(checkIn?.todayAttendance)
+  const checkedInAt = checkIn?.todayAttendance?.checked_in_at ?? null
 
-  const upcoming = schedules.filter(
-    (s) =>
-      s.status === 'scheduled' &&
-      (new Date(s.scheduled_at) >= new Date() || isSameLocalDay(s.scheduled_at)),
+  const canCheckIn = Boolean(
+    checkIn &&
+      !checkIn.todayAttendance &&
+      checkIn.memberStatus === 'active' &&
+      checkIn.remainingSessions > 0 &&
+      !checkIn.memberExpired &&
+      hasTodayPt,
   )
-  const past = schedules.filter((s) => !upcoming.includes(s))
+
+  const checkInBlockReason = checkIn
+    ? resolveCheckInBlockReason(checkIn, hasTodayPt)
+    : null
+
+  const pastAttendance =
+    checkIn?.recentAttendance.filter(
+      (a) => !isSameLocalDay(a.checked_in_at),
+    ) ?? []
 
   return (
-    <div className="space-y-4">
-      {checkIn && (
-        <section className={`${cardClass} p-6 text-center`}>
-          <h3 className="font-semibold text-charcoal">오늘의 출석</h3>
-          {todaySchedules.length > 0 ? (
-            <ul className="mt-3 space-y-1 text-sm text-charcoal/80">
-              {todaySchedules.map((s) => (
-                <li key={s.id} className="tabular-nums">
-                  오늘 PT ·{' '}
-                  {new Date(s.scheduled_at).toLocaleString('ko-KR', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-2 text-sm text-amber-800">
-              오늘 예약된 PT가 없습니다. 센터에서 스케줄 등록 후 출석할 수
-              있습니다.
-            </p>
-          )}
-          {checkIn.todayAttendance ? (
-            <>
-              <p className="mt-3 font-semibold text-emerald-700">✓ 출석 완료</p>
-              <p className="mt-1 text-xs text-muted">
-                {new Date(checkIn.todayAttendance.checked_in_at).toLocaleString(
-                  'ko-KR',
-                )}
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="mt-2 text-sm text-muted">
-                아직 오늘 출석하지 않았습니다.
-              </p>
-              <button
-                type="button"
-                onClick={checkIn.onCheckIn}
-                disabled={checkIn.checkInLoading || !checkIn.canCheckIn}
-                className={`mt-4 w-full ${btnGold}`}
-              >
-                {checkIn.checkInLoading ? '처리 중…' : '출석하기 (PT 1회 차감)'}
-              </button>
-              {checkIn.memberStatus !== 'active' && (
-                <p className="mt-2 text-xs text-red-600">
-                  활성 회원만 출석할 수 있습니다.
-                </p>
-              )}
-              {checkIn.memberStatus === 'active' &&
-                checkIn.remainingSessions <= 0 && (
-                  <p className="mt-2 text-xs text-red-600">
-                    잔여 PT가 없어 출석할 수 없습니다.
-                  </p>
-                )}
-              {checkIn.memberStatus === 'active' &&
-                checkIn.remainingSessions > 0 &&
-                checkIn.memberExpired && (
-                  <p className="mt-2 text-xs text-red-600">
-                    회원권 만료일이 지나 출석할 수 없습니다.
-                  </p>
-                )}
-              {checkIn.memberStatus === 'active' &&
-                checkIn.remainingSessions > 0 &&
-                !checkIn.memberExpired &&
-                !checkIn.hasTodayPt && (
-                  <p className="mt-2 text-xs text-red-600">
-                    오늘 PT 예약이 있어야 출석할 수 있습니다.
-                  </p>
-                )}
-            </>
-          )}
+    <section className={`${cardClass} overflow-hidden`}>
+      <div className="border-b border-gold/20 px-4 py-4">
+        <h3 className="font-semibold text-charcoal">수업 일정</h3>
+        <p className="mt-1 text-xs text-muted">
+          오늘 수업 출석과 예정 일정을 확인할 수 있습니다.
+        </p>
+      </div>
 
-          {checkIn.recentAttendance.length > 0 && (
-            <div className="mt-6 border-t border-gold/15 pt-4 text-left">
-              <h4 className="text-sm font-semibold text-charcoal">최근 출석</h4>
-              <ul className="mt-2 divide-y divide-gold/15 text-sm">
-                {checkIn.recentAttendance.map((a) => (
-                  <li key={a.id} className="py-2 text-muted">
-                    {new Date(a.checked_in_at).toLocaleString('ko-KR')}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </section>
+      {error && (
+        <div className="mx-4 mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </div>
       )}
 
-      <section className={`${cardClass} overflow-hidden`}>
-        <div className="border-b border-gold/20 px-4 py-4">
-          <h3 className="font-semibold text-charcoal">수업 일정</h3>
-          <p className="mt-1 text-xs text-muted">
-            센터에서 등록한 PT 예약 일정입니다.
-          </p>
+      {loading ? (
+        <p className="px-4 py-10 text-center text-sm text-muted">불러오는 중…</p>
+      ) : (
+        <div className="divide-y divide-gold/15">
+          <div className="px-4 py-4">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-gold-dark">
+              당일
+            </h4>
+            {todaySchedules.length === 0 ? (
+              <p className="mt-3 text-sm text-muted">
+                오늘 예정된 수업이 없습니다.
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-3">
+                {todaySchedules.map((schedule) => (
+                  <ScheduleCard
+                    key={schedule.id}
+                    schedule={schedule}
+                    attended={attendedToday}
+                    checkedInAt={checkedInAt}
+                    showCheckIn={Boolean(checkIn)}
+                    checkInLoading={checkIn?.checkInLoading}
+                    canCheckIn={canCheckIn}
+                    onCheckIn={checkIn?.onCheckIn}
+                    checkInBlockReason={
+                      canCheckIn ? null : checkInBlockReason
+                    }
+                  />
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="px-4 py-4">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-gold-dark">
+              예정
+            </h4>
+            {futureSchedules.length === 0 ? (
+              <p className="mt-3 text-sm text-muted">
+                예정된 수업이 없습니다.
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-3">
+                {futureSchedules.map((schedule) => (
+                  <ScheduleCard key={schedule.id} schedule={schedule} />
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {checkIn && (
+            <div className="px-4 py-4">
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-charcoal/45">
+                최근 출석 현황
+              </h4>
+              {pastAttendance.length === 0 ? (
+                <p className="mt-3 text-sm text-muted">
+                  최근 출석 기록이 없습니다.
+                </p>
+              ) : (
+                <ul className="mt-3 divide-y divide-gold/15 text-sm">
+                  {pastAttendance.map((a) => (
+                    <li
+                      key={a.id}
+                      className="flex items-center justify-between gap-2 py-2.5"
+                    >
+                      <span className="text-charcoal/80">PT 출석</span>
+                      <span className="tabular-nums text-muted">
+                        {formatCheckedInAt(a.checked_in_at)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
-
-        {error && (
-          <div className="mx-4 mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-
-        {loading ? (
-          <p className="px-4 py-10 text-center text-sm text-muted">
-            불러오는 중…
-          </p>
-        ) : schedules.length === 0 ? (
-          <p className="px-4 py-10 text-center text-sm text-muted">
-            등록된 수업 일정이 없습니다.
-          </p>
-        ) : (
-          <div className="divide-y divide-gold/15">
-            {upcoming.length > 0 && (
-              <div className="px-4 py-4">
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-gold-dark">
-                  예정 수업
-                </h4>
-                <ul className="mt-3 space-y-3">
-                  {upcoming.map((s) => (
-                    <li
-                      key={s.id}
-                      className="rounded-xl border border-gold/30 bg-cream/50 p-4"
-                    >
-                      <p className="font-semibold text-charcoal tabular-nums">
-                        {formatScheduleDateTime(s.scheduled_at)}
-                      </p>
-                      <p className="mt-1 text-sm text-charcoal/70">
-                        {s.trainer_name ?? '트레이너 미지정'} ·{' '}
-                        {s.duration_minutes}분
-                      </p>
-                      {s.note && (
-                        <p className="mt-1 truncate text-xs text-charcoal/55">
-                          {s.note}
-                        </p>
-                      )}
-                      <span className="mt-2 inline-block rounded-full bg-gold/25 px-2 py-0.5 text-[11px] font-semibold text-charcoal">
-                        {scheduleStatusLabel(s.status)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {past.length > 0 && (
-              <div className="px-4 py-4">
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-charcoal/45">
-                  지난 일정
-                </h4>
-                <ul className="mt-3 space-y-2">
-                  {past.slice(0, 10).map((s) => (
-                    <li
-                      key={s.id}
-                      className="flex flex-wrap items-center justify-between gap-2 border-b border-gold/10 pb-2 text-sm last:border-0"
-                    >
-                      <span className="text-charcoal/80 tabular-nums">
-                        {formatScheduleDateTime(s.scheduled_at)}
-                      </span>
-                      <span className="text-xs text-charcoal/50">
-                        {scheduleStatusLabel(s.status)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        )}
-      </section>
-    </div>
+      )}
+    </section>
   )
 }
