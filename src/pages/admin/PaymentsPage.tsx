@@ -19,7 +19,6 @@ import {
 import { CompletePaymentModal } from '../../components/admin/CompletePaymentModal'
 import { ContractInstancesPanel } from '../../components/admin/ContractInstancesPanel'
 import { PaymentCategoryPricingPanel } from '../../components/admin/PaymentCategoryPricingPanel'
-import { PaymentRequestSenderPanel } from '../../components/admin/PaymentRequestSenderPanel'
 import { PageHeader } from '../../components/admin/PageHeader'
 import {
   PAYMENT_CATEGORIES,
@@ -152,7 +151,7 @@ export default function PaymentsPage() {
     <div className="space-y-6">
       <PageHeader
         title="결제 관리"
-        description="상품·가격 설정, 회원 선택 후 결제 요청, 계약서·오프라인 완료 처리 및 MILE 사용을 관리합니다."
+        description="상품·가격 설정과 회원별 결제 요청, 계약서·오프라인 완료 처리 및 MILE 사용을 관리합니다."
       />
 
       <nav className="chip-scroll -mx-1 px-1">
@@ -179,6 +178,17 @@ export default function PaymentsPage() {
         </button>
       </nav>
 
+      {toast && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          {toast}
+        </div>
+      )}
+      {error && adminTab !== 'requests' && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
       {adminTab === 'contracts' ? (
         <ContractInstancesPanel />
       ) : adminTab === 'pricing' ? (
@@ -187,15 +197,11 @@ export default function PaymentsPage() {
           onCategoryChange={(category) => {
             setSearchParams({ category }, { replace: true })
           }}
+          onPaymentRequestToast={setToast}
+          onPaymentRequestError={setError}
         />
       ) : (
         <div className="space-y-4">
-          <PaymentRequestSenderPanel
-            onSent={() => void load()}
-            onError={setError}
-            onToast={setToast}
-          />
-
           <div className="flex flex-wrap items-center gap-3">
             <label className="flex items-center gap-2 text-sm">
               <span className="text-muted">항목</span>
@@ -230,11 +236,6 @@ export default function PaymentsPage() {
             </nav>
           </div>
 
-          {toast && (
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-              {toast}
-            </div>
-          )}
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               {error}

@@ -52,16 +52,9 @@ export function buildMemberRewardGuide(
       mile: formatRewardAmount(rules.pt_attendance.mile, 'M'),
     },
     {
-      key: 'exercise_journal',
-      title: REWARD_EVENT_LABELS.exercise_journal,
-      description: '운동일지 작성 시',
-      score: formatRewardAmount(rules.exercise_journal.score, '점'),
-      mile: formatRewardAmount(rules.exercise_journal.mile, 'M'),
-    },
-    {
       key: 'streak_7day',
       title: REWARD_EVENT_LABELS.streak_7day,
-      description: `${STREAK_DAYS}일 연속 활동 달성 시`,
+      description: `${STREAK_DAYS}일 연속 활동 달성 시 (PT 출석 또는 7,000보 이상)`,
       score: formatRewardAmount(rules.streak_7day.score, '점'),
       mile: formatRewardAmount(rules.streak_7day.mile, 'M'),
     },

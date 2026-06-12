@@ -6,16 +6,21 @@ import {
 } from '../../constants/paymentCategories'
 import { CenterPassAdminPanel } from './CenterPassAdminPanel'
 import { LockerTowelProductEditor } from './LockerTowelProductEditor'
+import { PaymentRequestSenderPanel } from './PaymentRequestSenderPanel'
 import { PtPricingEditor } from './PtPricingEditor'
 
 type Props = {
   initialCategory?: PaymentCategory
   onCategoryChange?: (category: PaymentCategory) => void
+  onPaymentRequestToast?: (message: string) => void
+  onPaymentRequestError?: (message: string) => void
 }
 
 export function PaymentCategoryPricingPanel({
   initialCategory = 'pt',
   onCategoryChange,
+  onPaymentRequestToast,
+  onPaymentRequestError,
 }: Props) {
   const [category, setCategory] = useState<PaymentCategory>(initialCategory)
 
@@ -42,6 +47,12 @@ export function PaymentCategoryPricingPanel({
           </button>
         ))}
       </nav>
+
+      <PaymentRequestSenderPanel
+        initialCategory={category}
+        onToast={onPaymentRequestToast}
+        onError={onPaymentRequestError}
+      />
 
       {category === 'pt' ? (
         <PtPricingEditor />

@@ -461,32 +461,6 @@ export async function awardCenterPhoto(
   return mile
 }
 
-/** 운동일지 작성 리워드 */
-export async function awardExerciseJournal(
-  memberId: string,
-  journalId: string,
-  trainedAt: string,
-): Promise<void> {
-  const rules = await fetchRewardEarnRules()
-  const date = trainedAt.slice(0, 10)
-  const eventKey = `exercise_journal:${journalId}`
-  try {
-    await awardPair(
-      memberId,
-      'exercise_journal',
-      eventKey,
-      rules.exercise_journal.score,
-      rules.exercise_journal.mile,
-      { reference_type: 'exercise_journals', reference_id: journalId },
-    )
-    await upsertDailyActivity(memberId, date, { has_journal: true })
-    await checkStreakReward(memberId)
-  } catch (err) {
-    if (err instanceof Error && err.message === 'ALREADY_AWARDED') return
-    throw err
-  }
-}
-
 type DailyActivity = {
   step_count: number
   has_pt_attendance: boolean
@@ -598,11 +572,7 @@ export async function awardStepRewardsFromVerification(
 }
 
 function isQualifyingDay(activity: DailyActivity): boolean {
-  return (
-    activity.has_pt_attendance ||
-    activity.has_journal ||
-    activity.step_count >= 7000
-  )
+  return activity.has_pt_attendance || activity.step_count >= 7000
 }
 
 async function checkStreakReward(memberId: string): Promise<void> {

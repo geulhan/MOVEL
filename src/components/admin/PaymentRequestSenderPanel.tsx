@@ -3,16 +3,19 @@ import { Link } from 'react-router-dom'
 import { fetchMembers, formatPhone } from '../../api/members'
 import { MemberSearchCombobox } from './MemberSearchCombobox'
 import { PaymentRequestModal } from '../member-detail/PaymentRequestModal'
+import type { PaymentCategory } from '../../constants/paymentCategories'
 import { btnGold, cardClass } from '../../styles/theme'
 import type { Member } from '../../types/database'
 
 type Props = {
-  onSent: () => void
-  onError: (message: string) => void
-  onToast: (message: string) => void
+  initialCategory: PaymentCategory
+  onSent?: () => void
+  onError?: (message: string) => void
+  onToast?: (message: string) => void
 }
 
 export function PaymentRequestSenderPanel({
+  initialCategory,
   onSent,
   onError,
   onToast,
@@ -61,10 +64,10 @@ export function PaymentRequestSenderPanel({
   return (
     <section className={`${cardClass} space-y-4 p-5`}>
       <div>
-        <h3 className="text-base font-semibold text-charcoal">결제 요청 보내기</h3>
+        <h3 className="text-base font-semibold text-charcoal">회원 선택 · 결제 요청</h3>
         <p className="mt-1 text-sm text-muted">
-          회원 이름·전화번호로 검색해 선택한 뒤 결제 요청을 보냅니다. 회원 앱
-          결제 탭과 계약서 서명 흐름에 표시됩니다.
+          위에서 선택한 상품 카테고리로 회원에게 결제 요청을 보냅니다. 회원 앱
+          결제 탭과 계약서 서명 후 센터 결제로 이어집니다.
         </p>
       </div>
 
@@ -123,13 +126,16 @@ export function PaymentRequestSenderPanel({
       <PaymentRequestModal
         memberId={selectedMember?.id ?? ''}
         memberName={selectedMember?.name ?? ''}
+        initialCategory={initialCategory}
         open={modalOpen && selectedMember != null}
         onClose={() => setModalOpen(false)}
         onSuccess={async () => {
-          onToast(`${selectedMember?.name ?? '회원'}님에게 결제 요청을 보냈습니다.`)
-          onSent()
+          onToast?.(
+            `${selectedMember?.name ?? '회원'}님에게 결제 요청을 보냈습니다.`,
+          )
+          onSent?.()
         }}
-        onError={onError}
+        onError={(message) => onError?.(message)}
       />
     </section>
   )

@@ -1,5 +1,4 @@
 import { supabase } from '../lib/supabase'
-import { awardExerciseJournal } from './rewards'
 
 export type ExerciseJournal = {
   id: string
@@ -41,13 +40,7 @@ export async function createExerciseJournal(
     .single()
 
   if (error) throw error
-  const journal = data as ExerciseJournal
-  try {
-    await awardExerciseJournal(memberId, journal.id, journal.trained_at)
-  } catch (rewardErr) {
-    console.warn('운동일지 리워드 적립 실패:', rewardErr)
-  }
-  return journal
+  return data as ExerciseJournal
 }
 
 export async function updateExerciseJournal(
