@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { formatCurrency } from '../../api/members'
 import {
+  ensureContractsForPaymentRequests,
+  type ContractInstance,
+} from '../../api/contracts'
+import {
   fetchMemberPendingPaymentRequests,
   formatDiscountSummary,
 } from '../../api/paymentRequests'
@@ -16,8 +20,10 @@ import {
   formatPaymentRequestDetail,
   paymentRequestFulfillmentHint,
 } from '../../lib/paymentRequestDisplay'
+import { CONTRACT_STATUS_LABELS } from '../../constants/contractTerms'
 import type { PaymentRequest } from '../../types/database'
-import { cardClass } from '../../styles/theme'
+import { btnGold, cardClass } from '../../styles/theme'
+import { MemberContractSignModal } from '../contracts/MemberContractSignModal'
 
 type Props = {
   memberId: string
@@ -30,6 +36,10 @@ function formatExpires(iso: string | null): string {
 
 export function MemberPaymentSection({ memberId }: Props) {
   const [pending, setPending] = useState<PaymentRequest[]>([])
+  const [contracts, setContracts] = useState<Map<string, ContractInstance>>(
+    new Map(),
+  )
+  const [signTarget, setSignTarget] = useState<ContractInstance | null>(null)
   const [catalogAmount, setCatalogAmount] = useState<number | null>(null)
   const [availableMiles, setAvailableMiles] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -44,7 +54,9 @@ export function MemberPaymentSection({ memberId }: Props) {
         fetchPtPricing(),
         fetchRewardBalance(memberId),
       ])
+      const contractMap = await ensureContractsForPaymentRequests(requests)
       setPending(requests)
+      setContracts(contractMap)
       setAvailableMiles(balance.move_mile)
       const active = getActivePackages(pricing)
       setCatalogAmount(active[0]?.amount ?? null)
@@ -93,6 +105,8 @@ export function MemberPaymentSection({ memberId }: Props) {
           const maxMiles = calcMaxRedeemableMiles(amount, availableMiles)
           const minCash = amount - maxMiles
           const category = request.category ?? 'pt'
+          const contract = contracts.get(request.id)
+          const contractSigned = contract?.status === 'signed'
           return (
             <section key={request.id} className={`${cardClass} p-5`}>
               <div className="flex items-start justify-between gap-3">
@@ -132,11 +146,46 @@ export function MemberPaymentSection({ memberId }: Props) {
                 </p>
               )}
 
+              <div
+                className={`mt-4 rounded-xl border px-4 py-3 text-sm ${
+                  contractSigned
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                    : 'border-amber-200 bg-amber-50 text-amber-900'
+                }`}
+              >
+                <p className="font-semibold">
+                  계약서 ·{' '}
+                  {contract
+                    ? CONTRACT_STATUS_LABELS[contract.status]
+                    : '준비 중'}
+                </p>
+                <p className="mt-1 text-xs opacity-90">
+                  {contractSigned
+                    ? '계약서 서명이 완료되었습니다. 센터 결제를 진행해 주세요.'
+                    : '결제 전 구매 계약서(환불 약관 포함)에 서명해야 합니다.'}
+                </p>
+                {contract && (
+                  <button
+                    type="button"
+                    onClick={() => setSignTarget(contract)}
+                    className={`mt-3 w-full ${btnGold} text-sm`}
+                  >
+                    {contractSigned ? '계약서 보기' : '계약서 확인 및 서명'}
+                  </button>
+                )}
+              </div>
+
               <div className="mt-4 rounded-xl border border-gold/30 bg-cream/50 px-4 py-3 text-sm text-charcoal">
                 <p className="font-semibold">센터 결제 안내</p>
                 <p className="mt-1 text-muted">
-                  센터 방문 또는 안내받은 계좌로 입금해 주세요. 확인 후{' '}
-                  {paymentRequestFulfillmentHint(category)}
+                  {contractSigned ? (
+                    <>
+                      센터 방문 또는 안내받은 계좌로 입금해 주세요. 확인 후{' '}
+                      {paymentRequestFulfillmentHint(category)}
+                    </>
+                  ) : (
+                    <>계약서 서명 후 센터 결제를 진행해 주세요.</>
+                  )}
                 </p>
                 {maxMiles > 0 && (
                   <p className="mt-2 rounded-lg bg-gold/10 px-3 py-2 text-xs text-charcoal">
@@ -166,6 +215,20 @@ export function MemberPaymentSection({ memberId }: Props) {
       <section className="rounded-xl border border-dashed border-gold/40 bg-white/60 px-4 py-3 text-xs text-muted">
         결제·할인·MILE 사용은 센터에서 최종 확인 후 반영됩니다.
       </section>
+
+      <MemberContractSignModal
+        open={signTarget != null}
+        contract={signTarget}
+        memberId={memberId}
+        onClose={() => setSignTarget(null)}
+        onSigned={(updated) => {
+          setContracts((prev) => {
+            const next = new Map(prev)
+            next.set(updated.payment_request_id, updated)
+            return next
+          })
+        }}
+      />
     </div>
   )
 }

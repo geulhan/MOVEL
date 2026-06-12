@@ -2,6 +2,14 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { formatCurrency, formatPhone } from '../../api/members'
 import {
+  CONTRACT_STATUS_LABELS,
+} from '../../constants/contractTerms'
+import {
+  ensureContractsForPaymentRequests,
+  fetchContractsByPaymentRequestIds,
+  type ContractInstance,
+} from '../../api/contracts'
+import {
   cancelPaymentRequest,
   completePaymentRequestManually,
   fetchPaymentRequests,
@@ -9,6 +17,7 @@ import {
   type PaymentRequestWithMember,
 } from '../../api/paymentRequests'
 import { CompletePaymentModal } from '../../components/admin/CompletePaymentModal'
+import { ContractInstancesPanel } from '../../components/admin/ContractInstancesPanel'
 import { PaymentCategoryPricingPanel } from '../../components/admin/PaymentCategoryPricingPanel'
 import { PageHeader } from '../../components/admin/PageHeader'
 import {
@@ -20,7 +29,7 @@ import { PAYMENT_REQUEST_STATUS_LABELS } from '../../constants/pricing'
 import { formatPaymentRequestDetail } from '../../lib/paymentRequestDisplay'
 import type { PaymentRequestStatus } from '../../types/database'
 
-type AdminTab = 'pricing' | 'requests'
+type AdminTab = 'pricing' | 'requests' | 'contracts'
 
 const STATUS_FILTERS: Array<{ id: 'all' | PaymentRequestStatus; label: string }> =
   [
@@ -54,6 +63,9 @@ export default function PaymentsPage() {
     'all',
   )
   const [requests, setRequests] = useState<PaymentRequestWithMember[]>([])
+  const [contracts, setContracts] = useState<Map<string, ContractInstance>>(
+    new Map(),
+  )
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actionId, setActionId] = useState<string | null>(null)
@@ -65,13 +77,23 @@ export default function PaymentsPage() {
     setLoading(true)
     setError(null)
     try {
-      setRequests(
-        await fetchPaymentRequests({
-          status: statusFilter === 'all' ? undefined : statusFilter,
-          category: categoryFilter,
-          limit: 100,
-        }),
+      const rows = await fetchPaymentRequests({
+        status: statusFilter === 'all' ? undefined : statusFilter,
+        category: categoryFilter,
+        limit: 100,
+      })
+      setRequests(rows)
+      const contractMap = await fetchContractsByPaymentRequestIds(
+        rows.map((row) => row.id),
       )
+      const pendingRows = rows.filter((row) => row.status === 'pending')
+      if (pendingRows.length > 0) {
+        const ensured = await ensureContractsForPaymentRequests(pendingRows)
+        for (const [id, contract] of ensured) {
+          contractMap.set(id, contract)
+        }
+      }
+      setContracts(contractMap)
     } catch (err) {
       setError(
         err instanceof Error ? err.message : '결제 요청을 불러올 수 없습니다.',
@@ -147,9 +169,18 @@ export default function PaymentsPage() {
         >
           결제 요청
         </button>
+        <button
+          type="button"
+          onClick={() => setAdminTab('contracts')}
+          className={`chip ${adminTab === 'contracts' ? 'chip-active' : 'chip-inactive'}`}
+        >
+          계약서
+        </button>
       </nav>
 
-      {adminTab === 'pricing' ? (
+      {adminTab === 'contracts' ? (
+        <ContractInstancesPanel />
+      ) : adminTab === 'pricing' ? (
         <PaymentCategoryPricingPanel
           initialCategory={pricingCategory}
           onCategoryChange={(category) => {
@@ -222,6 +253,7 @@ export default function PaymentsPage() {
                   <th className="px-4 py-3 font-semibold">회원</th>
                   <th className="px-4 py-3 font-semibold">내용</th>
                   <th className="px-4 py-3 font-semibold">금액</th>
+                  <th className="px-4 py-3 font-semibold">계약서</th>
                   <th className="px-4 py-3 font-semibold">상태</th>
                   <th className="px-4 py-3 font-semibold">처리</th>
                 </tr>
@@ -229,13 +261,13 @@ export default function PaymentsPage() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-muted">
+                    <td colSpan={8} className="px-4 py-8 text-center text-muted">
                       불러오는 중…
                     </td>
                   </tr>
                 ) : requests.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-muted">
+                    <td colSpan={8} className="px-4 py-8 text-center text-muted">
                       결제 요청이 없습니다.
                     </td>
                   </tr>
@@ -243,6 +275,7 @@ export default function PaymentsPage() {
                   requests.map((request) => {
                     const discount = formatDiscountSummary(request)
                     const busy = actionId === request.id
+                    const contract = contracts.get(request.id)
                     return (
                       <tr key={request.id} className="border-b border-gold/10">
                         <td className="px-4 py-3 whitespace-nowrap text-xs">
@@ -289,6 +322,23 @@ export default function PaymentsPage() {
                           <p className="font-semibold tabular-nums">
                             {formatCurrency(Number(request.amount))}
                           </p>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-xs">
+                          {contract ? (
+                            <span
+                              className={
+                                contract.status === 'signed'
+                                  ? 'font-semibold text-emerald-700'
+                                  : 'font-semibold text-amber-700'
+                              }
+                            >
+                              {CONTRACT_STATUS_LABELS[contract.status]}
+                            </span>
+                          ) : request.status === 'pending' ? (
+                            <span className="text-muted">생성 대기</span>
+                          ) : (
+                            '-'
+                          )}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-xs">
                           {PAYMENT_REQUEST_STATUS_LABELS[request.status]}

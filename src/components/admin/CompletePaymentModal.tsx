@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
+import {
+  fetchContractByPaymentRequestId,
+  type ContractInstance,
+} from '../../api/contracts'
 import { formatCurrency, todayDateString } from '../../api/members'
 import type { PaymentRequestWithMember } from '../../api/paymentRequests'
+import { CONTRACT_STATUS_LABELS } from '../../constants/contractTerms'
 import {
   calcMaxRedeemableMiles,
   fetchRewardBalance,
@@ -33,6 +38,8 @@ export function CompletePaymentModal({
   const [milesInput, setMilesInput] = useState('')
   const [startsAt, setStartsAt] = useState(todayDateString())
   const [loadingBalance, setLoadingBalance] = useState(false)
+  const [contract, setContract] = useState<ContractInstance | null>(null)
+  const [loadingContract, setLoadingContract] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const contractAmount = request ? Number(request.amount) : 0
@@ -52,16 +59,24 @@ export function CompletePaymentModal({
 
   const cashAmount = contractAmount - milesToUse
 
+  const contractSigned = contract?.status === 'signed'
+
   useEffect(() => {
     if (!open || !request) return
     setMilesInput('')
     setStartsAt(request.starts_at ?? todayDateString())
     setError(null)
+    setContract(null)
     setLoadingBalance(true)
+    setLoadingContract(true)
     void fetchRewardBalance(request.member_id)
       .then((balance) => setAvailableMiles(balance.move_mile))
       .catch(() => setAvailableMiles(0))
       .finally(() => setLoadingBalance(false))
+    void fetchContractByPaymentRequestId(request.id)
+      .then(setContract)
+      .catch(() => setContract(null))
+      .finally(() => setLoadingContract(false))
   }, [open, request])
 
   if (!open || !request) return null
@@ -98,6 +113,29 @@ export function CompletePaymentModal({
         <p className="mt-1 text-sm text-muted">
           {request.member?.name ?? '회원'} · {request.label}
         </p>
+
+        <div
+          className={`mt-4 rounded-xl border px-4 py-3 text-sm ${
+            contractSigned
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+              : 'border-amber-200 bg-amber-50 text-amber-900'
+          }`}
+        >
+          <p className="font-semibold">계약서</p>
+          <p className="mt-1 text-xs">
+            {loadingContract
+              ? '확인 중…'
+              : contract
+                ? CONTRACT_STATUS_LABELS[contract.status]
+                : '계약서 없음'}
+          </p>
+          {!loadingContract && !contractSigned && (
+            <p className="mt-1 text-xs">
+              회원이 앱에서 계약서(환불 약관 포함)에 서명해야 결제 완료 처리가
+              가능합니다.
+            </p>
+          )}
+        </div>
 
         <dl className="mt-4 space-y-2 rounded-xl bg-cream/50 px-4 py-3 text-sm">
           <div className="flex justify-between gap-3">
@@ -180,10 +218,10 @@ export function CompletePaymentModal({
           <button
             type="button"
             onClick={() => void handleSubmit()}
-            disabled={saving}
+            disabled={saving || loadingContract || !contractSigned}
             className={`flex-1 ${btnGold}`}
           >
-            {saving ? '처리 중…' : '완료 처리'}
+            {saving ? '처리 중…' : contractSigned ? '완료 처리' : '서명 대기'}
           </button>
         </div>
       </div>

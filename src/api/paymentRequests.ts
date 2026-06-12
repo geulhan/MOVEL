@@ -2,6 +2,11 @@ import { PAYMENT_REQUEST_EXPIRY_DAYS } from '../constants/pricing'
 import type { PaymentCategory } from '../constants/paymentCategories'
 import { supabase } from '../lib/supabase'
 import type { Member, PaymentHistory, PaymentRequest } from '../types/database'
+import {
+  assertContractSignedForPayment,
+  cancelContractForPaymentRequest,
+  createContractForPaymentRequest,
+} from './contracts'
 import { assignCenterPass } from './centerPasses'
 import { assignFacilitySubscription } from './facilityProducts'
 import { createPaymentRecord, syncMemberPaymentTotal } from './payments'
@@ -179,7 +184,9 @@ export async function createPaymentRequest(input: {
     .single()
 
   if (error) throw error
-  return normalizePaymentRequest(data as PaymentRequest)
+  const request = normalizePaymentRequest(data as PaymentRequest)
+  await createContractForPaymentRequest(request)
+  return request
 }
 
 export async function cancelPaymentRequest(requestId: string): Promise<void> {
@@ -198,6 +205,8 @@ export async function cancelPaymentRequest(requestId: string): Promise<void> {
   if (!data) {
     throw new Error('취소할 결제 요청이 없거나 이미 처리되었습니다.')
   }
+
+  await cancelContractForPaymentRequest(requestId)
 }
 
 export async function completePaymentRequestManually(
@@ -229,6 +238,8 @@ async function fulfillPaymentRequest(
   request: PaymentRequest,
   options: { milesToUse?: number; startsAt?: string } = {},
 ): Promise<PaymentHistory> {
+  await assertContractSignedForPayment(request.id)
+
   const milesToUse = options.milesToUse ?? 0
   const noteParts = [request.label]
   if (request.discount_note) noteParts.push(request.discount_note)

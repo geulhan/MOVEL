@@ -108,6 +108,24 @@ export type PaymentRequest = {
   updated_at: string
 }
 
+export type ContractType = 'pt_purchase' | 'center_pass_purchase'
+
+export type ContractStatus = 'pending_signature' | 'signed' | 'cancelled'
+
+export type ContractInstanceRow = {
+  id: string
+  payment_request_id: string
+  member_id: string
+  contract_type: ContractType
+  status: ContractStatus
+  field_data: Json
+  terms_accepted: Json
+  signature_path: string | null
+  signed_at: string | null
+  created_at: string
+  updated_at: string
+}
+
 export type MessageTemplateKey =
   | 'welcome'
   | 'payment_done'
@@ -519,6 +537,27 @@ export type Database = {
           pg_payment_key?: string | null
           expires_at?: string | null
           paid_at?: string | null
+          updated_at?: string
+        }
+      >
+      contract_instances: TableDef<
+        ContractInstanceRow,
+        {
+          payment_request_id: string
+          member_id: string
+          contract_type: ContractType
+          status?: ContractStatus
+          field_data?: Json
+          terms_accepted?: Json
+          signature_path?: string | null
+          signed_at?: string | null
+        },
+        {
+          status?: ContractStatus
+          field_data?: Json
+          terms_accepted?: Json
+          signature_path?: string | null
+          signed_at?: string | null
           updated_at?: string
         }
       >
