@@ -17,6 +17,7 @@ const SEND_TABS: Array<{ id: MessageCampaignKind; label: string }> = [
   { id: 'welcome', label: '신규회원' },
   { id: 'payment_done', label: '결제안내' },
   { id: 'renewal', label: '재등록' },
+  { id: 'renewal_pending', label: '재등록 알림' },
 ]
 
 function formatWhen(iso: string | null): string {
@@ -114,19 +115,6 @@ export default function MessagesPage() {
       </nav>
 
       <MessageCampaignPanel kind={activeTab} onSent={() => void loadLogs()} />
-
-      <section className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-        <p className="font-semibold">PT D-1 리마인더</p>
-        <p className="mt-1 text-emerald-800/90">
-          Solapi 템플릿 승인·Supabase 시크릿(
-          <code className="text-xs">SOLAPI_TEMPLATE_PT_REMINDER</code>) 설정이
-          완료되면, 예약 24시간 전 회원에게 알림톡이 발송됩니다. 아래 버튼으로
-          수동 실행하거나 Supabase cron으로{' '}
-          <code className="text-xs">pt-reminders</code> 함수를 주기 호출하세요.
-          <code className="ml-1 text-xs">MESSAGING_ENABLED=true</code>도
-          필요합니다.
-        </p>
-      </section>
 
       <section className="space-y-4 rounded-xl border border-gold/30 bg-white p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">

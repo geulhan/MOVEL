@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   fetchPaymentTargets,
+  fetchRenewalPendingTargets,
   fetchRenewalTargets,
   fetchWelcomeTargets,
   formatPaymentSummary,
@@ -10,7 +11,6 @@ import {
   sendPaymentMessage,
   sendRenewalMessage,
   sendWelcomeMessage,
-  suggestRenewalDaysLeft,
   type MessageCampaignKind,
   type PaymentTarget,
   type RenewalTarget,
@@ -51,8 +51,14 @@ const PANEL_COPY: Record<
   renewal: {
     title: '재등록',
     description:
-      '잔여 PT 5회 이하 또는 만료 7일 이내 회원입니다. 갱신 안내 알림톡을 보낼 수 있습니다.',
+      '잔여 PT 5회 이하 또는 만료 7일 이내 회원 전체입니다. 발송 여부를 확인하고 수동 발송할 수 있습니다.',
     empty: '재등록 안내 대상 회원이 없습니다.',
+  },
+  renewal_pending: {
+    title: '재등록 알림',
+    description:
+      '갱신 안내 알림톡이 아직 발송되지 않은 회원입니다. D-7·D-3·D-1 구간별로 한 번씩 발송됩니다.',
+    empty: '발송 대기 중인 재등록 알림이 없습니다.',
   },
 }
 
@@ -87,6 +93,8 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
         setWelcomeRows(await fetchWelcomeTargets())
       } else if (kind === 'payment_done') {
         setPaymentRows(await fetchPaymentTargets())
+      } else if (kind === 'renewal_pending') {
+        setRenewalRows(await fetchRenewalPendingTargets())
       } else {
         setRenewalRows(await fetchRenewalTargets())
       }
@@ -106,7 +114,10 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
   const memberIds = useMemo(() => {
     if (kind === 'welcome') return welcomeRows.map((row) => row.member.id)
     if (kind === 'payment_done') return paymentRows.map((row) => row.member.id)
-    return renewalRows.map((row) => row.member.id)
+    if (kind === 'renewal' || kind === 'renewal_pending') {
+      return renewalRows.map((row) => row.member.id)
+    }
+    return []
   }, [kind, welcomeRows, paymentRows, renewalRows])
 
   const filteredWelcome = useMemo(
@@ -141,7 +152,10 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
   const visibleIds = useMemo(() => {
     if (kind === 'welcome') return filteredWelcome.map((row) => row.member.id)
     if (kind === 'payment_done') return filteredPayment.map((row) => row.member.id)
-    return filteredRenewal.map((row) => row.member.id)
+    if (kind === 'renewal' || kind === 'renewal_pending') {
+      return filteredRenewal.map((row) => row.member.id)
+    }
+    return []
   }, [kind, filteredWelcome, filteredPayment, filteredRenewal])
 
   const allVisibleSelected =
@@ -179,8 +193,7 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
     }
     const row = renewalRows.find((item) => item.member.id === memberId)
     if (!row) throw new Error('회원 정보를 찾을 수 없습니다.')
-    const daysLeft = suggestRenewalDaysLeft(row.daysLeft)
-    return sendRenewalMessage(memberId, daysLeft)
+    return sendRenewalMessage(memberId, row.notifyTier)
   }
 
   async function handleSendOne(memberId: string) {
@@ -266,7 +279,9 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
       ? filteredWelcome.length
       : kind === 'payment_done'
         ? filteredPayment.length
-        : filteredRenewal.length
+        : kind === 'renewal' || kind === 'renewal_pending'
+          ? filteredRenewal.length
+          : 0
 
   return (
     <div className="space-y-4">
@@ -370,23 +385,31 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
                   onSend={() => void handleSendOne(member.id)}
                 />
               ))
-            ) : (
-              filteredRenewal.map(({ member, daysLeft }) => (
+            ) : kind === 'renewal' || kind === 'renewal_pending' ? (
+              filteredRenewal.map(({ member, daysLeft, notifyTier, alreadySent }) => (
                 <CampaignRow
                   key={member.id}
                   memberId={member.id}
                   name={member.name}
                   phone={member.phone}
-                  detail={formatRenewalSummary(member, daysLeft)}
-                  badge={renewalReminderLabel(daysLeft)}
+                  detail={`${formatRenewalSummary(member, daysLeft)} · 발송 구간 ${renewalReminderLabel(notifyTier)}`}
+                  badge={
+                    kind === 'renewal_pending' || !alreadySent
+                      ? renewalReminderLabel(notifyTier)
+                      : '발송 완료'
+                  }
+                  badgeTone={
+                    kind === 'renewal' && alreadySent ? 'muted' : 'alert'
+                  }
                   selected={selected.has(member.id)}
                   onToggle={() => toggleOne(member.id)}
                   rowStatus={rowStatus[member.id]}
                   sending={sendingId === member.id}
                   onSend={() => void handleSendOne(member.id)}
+                  sendDisabled={kind === 'renewal' && alreadySent}
                 />
               ))
-            )}
+            ) : null}
           </tbody>
         </table>
       </div>
@@ -400,22 +423,26 @@ function CampaignRow({
   phone,
   detail,
   badge,
+  badgeTone = 'alert',
   selected,
   onToggle,
   rowStatus,
   sending,
   onSend,
+  sendDisabled = false,
 }: {
   memberId: string
   name: string
   phone: string
   detail: string
   badge?: string
+  badgeTone?: 'alert' | 'muted'
   selected: boolean
   onToggle: () => void
   rowStatus?: RowStatus
   sending: boolean
   onSend: () => void
+  sendDisabled?: boolean
 }) {
   return (
     <tr className="border-b border-gold/10">
@@ -435,7 +462,13 @@ function CampaignRow({
           {name}
         </Link>
         {badge && (
-          <span className="ml-2 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+          <span
+            className={`ml-2 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+              badgeTone === 'muted'
+                ? 'bg-gray-100 text-gray-600'
+                : 'bg-amber-100 text-amber-800'
+            }`}
+          >
             {badge}
           </span>
         )}
@@ -465,10 +498,10 @@ function CampaignRow({
         <button
           type="button"
           onClick={onSend}
-          disabled={sending}
+          disabled={sending || sendDisabled}
           className="rounded-lg border border-gold/40 px-3 py-1.5 text-xs font-semibold text-charcoal transition hover:bg-cream disabled:opacity-50"
         >
-          {sending ? '발송 중…' : '발송'}
+          {sendDisabled ? '발송됨' : sending ? '발송 중…' : '발송'}
         </button>
       </td>
     </tr>

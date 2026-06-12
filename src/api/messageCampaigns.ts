@@ -1,10 +1,14 @@
 import { fetchMembers, formatDate, todayDateString } from './members'
 import { sendNotification, type SendNotificationResult } from './notifications'
 import { supabase } from '../lib/supabase'
-import type { Member, PaymentHistory } from '../types/database'
+import type { Member, MessageTemplateKey, PaymentHistory } from '../types/database'
 import { isExpiringSoon, isRenewalTarget } from '../utils/renewal'
 
-export type MessageCampaignKind = 'welcome' | 'payment_done' | 'renewal'
+export type MessageCampaignKind =
+  | 'welcome'
+  | 'payment_done'
+  | 'renewal'
+  | 'renewal_pending'
 
 export type WelcomeTarget = {
   member: Member
@@ -18,6 +22,8 @@ export type PaymentTarget = {
 export type RenewalTarget = {
   member: Member
   daysLeft: number
+  notifyTier: number
+  alreadySent: boolean
 }
 
 function daysBetween(from: string, to: string): number {
@@ -27,7 +33,7 @@ function daysBetween(from: string, to: string): number {
 }
 
 async function fetchNotifiedMemberIds(
-  templateKey: MessageCampaignKind,
+  templateKey: MessageTemplateKey,
 ): Promise<Set<string>> {
   const { data, error } = await supabase
     .from('message_logs')
@@ -41,6 +47,25 @@ async function fetchNotifiedMemberIds(
       .map((row) => row.member_id)
       .filter((id): id is string => Boolean(id)),
   )
+}
+
+async function fetchNotifiedRenewalTiers(): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from('message_logs')
+    .select('member_id, metadata')
+    .eq('template_key', 'renewal')
+    .in('status', ['sent', 'skipped'])
+
+  if (error) throw error
+
+  const keys = new Set<string>()
+  for (const row of data ?? []) {
+    if (!row.member_id) continue
+    const daysLeft = (row.metadata as { days_left?: number } | null)?.days_left
+    if (daysLeft == null) continue
+    keys.add(`${row.member_id}:${daysLeft}`)
+  }
+  return keys
 }
 
 async function fetchNotifiedPaymentIds(): Promise<Set<string>> {
@@ -103,8 +128,11 @@ export async function fetchPaymentTargets(): Promise<PaymentTarget[]> {
     .filter((row): row is PaymentTarget => row !== null)
 }
 
-export async function fetchRenewalTargets(): Promise<RenewalTarget[]> {
-  const members = await fetchMembers()
+async function buildRenewalTargets(): Promise<RenewalTarget[]> {
+  const [members, notifiedTiers] = await Promise.all([
+    fetchMembers(),
+    fetchNotifiedRenewalTiers(),
+  ])
   const today = todayDateString()
 
   return members
@@ -117,9 +145,24 @@ export async function fetchRenewalTargets(): Promise<RenewalTarget[]> {
     .map((member) => {
       const expiresAt = member.expires_at?.split('T')[0]
       const daysLeft = expiresAt ? Math.max(0, daysBetween(today, expiresAt)) : 0
-      return { member, daysLeft }
+      const notifyTier = suggestRenewalDaysLeft(daysLeft)
+      return {
+        member,
+        daysLeft,
+        notifyTier,
+        alreadySent: notifiedTiers.has(`${member.id}:${notifyTier}`),
+      }
     })
     .sort((a, b) => a.daysLeft - b.daysLeft)
+}
+
+export async function fetchRenewalTargets(): Promise<RenewalTarget[]> {
+  return buildRenewalTargets()
+}
+
+export async function fetchRenewalPendingTargets(): Promise<RenewalTarget[]> {
+  const rows = await buildRenewalTargets()
+  return rows.filter((row) => !row.alreadySent)
 }
 
 export async function sendWelcomeMessage(
