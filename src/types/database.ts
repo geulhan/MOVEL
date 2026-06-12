@@ -219,6 +219,7 @@ export type ExerciseJournal = {
   title: string | null
   content: string
   created_by: string
+  image_urls: string[]
   created_at: string
 }
 
@@ -642,11 +643,13 @@ export type Database = {
           title?: string | null
           content: string
           created_by?: string
+          image_urls?: string[]
         },
         {
           trained_at?: string
           title?: string | null
           content?: string
+          image_urls?: string[]
         }
       >
       member_inbody_records: TableDef<

@@ -456,10 +456,10 @@ export default function MemberPortalPage() {
     hasTodayPt
 
   const navTabs: { id: Exclude<Tab, 'home'>; label: string }[] = [
-    { id: 'payment', label: '결제' },
     { id: 'schedule', label: '수업 일정' },
     { id: 'journal', label: '운동일지' },
-    { id: 'rewards', label: 'MY REWARDS' },
+    { id: 'payment', label: '결제' },
+    { id: 'rewards', label: 'REWARDS' },
     { id: 'mypage', label: '마이페이지' },
   ]
 
@@ -503,7 +503,7 @@ export default function MemberPortalPage() {
               <p className="font-semibold">PT 이용 전 안내</p>
               <p className="mt-1 text-sky-800/90">
                 센터에서 결제·등록이 완료되면 PT 출석과 수업 일정을 이용할 수
-                있습니다. MY REWARDS(만보 인증 등)는 지금도 이용 가능합니다.
+                있습니다. REWARDS(만보 인증 등)는 지금도 이용 가능합니다.
               </p>
             </div>
           )}

@@ -1,13 +1,67 @@
 import { supabase } from '../lib/supabase'
 
+export type ExerciseJournalCreatedBy = 'member' | 'trainer' | 'admin'
+
 export type ExerciseJournal = {
   id: string
   member_id: string
   trained_at: string
   title: string | null
   content: string
-  created_by: string
+  created_by: ExerciseJournalCreatedBy
+  image_urls: string[]
   created_at: string
+}
+
+const BUCKET = 'exercise-journal-photos'
+const MAX_PHOTOS = 5
+const MAX_BYTES = 10 * 1024 * 1024
+
+function normalize(row: ExerciseJournal): ExerciseJournal {
+  return {
+    ...row,
+    image_urls: Array.isArray(row.image_urls) ? row.image_urls : [],
+  }
+}
+
+export async function uploadExerciseJournalPhotos(
+  memberId: string,
+  files: File[],
+): Promise<string[]> {
+  if (files.length === 0) return []
+  if (files.length > MAX_PHOTOS) {
+    throw new Error(`사진은 최대 ${MAX_PHOTOS}장까지 첨부할 수 있습니다.`)
+  }
+
+  const urls: string[] = []
+
+  for (const file of files) {
+    if (!file.type.startsWith('image/')) {
+      throw new Error('이미지 파일만 업로드할 수 있습니다.')
+    }
+    if (file.size > MAX_BYTES) {
+      throw new Error('이미지는 10MB 이하만 가능합니다.')
+    }
+
+    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+    const imagePath = `${memberId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
+
+    const { error: uploadError } = await supabase.storage
+      .from(BUCKET)
+      .upload(imagePath, file, { cacheControl: '3600', upsert: false })
+
+    if (uploadError) {
+      throw new Error(`이미지 업로드 실패: ${uploadError.message}`)
+    }
+
+    const { data: urlData } = supabase.storage
+      .from(BUCKET)
+      .getPublicUrl(imagePath)
+
+    urls.push(urlData.publicUrl)
+  }
+
+  return urls
 }
 
 export async function fetchExerciseJournals(
@@ -20,46 +74,82 @@ export async function fetchExerciseJournals(
     .order('trained_at', { ascending: false })
 
   if (error) throw error
-  return (data ?? []) as ExerciseJournal[]
+  return (data ?? []).map((row) => normalize(row as ExerciseJournal))
 }
 
 export async function createExerciseJournal(
   memberId: string,
-  input: { trained_at: string; title?: string; content: string },
+  input: {
+    trained_at: string
+    title?: string
+    content: string
+    created_by?: ExerciseJournalCreatedBy
+    photoFiles?: File[]
+  },
 ): Promise<ExerciseJournal> {
+  const trimmed = input.content.trim()
+  const photoFiles = input.photoFiles ?? []
+  if (!trimmed && photoFiles.length === 0) {
+    throw new Error('내용 또는 사진을 입력해 주세요.')
+  }
+
+  const image_urls = await uploadExerciseJournalPhotos(memberId, photoFiles)
+
   const { data, error } = await supabase
     .from('exercise_journals')
     .insert({
       member_id: memberId,
       trained_at: input.trained_at,
       title: input.title?.trim() || null,
-      content: input.content.trim(),
-      created_by: 'admin',
+      content: trimmed || '(사진 첨부)',
+      created_by: input.created_by ?? 'admin',
+      image_urls,
     })
     .select('*')
     .single()
 
   if (error) throw error
-  return data as ExerciseJournal
+  return normalize(data as ExerciseJournal)
 }
 
 export async function updateExerciseJournal(
+  memberId: string,
   journalId: string,
-  input: { trained_at: string; title?: string; content: string },
+  input: {
+    trained_at: string
+    title?: string
+    content: string
+    photoFiles?: File[]
+    existingImageUrls?: string[]
+  },
 ): Promise<ExerciseJournal> {
+  const trimmed = input.content.trim()
+  const kept = input.existingImageUrls ?? []
+  const newUrls =
+    input.photoFiles && input.photoFiles.length > 0
+      ? await uploadExerciseJournalPhotos(memberId, input.photoFiles)
+      : []
+
+  if (!trimmed && kept.length + newUrls.length === 0) {
+    throw new Error('내용 또는 사진을 입력해 주세요.')
+  }
+
+  const image_urls = [...kept, ...newUrls].slice(0, MAX_PHOTOS)
+
   const { data, error } = await supabase
     .from('exercise_journals')
     .update({
       trained_at: input.trained_at,
       title: input.title?.trim() || null,
-      content: input.content.trim(),
+      content: trimmed || '(사진 첨부)',
+      image_urls,
     })
     .eq('id', journalId)
     .select('*')
     .single()
 
   if (error) throw error
-  return data as ExerciseJournal
+  return normalize(data as ExerciseJournal)
 }
 
 export async function deleteExerciseJournal(journalId: string): Promise<void> {

@@ -9,6 +9,8 @@ import {
 import { formatDate } from '../api/members'
 import { formatSupabaseError } from '../lib/errors'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../styles/theme'
+import { ExerciseJournalPhotoGallery } from './member/ExerciseJournalPhotoGallery'
+import { ExerciseJournalPhotoPicker } from './member/ExerciseJournalPhotoPicker'
 
 const PLACEHOLDER = `예) 하체 데이
 - 스쿼트 60kg 4×8
@@ -29,11 +31,14 @@ export function MemberExerciseJournalSection({ memberId }: Props) {
   )
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
+  const [photoFiles, setPhotoFiles] = useState<File[]>([])
   const [saving, setSaving] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editTrainedAt, setEditTrainedAt] = useState('')
   const [editTitle, setEditTitle] = useState('')
   const [editContent, setEditContent] = useState('')
+  const [editExistingUrls, setEditExistingUrls] = useState<string[]>([])
+  const [editPhotoFiles, setEditPhotoFiles] = useState<File[]>([])
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
@@ -57,7 +62,7 @@ export function MemberExerciseJournalSection({ memberId }: Props) {
 
   async function handleCreate(e: FormEvent) {
     e.preventDefault()
-    if (!content.trim()) return
+    if (!content.trim() && photoFiles.length === 0) return
     setSaving(true)
     setError(null)
     try {
@@ -65,9 +70,11 @@ export function MemberExerciseJournalSection({ memberId }: Props) {
         trained_at: trainedAt,
         title,
         content,
+        photoFiles,
       })
       setTitle('')
       setContent('')
+      setPhotoFiles([])
       await load()
     } catch (err) {
       setError(formatSupabaseError(err))
@@ -80,7 +87,9 @@ export function MemberExerciseJournalSection({ memberId }: Props) {
     setEditingId(journal.id)
     setEditTrainedAt(String(journal.trained_at).slice(0, 10))
     setEditTitle(journal.title ?? '')
-    setEditContent(journal.content)
+    setEditContent(journal.content === '(사진 첨부)' ? '' : journal.content)
+    setEditExistingUrls(journal.image_urls)
+    setEditPhotoFiles([])
   }
 
   function cancelEdit() {
@@ -88,17 +97,23 @@ export function MemberExerciseJournalSection({ memberId }: Props) {
     setEditTrainedAt('')
     setEditTitle('')
     setEditContent('')
+    setEditExistingUrls([])
+    setEditPhotoFiles([])
   }
 
   async function handleUpdate(journalId: string) {
-    if (!editContent.trim()) return
+    if (!editContent.trim() && editExistingUrls.length + editPhotoFiles.length === 0) {
+      return
+    }
     setUpdatingId(journalId)
     setError(null)
     try {
-      await updateExerciseJournal(journalId, {
+      await updateExerciseJournal(memberId, journalId, {
         trained_at: editTrainedAt,
         title: editTitle,
         content: editContent,
+        existingImageUrls: editExistingUrls,
+        photoFiles: editPhotoFiles,
       })
       cancelEdit()
       await load()
@@ -173,12 +188,18 @@ export function MemberExerciseJournalSection({ memberId }: Props) {
             rows={6}
             placeholder={PLACEHOLDER}
             className={`${inputClass} resize-y text-sm leading-relaxed`}
-            required
           />
         </label>
+        <div className="mt-3">
+          <ExerciseJournalPhotoPicker
+            files={photoFiles}
+            onChange={setPhotoFiles}
+            disabled={saving}
+          />
+        </div>
         <button
           type="submit"
-          disabled={saving || !content.trim()}
+          disabled={saving || (!content.trim() && photoFiles.length === 0)}
           className={`mt-3 ${btnPrimary}`}
         >
           {saving ? '저장 중…' : '운동일지 등록'}
@@ -228,11 +249,21 @@ export function MemberExerciseJournalSection({ memberId }: Props) {
                       rows={6}
                       className={`${inputClass} resize-y text-sm leading-relaxed`}
                     />
+                    {editExistingUrls.length > 0 && (
+                      <ExerciseJournalPhotoGallery urls={editExistingUrls} />
+                    )}
+                    <ExerciseJournalPhotoPicker
+                      files={editPhotoFiles}
+                      onChange={setEditPhotoFiles}
+                      disabled={updatingId === j.id}
+                    />
                     <div className="flex flex-wrap gap-2">
                       <button
                         type="button"
                         disabled={
-                          updatingId === j.id || !editContent.trim()
+                          updatingId === j.id ||
+                          (!editContent.trim() &&
+                            editExistingUrls.length + editPhotoFiles.length === 0)
                         }
                         onClick={() => void handleUpdate(j.id)}
                         className={btnPrimary}
@@ -279,9 +310,12 @@ export function MemberExerciseJournalSection({ memberId }: Props) {
                         </button>
                       </div>
                     </div>
-                    <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-charcoal/85">
-                      {j.content}
-                    </p>
+                    {j.content !== '(사진 첨부)' && (
+                      <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-charcoal/85">
+                        {j.content}
+                      </p>
+                    )}
+                    <ExerciseJournalPhotoGallery urls={j.image_urls} />
                   </>
                 )}
               </li>
