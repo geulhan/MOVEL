@@ -10,6 +10,7 @@ import { formatDate } from '../../api/members'
 import { formatSupabaseError } from '../../lib/errors'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/theme'
 import { InbodyMuscleFatAnalysis } from './InbodyMuscleFatAnalysis'
+import { InbodyTrendCharts } from './InbodyTrendCharts'
 
 type Props = {
   memberId: string
@@ -128,6 +129,8 @@ export function MemberInbodySection({
           {latest && (
             <InbodyMuscleFatAnalysis record={latest} history={records} />
           )}
+
+          <InbodyTrendCharts records={records} />
 
           {allowInput && (
             <form

@@ -9,7 +9,6 @@ import {
 import { formatDate } from '../api/members'
 import { formatSupabaseError } from '../lib/errors'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../styles/theme'
-import { MemberInbodySection } from './member/MemberInbodySection'
 
 const PLACEHOLDER = `예) 하체 데이
 - 스쿼트 60kg 4×8
@@ -126,10 +125,7 @@ export function MemberExerciseJournalSection({ memberId }: Props) {
   }
 
   return (
-    <div className="space-y-4">
-      <MemberInbodySection memberId={memberId} createdBy="admin" />
-
-      <section className={`${cardClass} overflow-hidden`}>
+    <section className={`${cardClass} overflow-hidden`}>
       <div className="card-header">
         <h3 className="text-base font-semibold text-charcoal">운동일지</h3>
         <p className="mt-0.5 text-xs text-muted">
@@ -294,6 +290,5 @@ export function MemberExerciseJournalSection({ memberId }: Props) {
         </ul>
       )}
     </section>
-    </div>
   )
 }

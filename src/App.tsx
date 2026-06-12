@@ -6,6 +6,7 @@ import MembersPage from './pages/admin/MembersPage'
 import { MemberAttendanceTab } from './components/member-detail/MemberAttendanceTab'
 import { MemberDetailShell } from './components/member-detail/MemberDetailShell'
 import { MemberJournalTab } from './components/member-detail/MemberJournalTab'
+import { MemberInbodyTab } from './components/member-detail/MemberInbodyTab'
 import { MemberOverviewTab } from './components/member-detail/MemberOverviewTab'
 import { MemberPtPaymentTab } from './components/member-detail/MemberPtPaymentTab'
 import { MemberRecordsTab } from './components/member-detail/MemberRecordsTab'
@@ -38,6 +39,7 @@ export default function App() {
               <Route path="pt" element={<MemberPtPaymentTab />} />
               <Route path="attendance" element={<MemberAttendanceTab />} />
               <Route path="records" element={<MemberRecordsTab />} />
+              <Route path="inbody" element={<MemberInbodyTab />} />
               <Route path="journal" element={<MemberJournalTab />} />
             </Route>
             <Route

@@ -11,7 +11,14 @@ function MemberDetailShellInner() {
   const navigate = useNavigate()
   const location = useLocation()
   const { member, loading, error } = useMemberDetail()
-  const isJournalPage = location.pathname.endsWith('/journal')
+  const isSubPage =
+    location.pathname.endsWith('/journal') ||
+    location.pathname.endsWith('/inbody')
+  const subPageLabel = location.pathname.endsWith('/inbody')
+    ? '인바디'
+    : location.pathname.endsWith('/journal')
+      ? '운동일지'
+      : null
   const mainTabs = getMemberDetailTabs(getAdminSession())
 
   if (loading && !member) {
@@ -42,11 +49,11 @@ function MemberDetailShellInner() {
       <button
         type="button"
         onClick={() =>
-          navigate(isJournalPage ? basePath : '/admin/members')
+          navigate(isSubPage ? basePath : '/admin/members')
         }
         className={btnNavBack}
       >
-        {isJournalPage ? '← 회원 상세' : '← 회원 목록'}
+        {isSubPage ? '← 회원 상세' : '← 회원 목록'}
       </button>
 
       {error && (
@@ -64,14 +71,14 @@ function MemberDetailShellInner() {
             <PtAlertBadge member={member} />
           </div>
           <p className="mt-1 text-sm text-muted">{formatPhone(member.phone)}</p>
-          {isJournalPage && (
-            <p className="mt-0.5 text-xs font-medium text-gold">운동일지</p>
+          {subPageLabel && (
+            <p className="mt-0.5 text-xs font-medium text-gold">{subPageLabel}</p>
           )}
         </div>
         <StatusBadge status={member.status} />
       </header>
 
-      {!isJournalPage && (
+      {!isSubPage && (
         <nav className="chip-scroll -mx-1 px-1">
           {mainTabs.map((tab) => (
             <NavLink
@@ -85,6 +92,14 @@ function MemberDetailShellInner() {
               {tab.label}
             </NavLink>
           ))}
+          <NavLink
+            to={`${basePath}/inbody`}
+            className={({ isActive }) =>
+              `chip whitespace-nowrap ${isActive ? 'chip-active' : 'chip-inactive'}`
+            }
+          >
+            인바디
+          </NavLink>
           <NavLink
             to={`${basePath}/journal`}
             className={({ isActive }) =>
