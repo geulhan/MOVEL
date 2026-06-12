@@ -1,16 +1,16 @@
 import { formatDate } from '../../api/members'
 import type { InbodyRecord } from '../../api/inbodyRecords'
+import { bodyFatPercent, formatBodyFatPercent } from '../../lib/inbodyMetrics'
 
 type MetricKey = 'weight_kg' | 'skeletal_muscle_kg' | 'body_fat_kg'
 
 type MetricConfig = {
-  key: MetricKey
+  key: MetricKey | 'body_fat_percent'
   label: string
   subLabel: string
   unit: string
-  scaleMin: number
-  scaleMax: number
-  ticks: number[]
+  getValue: (record: InbodyRecord) => number
+  formatValue: (value: number) => string
 }
 
 const METRICS: MetricConfig[] = [
@@ -19,52 +19,54 @@ const METRICS: MetricConfig[] = [
     label: '체중',
     subLabel: 'Weight',
     unit: 'kg',
-    scaleMin: 55,
-    scaleMax: 205,
-    ticks: [55, 75, 95, 115, 135, 155, 175, 195],
+    getValue: (r) => r.weight_kg,
+    formatValue: (v) => v.toFixed(1),
   },
   {
     key: 'skeletal_muscle_kg',
     label: '골격근량',
     subLabel: 'Skeletal Muscle Mass',
     unit: 'kg',
-    scaleMin: 70,
-    scaleMax: 170,
-    ticks: [70, 90, 110, 130, 150, 170],
+    getValue: (r) => r.skeletal_muscle_kg,
+    formatValue: (v) => v.toFixed(1),
   },
   {
     key: 'body_fat_kg',
     label: '체지방량',
     subLabel: 'Body Fat Mass',
     unit: 'kg',
-    scaleMin: 40,
-    scaleMax: 460,
-    ticks: [40, 120, 200, 280, 360, 440],
+    getValue: (r) => r.body_fat_kg,
+    formatValue: (v) => v.toFixed(1),
+  },
+  {
+    key: 'body_fat_percent',
+    label: '체지방률',
+    subLabel: 'Percent Body Fat',
+    unit: '%',
+    getValue: bodyFatPercent,
+    formatValue: (v) => formatBodyFatPercent(v).replace('%', ''),
   },
 ]
 
-function referenceFor(
-  records: InbodyRecord[],
-  key: MetricKey,
-): number {
-  const oldest = records[records.length - 1]
-  if (oldest) return oldest[key]
-  const latest = records[0]
-  return latest?.[key] ?? 1
+function rangeForValues(values: number[]): { min: number; max: number } {
+  if (values.length === 0) return { min: 0, max: 1 }
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const span = max - min || Math.max(max * 0.1, 1)
+  return { min: min - span * 0.15, max: max + span * 0.15 }
 }
 
-function percentOfReference(value: number, reference: number): number {
-  if (reference <= 0) return 100
-  return (value / reference) * 100
+function barFillPercent(value: number, min: number, max: number): number {
+  const span = max - min || 1
+  const clamped = Math.max(min, Math.min(max, value))
+  return ((clamped - min) / span) * 100
 }
 
-function barPosition(percent: number, scaleMin: number, scaleMax: number): number {
-  const clamped = Math.max(scaleMin, Math.min(scaleMax, percent))
-  return ((clamped - scaleMin) / (scaleMax - scaleMin)) * 100
-}
-
-function zonePosition(percent: number, scaleMin: number, scaleMax: number): number {
-  return barPosition(percent, scaleMin, scaleMax)
+function buildTicks(min: number, max: number, count = 5): number[] {
+  const span = max - min
+  if (span <= 0) return [min]
+  const step = span / (count - 1)
+  return Array.from({ length: count }, (_, i) => min + step * i)
 }
 
 type Props = {
@@ -78,98 +80,75 @@ export function InbodyMuscleFatAnalysis({ record, history }: Props) {
       <div className="border-b border-charcoal/10 bg-cream/40 px-3 py-2">
         <p className="text-sm font-semibold text-charcoal">
           골격근·지방분석{' '}
-          <span className="text-xs font-normal text-muted">Muscle-Fat Analysis</span>
+          <span className="text-xs font-normal text-muted">
+            Muscle-Fat Analysis
+          </span>
         </p>
         <p className="mt-0.5 text-xs text-muted">
           측정일 {formatDate(record.measured_at)}
         </p>
       </div>
 
-      <div className="grid grid-cols-[5.5rem_1fr] text-xs">
-        <div className="border-r border-charcoal/10 bg-cream/20 px-2 py-2 text-center text-[10px] text-muted">
-          <div className="h-6" />
-          <div className="grid h-28 grid-rows-3 items-center">
-            <span>표준이하</span>
-            <span>표준</span>
-            <span>표준이상</span>
-          </div>
-        </div>
+      <div className="space-y-4 px-3 py-3 text-xs">
+        {METRICS.map((metric) => {
+          const value = metric.getValue(record)
+          const historyValues = history.map((r) => metric.getValue(r))
+          const { min, max } = rangeForValues(historyValues)
+          const fill = barFillPercent(value, min, max)
+          const ticks = buildTicks(min, max)
 
-        <div className="px-2 py-2">
-          <div className="mb-1 flex justify-between text-[10px] text-muted">
-            <span>Under</span>
-            <span>Normal</span>
-            <span>Over</span>
-          </div>
+          return (
+            <div key={metric.key}>
+              <p className="mb-1 font-semibold text-charcoal">
+                {metric.label}{' '}
+                <span className="text-[10px] font-normal text-muted">
+                  ({metric.unit}) {metric.subLabel}
+                </span>
+                {metric.key === 'body_fat_percent' && (
+                  <span className="ml-1 text-[10px] font-normal text-muted">
+                    · 체지방량÷체중 자동 계산
+                  </span>
+                )}
+              </p>
 
-          <div className="space-y-4">
-            {METRICS.map((metric) => {
-              const value = record[metric.key]
-              const reference = referenceFor(history, metric.key)
-              const percent = percentOfReference(value, reference)
-              const fill = barPosition(percent, metric.scaleMin, metric.scaleMax)
-              const underEnd = zonePosition(85, metric.scaleMin, metric.scaleMax)
-              const overStart = zonePosition(115, metric.scaleMin, metric.scaleMax)
+              <div className="relative h-7 rounded-sm border border-charcoal/15 bg-cream/30">
+                <div
+                  className="absolute inset-y-0 left-0 bg-charcoal"
+                  style={{ width: `${fill}%` }}
+                />
+                <span
+                  className="absolute top-1/2 -translate-y-1/2 text-[11px] font-bold tabular-nums text-charcoal"
+                  style={{ left: `min(${fill + 1}%, 78%)` }}
+                >
+                  {metric.key === 'body_fat_percent'
+                    ? formatBodyFatPercent(value)
+                    : metric.formatValue(value)}
+                </span>
+              </div>
 
-              return (
-                <div key={metric.key}>
-                  <div className="mb-1 flex items-baseline justify-between gap-2">
-                    <p className="font-semibold text-charcoal">
-                      {metric.label}{' '}
-                      <span className="text-[10px] font-normal text-muted">
-                        ({metric.unit}) {metric.subLabel}
-                      </span>
-                    </p>
-                  </div>
-
-                  <div className="relative h-7 rounded-sm border border-charcoal/15 bg-white">
-                    <div
-                      className="absolute inset-y-0 left-0 bg-charcoal/5"
-                      style={{ width: `${underEnd}%` }}
-                    />
-                    <div
-                      className="absolute inset-y-0 bg-charcoal/10"
-                      style={{ left: `${underEnd}%`, width: `${overStart - underEnd}%` }}
-                    />
-                    <div
-                      className="absolute inset-y-0 right-0 bg-amber-100/80"
-                      style={{ width: `${100 - overStart}%` }}
-                    />
-                    <div
-                      className="absolute inset-y-0 left-0 bg-charcoal"
-                      style={{ width: `${fill}%` }}
-                    />
+              <div className="relative mt-1 h-4">
+                {ticks.map((tick, i) => {
+                  const pos = barFillPercent(tick, min, max)
+                  return (
                     <span
-                      className="absolute top-1/2 -translate-y-1/2 text-[11px] font-bold tabular-nums text-charcoal"
-                      style={{ left: `min(${fill + 1}%, 78%)` }}
+                      key={i}
+                      className="absolute -translate-x-1/2 text-[9px] tabular-nums text-muted"
+                      style={{ left: `${pos}%` }}
                     >
-                      {value.toFixed(1)}
+                      {metric.key === 'body_fat_percent'
+                        ? tick.toFixed(1)
+                        : tick.toFixed(0)}
+                      <span
+                        className="absolute -top-2 left-1/2 h-1.5 w-px -translate-x-1/2 bg-charcoal/25"
+                        aria-hidden
+                      />
                     </span>
-                  </div>
-
-                  <div className="relative mt-1 h-4">
-                    {metric.ticks.map((tick) => {
-                      const pos = barPosition(tick, metric.scaleMin, metric.scaleMax)
-                      return (
-                        <span
-                          key={tick}
-                          className="absolute -translate-x-1/2 text-[9px] tabular-nums text-muted"
-                          style={{ left: `${pos}%` }}
-                        >
-                          {tick}
-                          <span
-                            className="absolute -top-2 left-1/2 h-1.5 w-px -translate-x-1/2 bg-charcoal/25"
-                            aria-hidden
-                          />
-                        </span>
-                      )
-                    })}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })}
       </div>
     </div>
   )

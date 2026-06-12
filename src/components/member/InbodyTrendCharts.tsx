@@ -1,23 +1,48 @@
 import type { InbodyRecord } from '../../api/inbodyRecords'
-
-type MetricKey = 'weight_kg' | 'skeletal_muscle_kg' | 'body_fat_kg'
+import { bodyFatPercent } from '../../lib/inbodyMetrics'
 
 type MetricConfig = {
-  key: MetricKey
+  id: string
   label: string
   unit: string
   higherIsBetter: boolean
+  getValue: (record: InbodyRecord) => number
+  formatValue: (value: number) => string
 }
 
 const METRICS: MetricConfig[] = [
-  { key: 'weight_kg', label: '체중', unit: 'kg', higherIsBetter: false },
   {
-    key: 'skeletal_muscle_kg',
+    id: 'weight_kg',
+    label: '체중',
+    unit: 'kg',
+    higherIsBetter: false,
+    getValue: (r) => r.weight_kg,
+    formatValue: (v) => v.toFixed(1),
+  },
+  {
+    id: 'skeletal_muscle_kg',
     label: '골격근량',
     unit: 'kg',
     higherIsBetter: true,
+    getValue: (r) => r.skeletal_muscle_kg,
+    formatValue: (v) => v.toFixed(1),
   },
-  { key: 'body_fat_kg', label: '체지방량', unit: 'kg', higherIsBetter: false },
+  {
+    id: 'body_fat_kg',
+    label: '체지방량',
+    unit: 'kg',
+    higherIsBetter: false,
+    getValue: (r) => r.body_fat_kg,
+    formatValue: (v) => v.toFixed(1),
+  },
+  {
+    id: 'body_fat_percent',
+    label: '체지방률',
+    unit: '%',
+    higherIsBetter: false,
+    getValue: bodyFatPercent,
+    formatValue: (v) => `${v.toFixed(1)}%`,
+  },
 ]
 
 const CHART_W = 320
@@ -67,8 +92,7 @@ function dotColor(
 
 function buildPoints(
   records: InbodyRecord[],
-  key: MetricKey,
-  higherIsBetter: boolean,
+  metric: MetricConfig,
 ): ChartPoint[] {
   const sorted = [...records].sort((a, b) => {
     const cmp = a.measured_at.localeCompare(b.measured_at)
@@ -76,7 +100,7 @@ function buildPoints(
     return a.created_at.localeCompare(b.created_at)
   })
 
-  const values = sorted.map((r) => r[key])
+  const values = sorted.map((r) => metric.getValue(r))
   const min = Math.min(...values)
   const max = Math.max(...values)
   const span = max - min || Math.max(max * 0.1, 1)
@@ -86,8 +110,8 @@ function buildPoints(
   const plotW = CHART_W - PAD_X * 2
 
   return sorted.map((record, i) => {
-    const value = record[key]
-    const prev = i > 0 ? sorted[i - 1][key] : null
+    const value = metric.getValue(record)
+    const prev = i > 0 ? metric.getValue(sorted[i - 1]) : null
     const x =
       sorted.length === 1
         ? PAD_X + plotW / 2
@@ -100,7 +124,7 @@ function buildPoints(
       value,
       x,
       y,
-      color: dotColor(value, prev, higherIsBetter),
+      color: dotColor(value, prev, metric.higherIsBetter),
     }
   })
 }
@@ -127,7 +151,7 @@ type ChartCardProps = {
 }
 
 function TrendChartCard({ metric, records }: ChartCardProps) {
-  const points = buildPoints(records, metric.key, metric.higherIsBetter)
+  const points = buildPoints(records, metric)
   const latest = points[points.length - 1]
   const path = linePath(points)
   const grids = gridLines(points)
@@ -139,6 +163,11 @@ function TrendChartCard({ metric, records }: ChartCardProps) {
           {metric.label}{' '}
           <span className="font-normal text-muted">({metric.unit})</span>
         </h4>
+        {metric.id === 'body_fat_percent' && (
+          <p className="mt-0.5 text-[10px] text-muted">
+            체지방량 ÷ 체중으로 자동 계산
+          </p>
+        )}
       </div>
 
       <div className="relative px-2 pb-3">
@@ -186,7 +215,15 @@ function TrendChartCard({ metric, records }: ChartCardProps) {
           {points.map((p) => (
             <g key={p.record.id}>
               <circle cx={p.x} cy={p.y} r="5" fill={p.color} />
-              <circle cx={p.x} cy={p.y} r="7" fill="none" stroke={p.color} strokeWidth="1.5" opacity="0.35" />
+              <circle
+                cx={p.x}
+                cy={p.y}
+                r="7"
+                fill="none"
+                stroke={p.color}
+                strokeWidth="1.5"
+                opacity="0.35"
+              />
               <text
                 x={p.x}
                 y={p.y - 12}
@@ -194,7 +231,7 @@ function TrendChartCard({ metric, records }: ChartCardProps) {
                 className="fill-charcoal text-[11px] font-semibold"
                 style={{ fontSize: 11 }}
               >
-                {p.value.toFixed(1)}
+                {metric.formatValue(p.value)}
               </text>
             </g>
           ))}
@@ -208,8 +245,7 @@ function TrendChartCard({ metric, records }: ChartCardProps) {
             }}
           >
             {formatTooltipDate(latest.record.measured_at)}{' '}
-            {latest.value.toFixed(1)}
-            {metric.unit}
+            {metric.formatValue(latest.value)}
           </div>
         )}
 
@@ -251,7 +287,7 @@ export function InbodyTrendCharts({ records }: Props) {
         </p>
       </div>
       {METRICS.map((metric) => (
-        <TrendChartCard key={metric.key} metric={metric} records={records} />
+        <TrendChartCard key={metric.id} metric={metric} records={records} />
       ))}
     </div>
   )

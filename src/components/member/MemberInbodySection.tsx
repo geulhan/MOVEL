@@ -9,6 +9,7 @@ import {
 import { formatDate } from '../../api/members'
 import { formatSupabaseError } from '../../lib/errors'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/theme'
+import { bodyFatPercent, formatBodyFatPercent } from '../../lib/inbodyMetrics'
 import { InbodyMuscleFatAnalysis } from './InbodyMuscleFatAnalysis'
 import { InbodyTrendCharts } from './InbodyTrendCharts'
 
@@ -111,8 +112,8 @@ export function MemberInbodySection({
       <div className="border-b border-gold/20 px-4 py-4">
         <h3 className="font-semibold text-charcoal">인바디</h3>
         <p className="mt-1 text-xs text-muted">
-          체중·골격근량·체지방량을 기록하면 인바디 형식 그래프로 확인할 수
-          있습니다.
+          체중·골격근량·체지방량을 기록하면 그래프로 확인할 수 있으며, 체지방률은
+          체지방량÷체중으로 자동 계산됩니다.
         </p>
       </div>
 
@@ -218,7 +219,8 @@ export function MemberInbodySection({
                       <p className="text-xs text-muted">
                         체중 {record.weight_kg.toFixed(1)} · 골격근{' '}
                         {record.skeletal_muscle_kg.toFixed(1)} · 체지방{' '}
-                        {record.body_fat_kg.toFixed(1)}
+                        {record.body_fat_kg.toFixed(1)} · 체지방률{' '}
+                        {formatBodyFatPercent(bodyFatPercent(record))}
                       </p>
                     </div>
                     {allowInput && (
