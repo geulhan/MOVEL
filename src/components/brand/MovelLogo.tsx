@@ -1,25 +1,35 @@
 import { Link } from 'react-router-dom'
 
-/** Transparent PNG — color applied via CSS filter */
-const LOGO_SRC = '/logo/movel-stacked-dark.png'
+const LOGO_SRC = {
+  'stacked-dark': '/logo/movel-stacked-dark.png',
+  'stacked-light': '/logo/movel-stacked-light.png',
+  'horizontal-dark': '/logo/movel-horizontal-dark.png',
+  'horizontal-light': '/logo/movel-horizontal-light.png',
+} as const
 
-export type MovelLogoTone = 'charcoal' | 'cream' | 'gold'
+export type MovelLogoVariant = 'stacked' | 'horizontal'
+export type MovelLogoTone = 'charcoal' | 'cream'
 
 type Props = {
-  /** charcoal on cream/white, cream or gold on charcoal */
+  variant?: MovelLogoVariant
+  /** charcoal = black logo on cream/white, cream = white logo on charcoal */
   tone?: MovelLogoTone
   className?: string
   alt?: string
   linkTo?: string
 }
 
-const TONE_CLASS: Record<MovelLogoTone, string> = {
-  charcoal: 'logo-tone-charcoal',
-  cream: 'logo-tone-cream',
-  gold: 'logo-tone-gold',
+function resolveSrc(variant: MovelLogoVariant, tone: MovelLogoTone): string {
+  if (variant === 'horizontal') {
+    return tone === 'cream'
+      ? LOGO_SRC['horizontal-light']
+      : LOGO_SRC['horizontal-dark']
+  }
+  return tone === 'cream' ? LOGO_SRC['stacked-light'] : LOGO_SRC['stacked-dark']
 }
 
 export function MovelLogo({
+  variant = 'stacked',
   tone = 'charcoal',
   className = 'h-12 w-auto',
   alt = 'MOVEL',
@@ -27,9 +37,9 @@ export function MovelLogo({
 }: Props) {
   const image = (
     <img
-      src={LOGO_SRC}
+      src={resolveSrc(variant, tone)}
       alt={alt}
-      className={`${TONE_CLASS[tone]} ${className}`}
+      className={`${tone === 'cream' ? 'mix-blend-screen' : ''} ${className}`.trim()}
       decoding="async"
     />
   )
@@ -38,7 +48,7 @@ export function MovelLogo({
     return (
       <Link
         to={linkTo}
-        className="inline-block opacity-95 transition hover:opacity-100"
+        className="inline-block transition hover:opacity-90"
         aria-label="MOVEL 홈"
       >
         {image}

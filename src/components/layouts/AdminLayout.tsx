@@ -92,8 +92,9 @@ export function AdminLayout() {
         <header className="border-b border-gold/30 bg-charcoal lg:hidden">
           <div className="flex items-center justify-between gap-3 px-4 py-3">
             <MovelLogo
+              variant="horizontal"
               tone="cream"
-              className="h-9 w-auto"
+              className="h-8 w-auto max-w-[10rem]"
               linkTo="/admin"
             />
             <div className="flex min-w-0 shrink items-center gap-1.5">

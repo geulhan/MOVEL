@@ -129,21 +129,6 @@ body {
   }
 }
 
-/* MOVEL logo — single monochrome asset tinted to brand palette */
-.logo-tone-charcoal {
-  filter: brightness(0) saturate(100%);
-}
-
-.logo-tone-cream {
-  filter: brightness(0) saturate(100%) invert(93%) sepia(8%) saturate(350%)
-    hue-rotate(358deg) brightness(102%);
-}
-
-.logo-tone-gold {
-  filter: brightness(0) saturate(100%) invert(78%) sepia(22%) saturate(520%)
-    hue-rotate(358deg) brightness(95%);
-}
-
 @media print {
   body.contract-printing * {
     visibility: hidden;

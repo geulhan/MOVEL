@@ -14,8 +14,9 @@ export function MemberLayout({ children, memberName, onLogout }: Props) {
         <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-4">
           <div className="min-w-0">
             <MovelLogo
+              variant="stacked"
               tone="charcoal"
-              className="h-12 w-auto"
+              className="h-14 w-auto"
               linkTo="/member"
             />
             <MovelBrandSubtitle tone="gold" className="mt-1.5" />
