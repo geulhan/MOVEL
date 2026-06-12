@@ -248,11 +248,39 @@ export type CenterAttendanceRow = {
 }
 
 export type CenterAttendanceSummary = {
-  scheduled: number
-  attended: number
-  noShow: number
-  absent: number
-  walkIn: number
+  /** 오늘 출석(예약·예약없음 포함) */
+  attendedToday: number
+  /** 선택 월 예약됐으나 출석 미처리 */
+  monthScheduled: number
+  /** 오늘 예약 있으나 미출석 */
+  absentToday: number
+  /** 오늘 노쇼 */
+  noShowToday: number
+  /** 선택 월 총 출석 횟수 */
+  monthAttendanceTotal: number
+}
+
+export type MonthRef = {
+  year: number
+  month: number
+}
+
+export function monthRangeIso({ year, month }: MonthRef): {
+  startIso: string
+  endIso: string
+} {
+  const start = new Date(year, month - 1, 1)
+  start.setHours(0, 0, 0, 0)
+  const end = new Date(year, month, 0)
+  end.setHours(23, 59, 59, 999)
+  return { startIso: start.toISOString(), endIso: end.toISOString() }
+}
+
+export function formatMonthLabel({ year, month }: MonthRef): string {
+  return new Date(year, month - 1, 1).toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+  })
 }
 
 const DISPLAY_STATUS_LABELS: Record<CenterAttendanceDisplayStatus, string> = {
@@ -260,7 +288,7 @@ const DISPLAY_STATUS_LABELS: Record<CenterAttendanceDisplayStatus, string> = {
   no_show: '노쇼',
   scheduled: '예정',
   absent: '미출석',
-  walk_in: '출석(예약없음)',
+  walk_in: '출석',
 }
 
 export function centerAttendanceStatusLabel(
@@ -289,10 +317,72 @@ function deriveDisplayStatus(input: {
   return 'scheduled'
 }
 
+export async function fetchMonthAttendanceTotal(
+  monthRef: MonthRef,
+): Promise<number> {
+  const { startIso, endIso } = monthRangeIso(monthRef)
+  const { count, error } = await supabase
+    .from('attendance_logs')
+    .select('id', { count: 'exact', head: true })
+    .gte('checked_in_at', startIso)
+    .lte('checked_in_at', endIso)
+
+  if (error) throw error
+  return count ?? 0
+}
+
+/** 선택 월: 예약됐으나 출석 처리되지 않은 수업 */
+export async function fetchMonthScheduledPending(
+  monthRef: MonthRef,
+): Promise<CenterAttendanceRow[]> {
+  const { startIso, endIso } = monthRangeIso(monthRef)
+  const [schedules, members] = await Promise.all([
+    fetchSchedulesInRange(startIso, endIso),
+    fetchMembers(),
+  ])
+
+  const nameById = new Map(members.map((m) => [m.id, m.name]))
+  const trainerByMemberId = new Map(
+    members.map((m) => [m.id, m.trainer_name ?? null]),
+  )
+
+  const rows = (schedules as PtSchedule[])
+    .filter((s) => s.status === 'scheduled')
+    .map((schedule) => ({
+      key: `month-schedule-${schedule.id}`,
+      memberId: schedule.member_id,
+      memberName:
+        schedule.member_name ?? nameById.get(schedule.member_id) ?? '회원',
+      trainerName:
+        schedule.trainer_name ??
+        trainerByMemberId.get(schedule.member_id) ??
+        null,
+      scheduleId: schedule.id,
+      scheduledAt: schedule.scheduled_at,
+      scheduleStatus: schedule.status,
+      displayStatus: 'scheduled' as const,
+      checkedInAt: null,
+      attendanceId: null,
+      method: null,
+    }))
+
+  rows.sort((a, b) => {
+    const aTime = a.scheduledAt ? new Date(a.scheduledAt).getTime() : 0
+    const bTime = b.scheduledAt ? new Date(b.scheduledAt).getTime() : 0
+    if (aTime !== bTime) return aTime - bTime
+    return a.memberName.localeCompare(b.memberName, 'ko')
+  })
+
+  return rows
+}
+
 /** 오늘 센터 전체 PT 예약·출석·노쇼 현황 */
 export async function fetchTodayCenterAttendanceBoard(): Promise<{
   rows: CenterAttendanceRow[]
-  summary: CenterAttendanceSummary
+  summary: Omit<
+    CenterAttendanceSummary,
+    'monthScheduled' | 'monthAttendanceTotal'
+  >
 }> {
   const start = localDayStartIso()
   const end = localDayEndIso()
@@ -377,17 +467,37 @@ export async function fetchTodayCenterAttendanceBoard(): Promise<{
     return a.memberName.localeCompare(b.memberName, 'ko')
   })
 
-  const summary: CenterAttendanceSummary = {
-    scheduled: rows.filter((r) => r.displayStatus === 'scheduled').length,
-    attended: rows.filter(
+  const summary = {
+    attendedToday: rows.filter(
       (r) => r.displayStatus === 'attended' || r.displayStatus === 'walk_in',
     ).length,
-    noShow: rows.filter((r) => r.displayStatus === 'no_show').length,
-    absent: rows.filter((r) => r.displayStatus === 'absent').length,
-    walkIn: rows.filter((r) => r.displayStatus === 'walk_in').length,
+    absentToday: rows.filter((r) => r.displayStatus === 'absent').length,
+    noShowToday: rows.filter((r) => r.displayStatus === 'no_show').length,
   }
 
   return { rows, summary }
+}
+
+export async function fetchCenterAttendanceBoard(monthRef: MonthRef): Promise<{
+  todayRows: CenterAttendanceRow[]
+  monthScheduledRows: CenterAttendanceRow[]
+  summary: CenterAttendanceSummary
+}> {
+  const [today, monthScheduledRows, monthAttendanceTotal] = await Promise.all([
+    fetchTodayCenterAttendanceBoard(),
+    fetchMonthScheduledPending(monthRef),
+    fetchMonthAttendanceTotal(monthRef),
+  ])
+
+  return {
+    todayRows: today.rows,
+    monthScheduledRows,
+    summary: {
+      ...today.summary,
+      monthScheduled: monthScheduledRows.length,
+      monthAttendanceTotal,
+    },
+  }
 }
 
 export { scheduleStatusLabel }

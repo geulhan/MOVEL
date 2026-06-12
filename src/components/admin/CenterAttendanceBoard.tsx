@@ -4,30 +4,53 @@ import {
   cancelAttendance,
   centerAttendanceStatusLabel,
   checkInMember,
-  fetchTodayCenterAttendanceBoard,
+  fetchCenterAttendanceBoard,
+  formatMonthLabel,
   type CenterAttendanceDisplayStatus,
   type CenterAttendanceRow,
+  type MonthRef,
 } from '../../api/attendance'
 import { fetchMembers, formatPhone, isExpired } from '../../api/members'
 import { updateScheduleStatus } from '../../api/schedule'
+import { isSameLocalDay } from '../../utils/date'
 import { formatSupabaseError } from '../../lib/errors'
 import { SearchBar } from '../SearchBar'
 import type { Member } from '../../types/database'
 import { btnGold, btnOutline, cardClass } from '../../styles/theme'
 
-type StatusFilter = 'all' | CenterAttendanceDisplayStatus
+type StatusFilter = 'all' | 'attended' | 'scheduled' | 'absent' | 'no_show'
 
-const FILTER_OPTIONS: Array<{ id: StatusFilter; label: string }> = [
-  { id: 'all', label: '전체' },
-  { id: 'attended', label: '출석' },
-  { id: 'walk_in', label: '예약없음' },
-  { id: 'scheduled', label: '예정' },
-  { id: 'absent', label: '미출석' },
-  { id: 'no_show', label: '노쇼' },
-]
+const FILTER_OPTIONS: Array<{ id: StatusFilter; label: string; hint: string }> =
+  [
+    { id: 'all', label: '전체', hint: '오늘' },
+    { id: 'attended', label: '출석', hint: '오늘' },
+    { id: 'scheduled', label: '예정', hint: '월별' },
+    { id: 'absent', label: '미출석', hint: '오늘' },
+    { id: 'no_show', label: '노쇼', hint: '오늘' },
+  ]
+
+function currentMonthRef(): MonthRef {
+  const now = new Date()
+  return { year: now.getFullYear(), month: now.getMonth() + 1 }
+}
+
+function shiftMonth(ref: MonthRef, delta: number): MonthRef {
+  const d = new Date(ref.year, ref.month - 1 + delta, 1)
+  return { year: d.getFullYear(), month: d.getMonth() + 1 }
+}
 
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function formatScheduleDateTime(iso: string): string {
+  return new Date(iso).toLocaleString('ko-KR', {
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
     hour: '2-digit',
     minute: '2-digit',
   })
@@ -47,15 +70,37 @@ function statusBadgeClass(status: CenterAttendanceDisplayStatus): string {
   }
 }
 
+function matchesTodayFilter(
+  row: CenterAttendanceRow,
+  filter: StatusFilter,
+): boolean {
+  switch (filter) {
+    case 'attended':
+      return (
+        row.displayStatus === 'attended' || row.displayStatus === 'walk_in'
+      )
+    case 'absent':
+      return row.displayStatus === 'absent'
+    case 'no_show':
+      return row.displayStatus === 'no_show'
+    default:
+      return true
+  }
+}
+
 export function CenterAttendanceBoard() {
-  const [rows, setRows] = useState<CenterAttendanceRow[]>([])
+  const [todayRows, setTodayRows] = useState<CenterAttendanceRow[]>([])
+  const [monthScheduledRows, setMonthScheduledRows] = useState<
+    CenterAttendanceRow[]
+  >([])
   const [summary, setSummary] = useState({
-    scheduled: 0,
-    attended: 0,
-    noShow: 0,
-    absent: 0,
-    walkIn: 0,
+    attendedToday: 0,
+    monthScheduled: 0,
+    absentToday: 0,
+    noShowToday: 0,
+    monthAttendanceTotal: 0,
   })
+  const [monthRef, setMonthRef] = useState<MonthRef>(currentMonthRef)
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
   const [actingKey, setActingKey] = useState<string | null>(null)
@@ -64,6 +109,9 @@ export function CenterAttendanceBoard() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [searchInput, setSearchInput] = useState('')
   const [activeSearch, setActiveSearch] = useState('')
+
+  const monthLabel = formatMonthLabel(monthRef)
+  const isMonthView = statusFilter === 'scheduled'
 
   const memberById = useMemo(
     () => new Map(members.map((member) => [member.id, member])),
@@ -75,10 +123,11 @@ export function CenterAttendanceBoard() {
     setError(null)
     try {
       const [board, memberList] = await Promise.all([
-        fetchTodayCenterAttendanceBoard(),
+        fetchCenterAttendanceBoard(monthRef),
         fetchMembers(),
       ])
-      setRows(board.rows)
+      setTodayRows(board.todayRows)
+      setMonthScheduledRows(board.monthScheduledRows)
       setSummary(board.summary)
       setMembers(memberList)
     } catch (err) {
@@ -86,7 +135,7 @@ export function CenterAttendanceBoard() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [monthRef])
 
   useEffect(() => {
     void load()
@@ -98,10 +147,12 @@ export function CenterAttendanceBoard() {
     return () => window.clearTimeout(timer)
   }, [toast])
 
+  const sourceRows = isMonthView ? monthScheduledRows : todayRows
+
   const filteredRows = useMemo(() => {
-    let list = rows
-    if (statusFilter !== 'all') {
-      list = list.filter((row) => row.displayStatus === statusFilter)
+    let list = sourceRows
+    if (!isMonthView && statusFilter !== 'all') {
+      list = list.filter((row) => matchesTodayFilter(row, statusFilter))
     }
     const term = activeSearch.trim().toLowerCase()
     if (!term) return list
@@ -114,7 +165,7 @@ export function CenterAttendanceBoard() {
         phone.includes(term)
       )
     })
-  }, [rows, statusFilter, activeSearch, memberById])
+  }, [sourceRows, statusFilter, isMonthView, activeSearch, memberById])
 
   async function handleCheckIn(row: CenterAttendanceRow) {
     const member = memberById.get(row.memberId)
@@ -189,19 +240,33 @@ export function CenterAttendanceBoard() {
     if (row.displayStatus === 'attended' || row.displayStatus === 'walk_in') {
       return false
     }
+    if (!row.scheduledAt || !isSameLocalDay(row.scheduledAt)) return false
     if (member.status !== 'active') return false
     if (member.remaining_sessions <= 0) return false
     if (member.expires_at && isExpired(member.expires_at)) return false
     return true
   }
 
+  const tableTitle = isMonthView
+    ? `${monthLabel} 예정 수업`
+    : '오늘 현황'
+
+  const tableDesc = isMonthView
+    ? '해당 월에 예약되었으나 아직 출석 처리되지 않은 수업입니다.'
+    : new Date().toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        weekday: 'long',
+      })
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="page-title">출석부</h2>
         <p className="page-desc">
-          오늘 센터 PT 예약·출석·노쇼 현황을 확인합니다. 출석 처리 시 PT 1회가
-          차감됩니다.
+          오늘 출석·미출석·노쇼를 확인하고, 월별 예정 수업과 총 출석 횟수를
+          조회합니다.
         </p>
       </div>
 
@@ -216,34 +281,98 @@ export function CenterAttendanceBoard() {
         </div>
       )}
 
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setMonthRef((m) => shiftMonth(m, -1))}
+            className={btnOutline}
+          >
+            이전 달
+          </button>
+          <span className="min-w-[7rem] text-center text-sm font-semibold text-charcoal">
+            {monthLabel}
+          </span>
+          <button
+            type="button"
+            onClick={() => setMonthRef((m) => shiftMonth(m, 1))}
+            className={btnOutline}
+          >
+            다음 달
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={() => setMonthRef(currentMonthRef())}
+          className="text-xs text-gold-dark hover:underline"
+        >
+          이번 달
+        </button>
+      </div>
+
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {[
-          { label: '출석', value: summary.attended, tone: 'text-emerald-700' },
-          { label: '예정', value: summary.scheduled, tone: 'text-charcoal' },
-          { label: '미출석', value: summary.absent, tone: 'text-orange-700' },
-          { label: '노쇼', value: summary.noShow, tone: 'text-red-700' },
-          { label: '예약없음 출석', value: summary.walkIn, tone: 'text-sky-700' },
+          {
+            label: '출석',
+            sub: '오늘',
+            value: summary.attendedToday,
+            tone: 'text-emerald-700',
+            filter: 'attended' as const,
+          },
+          {
+            label: '예정',
+            sub: monthLabel,
+            value: summary.monthScheduled,
+            tone: 'text-charcoal',
+            filter: 'scheduled' as const,
+          },
+          {
+            label: '미출석',
+            sub: '오늘',
+            value: summary.absentToday,
+            tone: 'text-orange-700',
+            filter: 'absent' as const,
+          },
+          {
+            label: '노쇼',
+            sub: '오늘',
+            value: summary.noShowToday,
+            tone: 'text-red-700',
+            filter: 'no_show' as const,
+          },
+          {
+            label: '총 출석',
+            sub: monthLabel,
+            value: summary.monthAttendanceTotal,
+            tone: 'text-sky-700',
+            filter: null,
+          },
         ].map((item) => (
-          <div key={item.label} className={`${cardClass} card-pad`}>
-            <p className="text-xs text-muted">{item.label}</p>
+          <button
+            key={item.label}
+            type="button"
+            onClick={() => item.filter && setStatusFilter(item.filter)}
+            className={`${cardClass} card-pad text-left transition ${
+              item.filter && statusFilter === item.filter
+                ? 'ring-2 ring-gold/50'
+                : 'hover:bg-cream/50'
+            } ${item.filter ? 'cursor-pointer' : 'cursor-default'}`}
+          >
+            <p className="text-xs text-muted">
+              {item.label}
+              <span className="ml-1 text-[10px]">({item.sub})</span>
+            </p>
             <p className={`mt-1 text-2xl font-bold tabular-nums ${item.tone}`}>
               {item.value}
             </p>
-          </div>
+          </button>
         ))}
       </div>
 
       <section className={`${cardClass} overflow-hidden`}>
         <div className="card-header">
-          <h3 className="text-base font-semibold text-charcoal">오늘 현황</h3>
-          <p className="mt-0.5 text-xs text-muted">
-            {new Date().toLocaleDateString('ko-KR', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-              weekday: 'long',
-            })}
-          </p>
+          <h3 className="text-base font-semibold text-charcoal">{tableTitle}</h3>
+          <p className="mt-0.5 text-xs text-muted">{tableDesc}</p>
         </div>
 
         <div className="flex flex-wrap gap-2 border-b border-gold/15 px-5 py-3">
@@ -259,6 +388,7 @@ export function CenterAttendanceBoard() {
               }`}
             >
               {option.label}
+              <span className="ml-1 font-normal opacity-70">({option.hint})</span>
             </button>
           ))}
         </div>
@@ -295,6 +425,8 @@ export function CenterAttendanceBoard() {
                   const member = memberById.get(row.memberId)
                   const canCheck = canCheckIn(member, row)
                   const isActing = actingKey === row.key
+                  const isTodaySchedule =
+                    row.scheduledAt && isSameLocalDay(row.scheduledAt)
 
                   return (
                     <tr key={row.key} className="hover:bg-cream/40">
@@ -310,7 +442,11 @@ export function CenterAttendanceBoard() {
                         {row.trainerName ?? '-'}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap tabular-nums">
-                        {row.scheduledAt ? formatTime(row.scheduledAt) : '-'}
+                        {row.scheduledAt
+                          ? isMonthView
+                            ? formatScheduleDateTime(row.scheduledAt)
+                            : formatTime(row.scheduledAt)
+                          : '-'}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <span
@@ -346,6 +482,7 @@ export function CenterAttendanceBoard() {
                             </button>
                           )}
                           {row.scheduleId &&
+                            isTodaySchedule &&
                             (row.displayStatus === 'scheduled' ||
                               row.displayStatus === 'absent') && (
                               <button
@@ -357,7 +494,7 @@ export function CenterAttendanceBoard() {
                                 노쇼
                               </button>
                             )}
-                          {row.attendanceId && (
+                          {row.attendanceId && isTodaySchedule && (
                             <button
                               type="button"
                               disabled={isActing}
