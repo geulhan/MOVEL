@@ -128,3 +128,26 @@ body {
     @apply flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden;
   }
 }
+
+@media print {
+  body.contract-printing * {
+    visibility: hidden;
+  }
+
+  body.contract-printing #contract-print-surface,
+  body.contract-printing #contract-print-surface * {
+    visibility: visible;
+  }
+
+  body.contract-printing #contract-print-surface {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-height: none;
+    overflow: visible;
+    padding: 0;
+    background: white;
+    color: black;
+  }
+}

@@ -1,4 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import {
+  fetchContractsByPaymentRequestIds,
+  type ContractInstance,
+} from '../../api/contracts'
+import { CONTRACT_STATUS_LABELS } from '../../constants/contractTerms'
+import { ContractViewModal } from '../contracts/ContractViewModal'
 import {
   formatCurrency,
   formatDate,
@@ -43,6 +49,36 @@ export function MemberPtPaymentTab() {
   const [savingRemaining, setSavingRemaining] = useState(false)
   const [recalculatingExpiry, setRecalculatingExpiry] = useState(false)
   const [requestRefresh, setRequestRefresh] = useState(0)
+  const [contractsByRequestId, setContractsByRequestId] = useState<
+    Map<string, ContractInstance>
+  >(new Map())
+  const [viewContract, setViewContract] = useState<ContractInstance | null>(
+    null,
+  )
+
+  const paymentRequestIds = useMemo(
+    () =>
+      payments
+        .map((payment) => payment.payment_request_id)
+        .filter((id): id is string => Boolean(id)),
+    [payments],
+  )
+
+  useEffect(() => {
+    if (paymentRequestIds.length === 0) {
+      setContractsByRequestId(new Map())
+      return
+    }
+
+    let cancelled = false
+    void fetchContractsByPaymentRequestIds(paymentRequestIds).then((map) => {
+      if (!cancelled) setContractsByRequestId(map)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [paymentRequestIds])
 
   if (!member) return null
 
@@ -227,7 +263,9 @@ export function MemberPtPaymentTab() {
         <div className="card-header flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="text-base font-semibold text-charcoal">결제 내역</h3>
-            <p className="mt-0.5 text-xs text-muted">최신순 · 수정 가능</p>
+            <p className="mt-0.5 text-xs text-muted">
+              최신순 · 수정 가능 · 결제 요청 건은 계약서 보기·인쇄
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
@@ -258,12 +296,16 @@ export function MemberPtPaymentTab() {
                   <th className="px-4 py-2.5">결제일</th>
                   <th className="px-4 py-2.5">결제금액</th>
                   <th className="px-4 py-2.5">PT 횟수</th>
+                  <th className="px-4 py-2.5">계약서</th>
                   <th className="px-4 py-2.5">수정</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gold/15">
                 {payments.map((p) => {
                   const editing = editingPaymentId === p.id
+                  const contract = p.payment_request_id
+                    ? contractsByRequestId.get(p.payment_request_id)
+                    : undefined
                   return (
                     <tr key={p.id} className="hover:bg-cream/40">
                       <td className="px-4 py-3 whitespace-nowrap">
@@ -305,6 +347,23 @@ export function MemberPtPaymentTab() {
                           />
                         ) : (
                           `${p.sessions}회`
+                        )}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {contract ? (
+                          <button
+                            type="button"
+                            onClick={() => setViewContract(contract)}
+                            className={btnLink}
+                          >
+                            {contract.status === 'signed'
+                              ? '보기·인쇄'
+                              : CONTRACT_STATUS_LABELS[contract.status]}
+                          </button>
+                        ) : p.payment_request_id ? (
+                          <span className="text-xs text-muted">없음</span>
+                        ) : (
+                          <span className="text-xs text-muted">-</span>
                         )}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
@@ -367,6 +426,12 @@ export function MemberPtPaymentTab() {
           await reload()
         }}
         onError={setError}
+      />
+      <ContractViewModal
+        open={viewContract != null}
+        contract={viewContract}
+        memberName={member.name}
+        onClose={() => setViewContract(null)}
       />
     </div>
   )

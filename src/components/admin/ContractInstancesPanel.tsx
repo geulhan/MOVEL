@@ -6,13 +6,9 @@ import {
   CONTRACT_TYPE_LABELS,
   type ContractStatus,
 } from '../../constants/contractTerms'
-import {
-  fetchContracts,
-  getContractSignatureUrl,
-  type ContractWithMember,
-} from '../../api/contracts'
+import { fetchContracts, type ContractWithMember } from '../../api/contracts'
 import { PAYMENT_CATEGORY_LABELS } from '../../constants/paymentCategories'
-import { ContractDocument } from '../contracts/ContractDocument'
+import { ContractViewModal } from '../contracts/ContractViewModal'
 
 const STATUS_FILTERS: Array<{ id: 'all' | ContractStatus; label: string }> = [
   { id: 'all', label: '전체' },
@@ -186,38 +182,12 @@ export function ContractInstancesPanel() {
         </table>
       </div>
 
-      {viewTarget && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-charcoal/50 p-4 sm:items-center">
-          <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl border border-gold/30 bg-white shadow-xl">
-            <div className="border-b border-gold/20 px-5 py-4">
-              <h3 className="text-lg font-bold text-charcoal">
-                {CONTRACT_TYPE_LABELS[viewTarget.contract_type]}
-              </h3>
-              <p className="mt-1 text-sm text-muted">
-                {viewTarget.member?.name ?? '회원'} ·{' '}
-                {CONTRACT_STATUS_LABELS[viewTarget.status]}
-              </p>
-            </div>
-            <div className="flex-1 overflow-y-auto px-5 py-4">
-              <ContractDocument
-                contractType={viewTarget.contract_type}
-                fields={viewTarget.field_data}
-                signedAt={viewTarget.signed_at}
-                signatureUrl={getContractSignatureUrl(viewTarget.signature_path)}
-              />
-            </div>
-            <div className="border-t border-gold/20 px-5 py-4">
-              <button
-                type="button"
-                onClick={() => setViewTarget(null)}
-                className="w-full rounded-xl border border-gold/30 px-4 py-2 text-sm font-semibold text-charcoal hover:bg-cream/60"
-              >
-                닫기
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ContractViewModal
+        open={viewTarget != null}
+        contract={viewTarget}
+        memberName={viewTarget?.member?.name ?? undefined}
+        onClose={() => setViewTarget(null)}
+      />
     </div>
   )
 }
