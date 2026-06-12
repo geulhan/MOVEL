@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchMembers, formatPhone } from '../../api/members'
 import { MemberSearchCombobox } from './MemberSearchCombobox'
@@ -25,6 +25,21 @@ export function PaymentRequestSenderPanel({
   const [searchLoading, setSearchLoading] = useState(false)
   const [selectedMember, setSelectedMember] = useState<Member | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
+  const [panelError, setPanelError] = useState<string | null>(null)
+
+  const handleModalError = useCallback(
+    (message: string) => {
+      setPanelError(message)
+      onError?.(message)
+    },
+    [onError],
+  )
+
+  const handleModalSuccess = useCallback(async () => {
+    setPanelError(null)
+    onToast?.(`${selectedMember?.name ?? '회원'}님에게 결제 요청을 보냈습니다.`)
+    onSent?.()
+  }, [onSent, onToast, selectedMember?.name])
 
   useEffect(() => {
     const term = searchInput.trim()
@@ -49,6 +64,7 @@ export function PaymentRequestSenderPanel({
     setSelectedMember(member)
     setSearchInput('')
     setSuggestions([])
+    setPanelError(null)
   }
 
   function handleClearSearch() {
@@ -101,7 +117,10 @@ export function PaymentRequestSenderPanel({
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => setModalOpen(true)}
+              onClick={() => {
+                setPanelError(null)
+                setModalOpen(true)
+              }}
               className={btnGold}
             >
               결제 요청 작성
@@ -123,19 +142,20 @@ export function PaymentRequestSenderPanel({
         </div>
       )}
 
+      {panelError && (
+        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {panelError}
+        </p>
+      )}
+
       <PaymentRequestModal
         memberId={selectedMember?.id ?? ''}
         memberName={selectedMember?.name ?? ''}
         initialCategory={initialCategory}
         open={modalOpen && selectedMember != null}
         onClose={() => setModalOpen(false)}
-        onSuccess={async () => {
-          onToast?.(
-            `${selectedMember?.name ?? '회원'}님에게 결제 요청을 보냈습니다.`,
-          )
-          onSent?.()
-        }}
-        onError={(message) => onError?.(message)}
+        onSuccess={handleModalSuccess}
+        onError={handleModalError}
       />
     </section>
   )

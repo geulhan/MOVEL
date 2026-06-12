@@ -185,7 +185,11 @@ export async function createPaymentRequest(input: {
 
   if (error) throw error
   const request = normalizePaymentRequest(data as PaymentRequest)
-  await createContractForPaymentRequest(request)
+  try {
+    await createContractForPaymentRequest(request)
+  } catch (contractErr) {
+    console.warn('계약서 자동 생성 실패:', contractErr)
+  }
   return request
 }
 

@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { formatCurrency, todayDateString } from '../../api/members'
 import { fetchCenterPassProducts } from '../../api/centerPasses'
 import {
@@ -57,15 +58,23 @@ export function PaymentRequestModal({
   const [note, setNote] = useState('')
   const [loadingPackages, setLoadingPackages] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [modalError, setModalError] = useState<string | null>(null)
+  const onErrorRef = useRef(onError)
+
+  useEffect(() => {
+    onErrorRef.current = onError
+  }, [onError])
 
   useEffect(() => {
     if (!open) return
     setCategory(initialCategory)
+    setModalError(null)
   }, [open, initialCategory])
 
   useEffect(() => {
     if (!open) return
     setLoadingPackages(true)
+    setModalError(null)
 
     void (async () => {
       try {
@@ -109,12 +118,14 @@ export function PaymentRequestModal({
           setAmount('0')
         }
       } catch {
-        onError('상품 목록을 불러올 수 없습니다.')
+        const message = '상품 목록을 불러올 수 없습니다. 아래에서 직접 입력해 주세요.'
+        setModalError(message)
+        onErrorRef.current?.(message)
       } finally {
         setLoadingPackages(false)
       }
     })()
-  }, [open, category, onError])
+  }, [open, category])
 
   const discountAmount = useMemo(() => {
     const list = Number(listAmount.replace(/,/g, ''))
@@ -137,43 +148,55 @@ export function PaymentRequestModal({
     if (item) applyCatalogItem(item)
   }
 
+  function reportError(message: string) {
+    setModalError(message)
+    onError(message)
+  }
+
   function handleClose() {
     if (saving) return
+    setModalError(null)
     onClose()
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    if (!memberId.trim()) {
+      reportError('회원을 선택해 주세요.')
+      return
+    }
+
     const parsedSessions = Number(sessions)
     const parsedDuration = Number(durationDays)
     const parsedList = Number(listAmount.replace(/,/g, ''))
     const parsedAmount = Number(amount.replace(/,/g, ''))
 
     if (!label.trim()) {
-      onError('결제 요청 제목을 입력해 주세요.')
+      reportError('결제 요청 제목을 입력해 주세요.')
       return
     }
     if (category === 'pt') {
       if (!Number.isInteger(parsedSessions) || parsedSessions < 1) {
-        onError('PT 횟수는 1 이상이어야 합니다.')
+        reportError('PT 횟수는 1 이상이어야 합니다.')
         return
       }
     } else {
       if (!Number.isInteger(parsedDuration) || parsedDuration < 1) {
-        onError('이용 기간(일)은 1 이상이어야 합니다.')
+        reportError('이용 기간(일)은 1 이상이어야 합니다.')
         return
       }
       if (!startsAt.trim()) {
-        onError('이용 시작일을 입력해 주세요.')
+        reportError('이용 시작일을 입력해 주세요.')
         return
       }
     }
     if (!Number.isFinite(parsedAmount) || parsedAmount < 0) {
-      onError('결제 금액을 올바르게 입력해 주세요.')
+      reportError('결제 금액을 올바르게 입력해 주세요.')
       return
     }
 
     setSaving(true)
+    setModalError(null)
     try {
       await createPaymentRequest({
         memberId,
@@ -188,10 +211,11 @@ export function PaymentRequestModal({
         discountNote: discountNote.trim() || null,
         note: note.trim() || null,
       })
+      setModalError(null)
       onClose()
       await onSuccess()
     } catch (err) {
-      onError(err instanceof Error ? err.message : '결제 요청 실패')
+      reportError(err instanceof Error ? err.message : '결제 요청 실패')
     } finally {
       setSaving(false)
     }
@@ -199,9 +223,9 @@ export function PaymentRequestModal({
 
   if (!open) return null
 
-  return (
+  const dialog = (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-charcoal/50 p-4 sm:items-center"
+      className="fixed inset-0 z-[120] flex items-end justify-center bg-charcoal/50 p-4 sm:items-center"
       role="dialog"
       aria-modal="true"
     >
@@ -229,6 +253,12 @@ export function PaymentRequestModal({
             </button>
           ))}
         </nav>
+
+        {modalError && (
+          <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {modalError}
+          </p>
+        )}
 
         <form onSubmit={(e) => void handleSubmit(e)} className="mt-5 space-y-4">
           <label className="block">
@@ -385,7 +415,7 @@ export function PaymentRequestModal({
           <div className="flex gap-2 pt-1">
             <button
               type="submit"
-              disabled={saving || loadingPackages || catalog.length === 0}
+              disabled={saving || loadingPackages}
               className={`flex-1 ${btnPrimary}`}
             >
               {saving ? '보내는 중…' : '결제 요청 보내기'}
@@ -403,4 +433,6 @@ export function PaymentRequestModal({
       </div>
     </div>
   )
+
+  return createPortal(dialog, document.body)
 }
