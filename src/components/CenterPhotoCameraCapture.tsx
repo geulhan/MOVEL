@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   blobToCenterPhotoFile,
   capturePhotoWithTimestamp,
@@ -116,14 +117,14 @@ export function CenterPhotoCameraCapture({ onClose, onCapture }: Props) {
 
   const timestampLabel = formatCenterPhotoTimestamp(now)
 
-  return (
+  const content = (
     <div
-      className="fixed inset-0 z-50 flex flex-col bg-charcoal text-cream"
+      className="fixed inset-0 z-[200] flex h-[100dvh] flex-col bg-charcoal text-cream"
       role="dialog"
       aria-modal="true"
       aria-label="센터 사진 촬영"
     >
-      <header className="flex items-center justify-between border-b border-gold/20 px-4 py-3">
+      <header className="flex shrink-0 items-center justify-between border-b border-gold/20 px-4 py-3">
         <button
           type="button"
           onClick={onClose}
@@ -135,15 +136,15 @@ export function CenterPhotoCameraCapture({ onClose, onCapture }: Props) {
         <span className="w-10" aria-hidden />
       </header>
 
-      <div className="flex flex-1 flex-col px-4 py-4">
-        <p className="text-center text-xs leading-relaxed text-cream/75">
-          센터에서 직접 촬영한 사진만 인증됩니다. 화면에 표시된 날짜·시간이
-          사진에 함께 저장됩니다.
-        </p>
+      <p className="shrink-0 px-4 pt-3 text-center text-xs leading-relaxed text-cream/75">
+        센터에서 직접 촬영한 사진만 인증됩니다. 화면에 표시된 날짜·시간이 사진에
+        함께 저장됩니다.
+      </p>
 
-        {step === 'camera' ? (
-          <div className="relative mt-4 flex flex-1 flex-col">
-            <div className="relative flex-1 overflow-hidden rounded-2xl bg-black">
+      {step === 'camera' ? (
+        <>
+          <div className="relative min-h-0 flex-1 px-4 pt-3">
+            <div className="relative h-full overflow-hidden rounded-2xl bg-black">
               <video
                 ref={videoRef}
                 autoPlay
@@ -162,62 +163,73 @@ export function CenterPhotoCameraCapture({ onClose, onCapture }: Props) {
 
               {!loadingCamera && !error && (
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-black/55 px-4 py-3">
-                  <p className="text-center font-mono text-sm font-bold tracking-wide text-white sm:text-base">
+                  <p className="text-center font-mono text-sm font-bold tracking-wide text-white">
                     {timestampLabel}
                   </p>
                 </div>
               )}
             </div>
+          </div>
 
-            <div className="mt-5 flex justify-center pb-2">
+          <footer
+            className="shrink-0 px-4 pt-4"
+            style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}
+          >
+            <div className="flex justify-center">
               <button
                 type="button"
                 onClick={() => void handleCapture()}
                 disabled={loadingCamera || capturing || Boolean(error)}
-                className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-gold bg-cream text-xs font-bold text-charcoal transition enabled:hover:scale-105 disabled:opacity-40"
+                className="flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full border-4 border-gold bg-cream text-sm font-bold text-charcoal shadow-lg transition enabled:active:scale-95 disabled:opacity-40"
                 aria-label="사진 촬영"
               >
                 {capturing ? '…' : '촬영'}
               </button>
             </div>
-          </div>
-        ) : (
-          <div className="mt-4 flex flex-1 flex-col">
-            {previewUrl && (
-              <div className="flex-1 overflow-hidden rounded-2xl bg-black">
-                <img
-                  src={previewUrl}
-                  alt="촬영한 센터 사진 미리보기"
-                  className="h-full w-full object-contain"
-                />
-              </div>
-            )}
-
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={handleRetake}
-                className={`${btnOutline} border-cream/30 bg-transparent text-cream hover:bg-cream/10`}
-              >
-                다시 촬영
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirm}
-                className={btnGold}
-              >
-                인증하기
-              </button>
+          </footer>
+        </>
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col px-4 pt-3">
+          {previewUrl && (
+            <div className="min-h-0 flex-1 overflow-hidden rounded-2xl bg-black">
+              <img
+                src={previewUrl}
+                alt="촬영한 센터 사진 미리보기"
+                className="h-full w-full object-contain"
+              />
             </div>
-          </div>
-        )}
+          )}
 
-        {error && (
-          <p className="mt-4 rounded-lg border border-red-300/40 bg-red-950/40 px-3 py-2 text-center text-sm text-red-200">
+          <div
+            className="grid shrink-0 grid-cols-2 gap-3 pt-4"
+            style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+          >
+            <button
+              type="button"
+              onClick={handleRetake}
+              className={`${btnOutline} border-cream/30 bg-transparent py-3 text-cream hover:bg-cream/10`}
+            >
+              다시 촬영
+            </button>
+            <button type="button" onClick={handleConfirm} className={`${btnGold} py-3`}>
+              인증하기
+            </button>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <p
+          className="shrink-0 px-4 pb-3 text-center text-sm text-red-200"
+          style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+        >
+          <span className="inline-block rounded-lg border border-red-300/40 bg-red-950/40 px-3 py-2">
             {error}
-          </p>
-        )}
-      </div>
+          </span>
+        </p>
+      )}
     </div>
   )
+
+  return createPortal(content, document.body)
 }
