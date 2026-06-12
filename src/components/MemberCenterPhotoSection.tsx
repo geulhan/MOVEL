@@ -57,20 +57,10 @@ export function MemberCenterPhotoSection({
     setError(null)
     setSuccessMsg(null)
     try {
-      const result = await submitCenterPhoto(memberId, file)
-      setTodaySubmission(result.submission)
-      const parts = [
-        earnRules.center_photo.score > 0
-          ? `SCORE +${earnRules.center_photo.score.toLocaleString()}점`
-          : null,
-        result.mileAwarded > 0
-          ? `MILE +${result.mileAwarded.toLocaleString()}M`
-          : null,
-      ].filter(Boolean)
+      const submission = await submitCenterPhoto(memberId, file)
+      setTodaySubmission(submission)
       setSuccessMsg(
-        parts.length > 0
-          ? `센터 사진 인증 완료 · ${parts.join(' · ')}`
-          : '센터 사진 인증 완료',
+        '센터 사진 제출 완료 · 관리자 검수 후 SCORE · MILE이 적립됩니다.',
       )
       onSuccess?.()
     } catch (err) {
@@ -81,13 +71,15 @@ export function MemberCenterPhotoSection({
   }
 
   const approvedToday = todaySubmission?.status === 'approved'
+  const pendingToday = todaySubmission?.status === 'pending'
+  const rejectedToday = todaySubmission?.status === 'rejected'
 
   return (
     <>
       <section className={`${cardClass} p-5 sm:p-6`}>
         <h4 className="text-sm font-bold text-charcoal">센터 사진 인증</h4>
         <p className="mt-1 text-xs leading-relaxed text-muted">
-          센터에서 카메라로 사진을 촬영하면{' '}
+          센터에서 카메라로 사진을 촬영하면 관리자 검수 후{' '}
           <strong className="text-charcoal">
             SCORE +{earnRules.center_photo.score.toLocaleString()}점 · MILE +
             {earnRules.center_photo.mile.toLocaleString()}M
@@ -106,8 +98,17 @@ export function MemberCenterPhotoSection({
               </span>
             )}
           </div>
+        ) : pendingToday ? (
+          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            제출 완료 · 관리자 검수 대기 중입니다.
+          </div>
         ) : (
           <div className="mt-4">
+            {rejectedToday && todaySubmission?.rejection_reason && (
+              <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                반려: {todaySubmission.rejection_reason}
+              </p>
+            )}
             <button
               type="button"
               onClick={() => setShowCamera(true)}
@@ -118,7 +119,7 @@ export function MemberCenterPhotoSection({
                   : `${btnGold} hover:bg-gold-dark`
               }`}
             >
-              {uploading ? '인증 처리 중…' : '카메라로 촬영하기'}
+              {uploading ? '제출 중…' : '카메라로 촬영하기'}
             </button>
           </div>
         )}

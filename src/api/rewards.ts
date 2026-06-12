@@ -435,10 +435,10 @@ export async function reversePtAttendance(
 export async function awardCenterPhoto(
   memberId: string,
   submissionId: string,
+  submissionDate = todayDateString(),
 ): Promise<number> {
   const rules = await fetchRewardEarnRules()
-  const date = todayDateString()
-  const eventKey = `center_photo:${memberId}:${date}`
+  const eventKey = `center_photo:${memberId}:${submissionDate}`
   const mile = rules.center_photo.mile
   try {
     await awardPair(

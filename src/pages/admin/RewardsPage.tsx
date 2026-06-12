@@ -135,7 +135,7 @@ export default function RewardsPage() {
     <div className="space-y-6">
       <PageHeader
         title="마일리지 관리"
-        description="회원별 MOVE MILE · SCORE 조회, 걸음 인증 확인, 수동 적립·차감"
+        description="회원별 MOVE MILE · SCORE 조회, 걸음·센터 인증 검수, 수동 적립·차감"
       />
 
       <nav className="chip-scroll -mx-1 px-1">
@@ -158,7 +158,7 @@ export default function RewardsPage() {
           onClick={() => setAdminTab('center_photo')}
           className={`chip ${adminTab === 'center_photo' ? 'chip-active' : 'chip-inactive'}`}
         >
-          센터 사진
+          센터 인증
         </button>
       </nav>
 

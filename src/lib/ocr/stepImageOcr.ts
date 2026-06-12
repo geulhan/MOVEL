@@ -35,10 +35,11 @@ type ParseOptions = {
 }
 
 function stepCountQualityBonus(n: number): number {
-  if (isRoundStepGoal(n)) return -900
-  if (n % 1000 === 0) return -500
-  if (n >= MIN_DAILY_STEPS && n < 20_000) return 250
-  if (n >= 20_000) return -300
+  if (n >= 25_000) return -2500
+  if (n >= 20_000) return -1800
+  if (isRoundStepGoal(n)) return -400
+  if (n % 1000 === 0) return -300
+  if (n >= MIN_DAILY_STEPS && n < 20_000) return 300
   return 0
 }
 
@@ -110,20 +111,33 @@ type StepCountCandidate = {
   weight: number
 }
 
+function isLikelyWeeklyAggregate(text: string, raw: string, value: number): boolean {
+  const idx = text.indexOf(raw)
+  if (idx < 0) return false
+  const context = text.slice(Math.max(0, idx - 24), idx + raw.length + 24)
+  return /(?:주간|이번\s*주|weekly|week|7\s*일|일주)/i.test(context) && value >= 15_000
+}
+
 function pushStepCandidate(
   candidates: StepCountCandidate[],
   raw: string,
   weight: number,
   excludeCodeDigits?: string,
+  sourceText?: string,
 ): void {
   const n = parseInt(raw.replace(/[^\d]/g, ''), 10)
   if (n < 100 || n > 100_000 || isYearLike(n)) return
   if (excludeCodeDigits && String(n) === excludeCodeDigits) return
+  if (sourceText && isLikelyWeeklyAggregate(sourceText, raw, n)) return
   candidates.push({ value: n, weight })
 }
 
 function isRoundStepGoal(n: number): boolean {
   return COMMON_STEP_GOALS.has(n)
+}
+
+function candidateScore(value: number, weight: number): number {
+  return weight + stepCountQualityBonus(value)
 }
 
 function pickBestStepCount(candidates: StepCountCandidate[]): number | null {
@@ -135,13 +149,18 @@ function pickBestStepCount(candidates: StepCountCandidate[]): number | null {
   }
 
   const ranked = [...weightByValue.entries()]
-    .map(([value, weight]) => ({ value, weight }))
+    .map(([value, weight]) => ({ value, weight, score: candidateScore(value, weight) }))
     .sort((a, b) => {
-      if (b.weight !== a.weight) return b.weight - a.weight
-      const aGoal = isRoundStepGoal(a.value)
-      const bGoal = isRoundStepGoal(b.value)
-      if (aGoal !== bGoal) return aGoal ? 1 : -1
-      return b.value - a.value
+      if (b.score !== a.score) return b.score - a.score
+      if (
+        a.value >= MIN_DAILY_STEPS &&
+        b.value >= MIN_DAILY_STEPS &&
+        a.value <= 20_000 &&
+        b.value <= 20_000
+      ) {
+        return a.value - b.value
+      }
+      return a.value - b.value
     })
 
   return ranked[0]?.value ?? null
@@ -157,18 +176,24 @@ function extractStepCount(
   const labeledPatterns: Array<{ pattern: RegExp; weight: number }> = [
     {
       pattern: /(?:걸음|보|steps?|step\s*count|walking)\s*[:：]?\s*([\d,.\s]+)/gi,
-      weight: 120,
+      weight: 140,
     },
-    { pattern: /([\d,]+)\s*(?:걸음|보|steps?)/gi, weight: 115 },
-    { pattern: /오늘\s*([\d,]+)/gi, weight: 100 },
-    { pattern: /(?:총|합계|total)\s*[:：]?\s*([\d,]+)/gi, weight: 90 },
+    { pattern: /([\d,]+)\s*(?:걸음|보|steps?)/gi, weight: 135 },
+    { pattern: /오늘\s*([\d,]+)/gi, weight: 130 },
+    { pattern: /(?:총|합계|total)\s*[:：]?\s*([\d,]+)/gi, weight: 40 },
   ]
 
   for (const { pattern, weight } of labeledPatterns) {
     let m: RegExpExecArray | null
     pattern.lastIndex = 0
     while ((m = pattern.exec(normalized)) !== null) {
-      pushStepCandidate(candidates, m[1], weight, excludeCodeDigits)
+      pushStepCandidate(
+        candidates,
+        m[1],
+        weight,
+        excludeCodeDigits,
+        normalized,
+      )
     }
   }
 
@@ -178,8 +203,9 @@ function extractStepCount(
     pushStepCandidate(
       candidates,
       progressMatch[1],
-      110,
+      125,
       excludeCodeDigits,
+      normalized,
     )
     const goal = parseInt(progressMatch[2].replace(/[^\d]/g, ''), 10)
     if (
@@ -196,16 +222,18 @@ function extractStepCount(
     normalized.match(/\b(\d{1,3}(?:[,\s.'·]\d{3})+|\d{4,6})\b/g) ?? []
   for (const chunk of plainNumbers) {
     const n = parseInt(chunk.replace(/[^\d]/g, ''), 10)
-    const weight = isRoundStepGoal(n) ? 25 : 55
-    pushStepCandidate(candidates, chunk, weight, excludeCodeDigits)
+    if (n >= 20_000) continue
+    const weight = isRoundStepGoal(n) ? 20 : 45
+    pushStepCandidate(candidates, chunk, weight, excludeCodeDigits, normalized)
   }
 
   for (const line of text.split('\n')) {
     const trimmed = line.trim()
     if (!/^\d[\d,.\s]{2,}$/.test(trimmed)) continue
     const n = parseInt(trimmed.replace(/[^\d]/g, ''), 10)
-    const weight = isRoundStepGoal(n) ? 35 : 80
-    pushStepCandidate(candidates, String(n), weight, excludeCodeDigits)
+    if (n >= 20_000) continue
+    const weight = isRoundStepGoal(n) ? 30 : 70
+    pushStepCandidate(candidates, String(n), weight, excludeCodeDigits, text)
   }
 
   return pickBestStepCount(candidates)

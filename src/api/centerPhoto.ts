@@ -37,6 +37,22 @@ export async function hasApprovedCenterPhotoToday(
   return Boolean(data)
 }
 
+export async function hasPendingCenterPhotoToday(
+  memberId: string,
+  date = todayDateString(),
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('center_photo_submissions')
+    .select('id')
+    .eq('member_id', memberId)
+    .eq('submission_date', date)
+    .eq('status', 'pending')
+    .maybeSingle()
+
+  if (error) throw error
+  return Boolean(data)
+}
+
 export async function fetchTodayCenterPhotoSubmission(
   memberId: string,
 ): Promise<CenterPhotoSubmission | null> {
@@ -57,7 +73,7 @@ export async function fetchTodayCenterPhotoSubmission(
 export async function submitCenterPhoto(
   memberId: string,
   file: File,
-): Promise<{ submission: CenterPhotoSubmission; mileAwarded: number }> {
+): Promise<CenterPhotoSubmission> {
   if (!file.type.startsWith('image/')) {
     throw new Error('이미지 파일만 업로드할 수 있습니다.')
   }
@@ -68,6 +84,9 @@ export async function submitCenterPhoto(
   const today = todayDateString()
   if (await hasApprovedCenterPhotoToday(memberId, today)) {
     throw new Error('오늘은 이미 센터 사진 인증이 완료되었습니다.')
+  }
+  if (await hasPendingCenterPhotoToday(memberId, today)) {
+    throw new Error('오늘 제출한 센터 사진이 검수 대기 중입니다.')
   }
 
   const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
@@ -85,7 +104,6 @@ export async function submitCenterPhoto(
     .from('center-photos')
     .getPublicUrl(imagePath)
 
-  const now = new Date().toISOString()
   const { data, error } = await supabase
     .from('center_photo_submissions')
     .insert({
@@ -93,9 +111,9 @@ export async function submitCenterPhoto(
       submission_date: today,
       image_url: urlData.publicUrl,
       image_path: imagePath,
-      status: 'approved',
+      status: 'pending',
       mile_awarded: 0,
-      reviewed_at: now,
+      reviewed_at: null,
     })
     .select('*')
     .single()
@@ -107,26 +125,84 @@ export async function submitCenterPhoto(
     throw error
   }
 
-  const submission = data as CenterPhotoSubmission
-  const mileAwarded = await awardCenterPhoto(memberId, submission.id)
+  return data as CenterPhotoSubmission
+}
 
-  const { data: updated, error: updateError } = await supabase
+export async function approveCenterPhotoSubmission(
+  submissionId: string,
+): Promise<CenterPhotoSubmission> {
+  const { data: existing, error: fetchError } = await supabase
     .from('center_photo_submissions')
-    .update({ mile_awarded: mileAwarded })
-    .eq('id', submission.id)
+    .select('*')
+    .eq('id', submissionId)
+    .single()
+
+  if (fetchError) throw fetchError
+  const submission = existing as CenterPhotoSubmission
+
+  if (submission.status === 'approved') {
+    return submission
+  }
+  if (submission.status !== 'pending') {
+    throw new Error('대기 중인 제출만 승인할 수 있습니다.')
+  }
+
+  if (await hasApprovedCenterPhotoToday(submission.member_id, submission.submission_date)) {
+    throw new Error('해당 회원은 이미 오늘 센터 사진 인증이 완료되었습니다.')
+  }
+
+  const now = new Date().toISOString()
+  const mileAwarded = await awardCenterPhoto(
+    submission.member_id,
+    submission.id,
+    submission.submission_date,
+  )
+
+  const { data, error } = await supabase
+    .from('center_photo_submissions')
+    .update({
+      status: 'approved',
+      mile_awarded: mileAwarded,
+      reviewed_at: now,
+      rejection_reason: null,
+    })
+    .eq('id', submissionId)
+    .eq('status', 'pending')
     .select('*')
     .single()
 
-  if (updateError) throw updateError
+  if (error) throw error
+  return data as CenterPhotoSubmission
+}
 
-  return {
-    submission: updated as CenterPhotoSubmission,
-    mileAwarded,
+export async function rejectCenterPhotoSubmission(
+  submissionId: string,
+  reason: string,
+): Promise<CenterPhotoSubmission> {
+  const trimmed = reason.trim()
+  if (!trimmed) {
+    throw new Error('반려 사유를 입력해 주세요.')
   }
+
+  const { data, error } = await supabase
+    .from('center_photo_submissions')
+    .update({
+      status: 'rejected',
+      rejection_reason: trimmed,
+      reviewed_at: new Date().toISOString(),
+    })
+    .eq('id', submissionId)
+    .eq('status', 'pending')
+    .select('*')
+    .single()
+
+  if (error) throw error
+  return data as CenterPhotoSubmission
 }
 
 export async function fetchCenterPhotoSubmissions(options?: {
   memberId?: string
+  status?: CenterPhotoStatus
   limit?: number
 }): Promise<CenterPhotoSubmissionWithMember[]> {
   let query = supabase
@@ -137,6 +213,9 @@ export async function fetchCenterPhotoSubmissions(options?: {
 
   if (options?.memberId) {
     query = query.eq('member_id', options.memberId)
+  }
+  if (options?.status) {
+    query = query.eq('status', options.status)
   }
 
   const { data, error } = await query
@@ -157,4 +236,14 @@ export async function fetchCenterPhotoSubmissions(options?: {
     ...row,
     member_name: nameMap.get(row.member_id) ?? null,
   }))
+}
+
+export async function countPendingCenterPhotoSubmissions(): Promise<number> {
+  const { count, error } = await supabase
+    .from('center_photo_submissions')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'pending')
+
+  if (error) throw error
+  return count ?? 0
 }

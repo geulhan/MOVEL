@@ -68,7 +68,7 @@ export function buildMemberRewardGuide(
     {
       key: 'center_photo',
       title: REWARD_EVENT_LABELS.center_photo,
-      description: '센터에서 카메라로 촬영 · 날짜·시간 표시 · 하루 1회',
+      description: '센터에서 카메라로 촬영 · 관리자 검수 후 적립 · 하루 1회',
       score: formatRewardAmount(rules.center_photo.score, '점'),
       mile: formatRewardAmount(rules.center_photo.mile, 'M'),
     },
