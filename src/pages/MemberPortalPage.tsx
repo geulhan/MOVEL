@@ -30,6 +30,7 @@ import { PullToRefresh } from '../components/PullToRefresh'
 import { MemberScheduleSection } from '../components/MemberScheduleSection'
 import { MemberJournalPortalSection } from '../components/member/MemberJournalPortalSection'
 import { MemberInbodySection } from '../components/member/MemberInbodySection'
+import { MemberPortalNav } from '../components/member/MemberPortalNav'
 import { SessionCount } from '../components/SessionCount'
 
 type Tab =
@@ -436,15 +437,6 @@ export default function MemberPortalPage() {
   const memberExpired =
     member.expires_at != null && isExpired(member.expires_at)
 
-  const navTabs: { id: Exclude<Tab, 'home'>; top: string; bottom: string }[] = [
-    { id: 'schedule', top: '수업', bottom: '일정' },
-    { id: 'journal', top: '운동', bottom: '일지' },
-    { id: 'inbody', top: '인바디', bottom: '' },
-    { id: 'payment', top: '결제', bottom: '' },
-    { id: 'rewards', top: 'REWARDS', bottom: '' },
-    { id: 'mypage', top: '마이', bottom: '페이지' },
-  ]
-
   const activeNavTab = tab === 'home' ? null : tab
 
   return (
@@ -453,35 +445,10 @@ export default function MemberPortalPage() {
       onLogout={handleLogout}
       onDashboard={() => setTab('home')}
     >
-      <nav className="flex gap-1 rounded-xl border border-gold/20 bg-white p-1 shadow-sm">
-        {navTabs.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTab(t.id)}
-            className={`flex min-w-0 flex-1 flex-col items-center justify-center rounded-lg px-0.5 py-2 transition ${
-              activeNavTab === t.id
-                ? 'bg-charcoal text-cream'
-                : 'text-charcoal/60 hover:bg-cream'
-            }`}
-          >
-            <span
-              className={`block w-full truncate text-center font-semibold leading-tight ${
-                t.id === 'rewards' ? 'text-[10px] tracking-wide' : 'text-xs'
-              }`}
-            >
-              {t.top}
-            </span>
-            <span
-              className={`mt-0.5 block min-h-[0.8rem] w-full truncate text-center text-[10px] leading-tight ${
-                activeNavTab === t.id ? 'text-cream/85' : 'text-charcoal/45'
-              }`}
-            >
-              {t.bottom || '\u00a0'}
-            </span>
-          </button>
-        ))}
-      </nav>
+      <MemberPortalNav
+        activeTab={activeNavTab}
+        onSelect={(id) => setTab(id)}
+      />
 
       <PullToRefresh onRefresh={handlePortalRefresh}>
         {portalError && (
