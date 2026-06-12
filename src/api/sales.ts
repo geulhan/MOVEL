@@ -1,9 +1,10 @@
 import { supabase } from '../lib/supabase'
 
 export type SalesStats = {
-  totalRevenue: number
+  yearRevenue: number
   monthRevenue: number
   monthPaymentCount: number
+  yearPaymentCount: number
   activeMemberCount: number
   avgPerMember: number
 }
@@ -34,19 +35,25 @@ export async function fetchSalesStats(): Promise<SalesStats> {
   const now = new Date()
   const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 
+  const yearAgo = new Date(now)
+  yearAgo.setFullYear(yearAgo.getFullYear() - 1)
+  const yearStart = yearAgo.toISOString().slice(0, 10)
+
   const all = payments ?? []
-  const totalRevenue = all.reduce((s, p) => s + Number(p.amount), 0)
   const monthRows = all.filter((p) => String(p.paid_at).startsWith(monthPrefix))
+  const yearRows = all.filter((p) => String(p.paid_at) >= yearStart)
   const monthRevenue = monthRows.reduce((s, p) => s + Number(p.amount), 0)
+  const yearRevenue = yearRows.reduce((s, p) => s + Number(p.amount), 0)
 
   const activeCount = members?.length ?? 0
 
   return {
-    totalRevenue,
+    yearRevenue,
     monthRevenue,
     monthPaymentCount: monthRows.length,
+    yearPaymentCount: yearRows.length,
     activeMemberCount: activeCount,
-    avgPerMember: activeCount > 0 ? Math.round(totalRevenue / activeCount) : 0,
+    avgPerMember: activeCount > 0 ? Math.round(yearRevenue / activeCount) : 0,
   }
 }
 

@@ -56,9 +56,9 @@ export function SalesDashboard() {
       sub: `${stats.monthPaymentCount}건`,
     },
     {
-      label: '누적 매출',
-      value: formatCurrency(stats.totalRevenue),
-      sub: '전체 합계',
+      label: '1년 매출',
+      value: formatCurrency(stats.yearRevenue),
+      sub: `최근 12개월 · ${stats.yearPaymentCount}건`,
     },
     {
       label: '활성 회원',
@@ -68,7 +68,7 @@ export function SalesDashboard() {
     {
       label: '회원당 평균',
       value: formatCurrency(stats.avgPerMember),
-      sub: '누적 ÷ 활성',
+      sub: '1년 ÷ 활성',
     },
   ]
 
