@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { formatCurrency } from '../../api/members'
 import {
+  deleteFacilityProduct,
   fetchFacilityProducts,
   saveFacilityProduct,
 } from '../../api/facilityProducts'
@@ -59,6 +60,30 @@ export function LockerTowelProductEditor() {
       setMessage('라커·수건 상품이 저장되었습니다.')
     } catch (err) {
       setError(err instanceof Error ? err.message : '저장에 실패했습니다.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDeleteProduct(index: number) {
+    const product = products[index]
+    if (
+      !window.confirm(
+        `「${product.label || '이 상품'}」을 삭제할까요?\n이미 부여된 이용은 유지됩니다.`,
+      )
+    ) {
+      return
+    }
+
+    setSaving(true)
+    setError(null)
+    setMessage(null)
+    try {
+      await deleteFacilityProduct(product.id)
+      setProducts((prev) => prev.filter((_, i) => i !== index))
+      setMessage('상품이 삭제되었습니다.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '삭제에 실패했습니다.')
     } finally {
       setSaving(false)
     }
@@ -200,6 +225,14 @@ export function LockerTowelProductEditor() {
                     ? formatCurrency(Number(product.list_amount))
                     : '가격 미정'}
                 </span>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => void handleDeleteProduct(index)}
+                  className="text-sm text-red-600 hover:underline disabled:opacity-50"
+                >
+                  삭제
+                </button>
                 <button
                   type="button"
                   disabled={saving}

@@ -75,6 +75,15 @@ export async function saveFacilityProduct(input: {
   return data as FacilityProduct
 }
 
+export async function deleteFacilityProduct(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('facility_products')
+    .delete()
+    .eq('id', id)
+
+  if (error) throw error
+}
+
 export async function assignFacilitySubscription(input: {
   memberId: string
   productId?: string | null

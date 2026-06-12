@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { formatCurrency } from '../../api/members'
 import {
+  deleteCenterPassProduct,
   fetchCenterPassProducts,
   saveCenterPassProduct,
   type CenterPassProduct,
@@ -70,6 +71,32 @@ export function CenterPassProductEditor() {
       setMessage('센터 이용권 상품이 저장되었습니다.')
     } catch (err) {
       setError(err instanceof Error ? err.message : '저장에 실패했습니다.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDeleteProduct(index: number) {
+    const product = products[index]
+    if (
+      !window.confirm(
+        `「${product.label || '이 상품'}」을 삭제할까요?\n이미 부여된 이용권은 유지됩니다.`,
+      )
+    ) {
+      return
+    }
+
+    setSaving(true)
+    setError(null)
+    setMessage(null)
+    try {
+      if (product.id) {
+        await deleteCenterPassProduct(product.id)
+      }
+      setProducts((prev) => prev.filter((_, i) => i !== index))
+      setMessage('상품이 삭제되었습니다.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '삭제에 실패했습니다.')
     } finally {
       setSaving(false)
     }
@@ -188,6 +215,14 @@ export function CenterPassProductEditor() {
                     ? formatCurrency(Number(product.list_amount))
                     : '가격 미정'}
                 </span>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => void handleDeleteProduct(index)}
+                  className="text-sm text-red-600 hover:underline disabled:opacity-50"
+                >
+                  삭제
+                </button>
                 <button
                   type="button"
                   disabled={saving}

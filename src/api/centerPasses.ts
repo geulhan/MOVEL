@@ -98,6 +98,15 @@ export async function saveCenterPassProduct(input: {
   return data as CenterPassProduct
 }
 
+export async function deleteCenterPassProduct(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('center_pass_products')
+    .delete()
+    .eq('id', id)
+
+  if (error) throw error
+}
+
 export async function fetchMemberCenterPasses(
   memberId: string,
 ): Promise<CenterPass[]> {
