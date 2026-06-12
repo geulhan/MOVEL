@@ -67,5 +67,6 @@ Deno.serve(async (req) => {
     metadata: body.metadata,
   })
 
-  return jsonResponse(result, result.ok ? 200 : 500)
+  // Always 200 so the client receives result.error (Solapi, config, etc.)
+  return jsonResponse(result, 200)
 })

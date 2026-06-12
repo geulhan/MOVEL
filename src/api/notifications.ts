@@ -11,6 +11,34 @@ export type SendNotificationResult = {
   skippedReason?: string
 }
 
+async function extractInvokeErrorDetail(
+  error: { message?: string; context?: Response },
+  result: SendNotificationResult | null,
+): Promise<string> {
+  if (result?.error) return result.error
+  if (result?.status === 'failed') {
+    return result.error ?? '알림 발송에 실패했습니다.'
+  }
+
+  try {
+    const response = error.context
+    if (response) {
+      const body = (await response.clone().json()) as {
+        error?: string
+        status?: string
+      }
+      if (body.error) return body.error
+      if (body.status === 'failed' && typeof body.error === 'string') {
+        return body.error
+      }
+    }
+  } catch {
+    // ignore JSON parse errors
+  }
+
+  return error.message ?? '알림 발송에 실패했습니다.'
+}
+
 async function invokeNotification(
   templateKey: NotificationTemplateKey,
   memberId: string,
@@ -37,20 +65,28 @@ async function invokeNotification(
       },
     })
 
+    const result = data as SendNotificationResult | null
+
     if (error) {
-      console.warn(`[notifications] ${templateKey} 호출 실패:`, error.message)
+      const detail = await extractInvokeErrorDetail(error, result)
+      console.warn(`[notifications] ${templateKey} 호출 실패:`, detail)
       return {
         ok: false,
         status: 'failed',
-        error: error.message,
+        error: detail,
       }
     }
 
-    const result = data as SendNotificationResult | null
     if (result?.status === 'failed') {
       console.warn(`[notifications] ${templateKey} 발송 실패:`, data)
     }
-    return result
+    return (
+      result ?? {
+        ok: false,
+        status: 'failed',
+        error: '알림 발송 응답이 비어 있습니다.',
+      }
+    )
   } catch (err) {
     console.warn(`[notifications] ${templateKey} 예외:`, err)
     return {
