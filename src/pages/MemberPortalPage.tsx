@@ -436,13 +436,13 @@ export default function MemberPortalPage() {
   const memberExpired =
     member.expires_at != null && isExpired(member.expires_at)
 
-  const navTabs: { id: Exclude<Tab, 'home'>; label: string }[] = [
-    { id: 'schedule', label: '수업 일정' },
-    { id: 'journal', label: '운동일지' },
-    { id: 'inbody', label: '인바디' },
-    { id: 'payment', label: '결제' },
-    { id: 'rewards', label: 'REWARDS' },
-    { id: 'mypage', label: '마이페이지' },
+  const navTabs: { id: Exclude<Tab, 'home'>; top: string; bottom: string }[] = [
+    { id: 'schedule', top: '수업', bottom: '일정' },
+    { id: 'journal', top: '운동', bottom: '일지' },
+    { id: 'inbody', top: '인바디', bottom: '' },
+    { id: 'payment', top: '결제', bottom: '' },
+    { id: 'rewards', top: 'REWARDS', bottom: '' },
+    { id: 'mypage', top: '마이', bottom: '페이지' },
   ]
 
   const activeNavTab = tab === 'home' ? null : tab
@@ -453,19 +453,32 @@ export default function MemberPortalPage() {
       onLogout={handleLogout}
       onDashboard={() => setTab('home')}
     >
-      <nav className="-mx-1 flex gap-1 overflow-x-auto rounded-xl border border-gold/20 bg-white p-1 shadow-sm">
+      <nav className="flex gap-1 rounded-xl border border-gold/20 bg-white p-1 shadow-sm">
         {navTabs.map((t) => (
           <button
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`shrink-0 rounded-lg px-3 py-2.5 text-sm font-medium transition sm:flex-1 ${
+            className={`flex min-w-0 flex-1 flex-col items-center justify-center rounded-lg px-0.5 py-2 transition ${
               activeNavTab === t.id
                 ? 'bg-charcoal text-cream'
                 : 'text-charcoal/60 hover:bg-cream'
             }`}
           >
-            {t.label}
+            <span
+              className={`block w-full truncate text-center font-semibold leading-tight ${
+                t.id === 'rewards' ? 'text-[10px] tracking-wide' : 'text-xs'
+              }`}
+            >
+              {t.top}
+            </span>
+            <span
+              className={`mt-0.5 block min-h-[0.8rem] w-full truncate text-center text-[10px] leading-tight ${
+                activeNavTab === t.id ? 'text-cream/85' : 'text-charcoal/45'
+              }`}
+            >
+              {t.bottom || '\u00a0'}
+            </span>
           </button>
         ))}
       </nav>
