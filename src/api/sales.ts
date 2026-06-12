@@ -1,12 +1,16 @@
 import { supabase } from '../lib/supabase'
 
+export type YearRevenue = {
+  year: number
+  revenue: number
+  paymentCount: number
+}
+
 export type SalesStats = {
-  yearRevenue: number
   monthRevenue: number
   monthPaymentCount: number
-  yearPaymentCount: number
+  yearlyRevenue: YearRevenue[]
   activeMemberCount: number
-  avgPerMember: number
 }
 
 export type RecentPayment = {
@@ -16,6 +20,35 @@ export type RecentPayment = {
   sessions: number
   paid_at: string
   note: string | null
+}
+
+function aggregateYearlyRevenue(
+  payments: Array<{ amount: number; paid_at: string }>,
+): YearRevenue[] {
+  const totals = new Map<number, { revenue: number; paymentCount: number }>()
+
+  for (const payment of payments) {
+    const year = Number(String(payment.paid_at).slice(0, 4))
+    if (!Number.isFinite(year) || year < 2000) continue
+
+    const current = totals.get(year) ?? { revenue: 0, paymentCount: 0 }
+    current.revenue += Number(payment.amount)
+    current.paymentCount += 1
+    totals.set(year, current)
+  }
+
+  const currentYear = new Date().getFullYear()
+  if (!totals.has(currentYear)) {
+    totals.set(currentYear, { revenue: 0, paymentCount: 0 })
+  }
+
+  return [...totals.entries()]
+    .sort((a, b) => b[0] - a[0])
+    .map(([year, data]) => ({
+      year,
+      revenue: data.revenue,
+      paymentCount: data.paymentCount,
+    }))
 }
 
 export async function fetchSalesStats(): Promise<SalesStats> {
@@ -35,26 +68,29 @@ export async function fetchSalesStats(): Promise<SalesStats> {
   const now = new Date()
   const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 
-  const yearAgo = new Date(now)
-  yearAgo.setFullYear(yearAgo.getFullYear() - 1)
-  const yearStart = yearAgo.toISOString().slice(0, 10)
-
   const all = payments ?? []
   const monthRows = all.filter((p) => String(p.paid_at).startsWith(monthPrefix))
-  const yearRows = all.filter((p) => String(p.paid_at) >= yearStart)
   const monthRevenue = monthRows.reduce((s, p) => s + Number(p.amount), 0)
-  const yearRevenue = yearRows.reduce((s, p) => s + Number(p.amount), 0)
-
-  const activeCount = members?.length ?? 0
 
   return {
-    yearRevenue,
     monthRevenue,
     monthPaymentCount: monthRows.length,
-    yearPaymentCount: yearRows.length,
-    activeMemberCount: activeCount,
-    avgPerMember: activeCount > 0 ? Math.round(yearRevenue / activeCount) : 0,
+    yearlyRevenue: aggregateYearlyRevenue(all),
+    activeMemberCount: members?.length ?? 0,
   }
+}
+
+export function getYearRevenue(
+  yearlyRevenue: YearRevenue[],
+  year: number,
+): YearRevenue {
+  return (
+    yearlyRevenue.find((row) => row.year === year) ?? {
+      year,
+      revenue: 0,
+      paymentCount: 0,
+    }
+  )
 }
 
 export async function fetchRecentPayments(limit = 8): Promise<RecentPayment[]> {
