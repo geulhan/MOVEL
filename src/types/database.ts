@@ -222,6 +222,19 @@ export type ExerciseJournal = {
   created_at: string
 }
 
+export type InbodyCreatedBy = 'member' | 'trainer' | 'admin'
+
+export type InbodyRecord = {
+  id: string
+  member_id: string
+  measured_at: string
+  weight_kg: number
+  skeletal_muscle_kg: number
+  body_fat_kg: number
+  created_by: InbodyCreatedBy
+  created_at: string
+}
+
 export type AttendanceLog = {
   id: string
   member_id: string
@@ -634,6 +647,24 @@ export type Database = {
           trained_at?: string
           title?: string | null
           content?: string
+        }
+      >
+      member_inbody_records: TableDef<
+        InbodyRecord,
+        {
+          member_id: string
+          measured_at: string
+          weight_kg: number
+          skeletal_muscle_kg: number
+          body_fat_kg: number
+          created_by?: InbodyCreatedBy
+        },
+        {
+          measured_at?: string
+          weight_kg?: number
+          skeletal_muscle_kg?: number
+          body_fat_kg?: number
+          created_by?: InbodyCreatedBy
         }
       >
       attendance_logs: TableDef<

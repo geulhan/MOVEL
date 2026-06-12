@@ -11,12 +11,10 @@ import { loginMember, registerMember } from '../api/memberAuth'
 import {
   checkIn,
   clearMemberSession,
-  fetchJournals,
   fetchRecentAttendance,
   fetchTodayAttendance,
   getMemberSession,
   type AttendanceLog,
-  type ExerciseJournal,
 } from '../api/memberPortal'
 import { SiteUrlCopy } from '../components/SiteUrlCopy'
 import { MemberMyPageSection } from '../components/MemberMyPageSection'
@@ -36,13 +34,13 @@ import { MemberPaymentSection } from '../components/member/MemberPaymentSection'
 import { MemberRewardsSection } from '../components/MemberRewardsSection'
 import { PullToRefresh } from '../components/PullToRefresh'
 import { MemberScheduleSection } from '../components/MemberScheduleSection'
+import { MemberJournalPortalSection } from '../components/member/MemberJournalPortalSection'
 import { SessionCount } from '../components/SessionCount'
 
 type Tab =
   | 'home'
   | 'payment'
   | 'schedule'
-  | 'attendance'
   | 'journal'
   | 'rewards'
   | 'mypage'
@@ -69,7 +67,6 @@ export default function MemberPortalPage() {
   const [recentAttendance, setRecentAttendance] = useState<AttendanceLog[]>(
     [],
   )
-  const [journals, setJournals] = useState<ExerciseJournal[]>([])
   const [schedules, setSchedules] = useState<PtSchedule[]>([])
   const [checkInLoading, setCheckInLoading] = useState(false)
   const [portalError, setPortalError] = useState<string | null>(null)
@@ -91,13 +88,6 @@ export default function MemberPortalPage() {
       setRecentAttendance(recent)
     } catch {
       setRecentAttendance([])
-    }
-
-    try {
-      const j = await fetchJournals(memberId)
-      setJournals(j)
-    } catch {
-      setJournals([])
     }
 
     try {
@@ -465,26 +455,30 @@ export default function MemberPortalPage() {
     !memberExpired &&
     hasTodayPt
 
-  const tabs: { id: Tab; label: string }[] = [
-    { id: 'home', label: '내 정보' },
+  const navTabs: { id: Exclude<Tab, 'home'>; label: string }[] = [
     { id: 'payment', label: '결제' },
     { id: 'schedule', label: '수업 일정' },
-    { id: 'attendance', label: '출석' },
     { id: 'journal', label: '운동일지' },
     { id: 'rewards', label: 'MY REWARDS' },
     { id: 'mypage', label: '마이페이지' },
   ]
 
+  const activeNavTab = tab === 'home' ? null : tab
+
   return (
-    <MemberLayout memberName={member.name} onLogout={handleLogout}>
-      <nav className="flex gap-1 rounded-xl border border-gold/20 bg-white p-1 shadow-sm">
-        {tabs.map((t) => (
+    <MemberLayout
+      memberName={member.name}
+      onLogout={handleLogout}
+      onDashboard={() => setTab('home')}
+    >
+      <nav className="-mx-1 flex gap-1 overflow-x-auto rounded-xl border border-gold/20 bg-white p-1 shadow-sm">
+        {navTabs.map((t) => (
           <button
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`flex-1 rounded-lg py-2.5 text-sm font-medium transition ${
-              tab === t.id
+            className={`shrink-0 rounded-lg px-3 py-2.5 text-sm font-medium transition sm:flex-1 ${
+              activeNavTab === t.id
                 ? 'bg-charcoal text-cream'
                 : 'text-charcoal/60 hover:bg-cream'
             }`}
@@ -566,100 +560,21 @@ export default function MemberPortalPage() {
       )}
 
       {tab === 'schedule' && member && (
-        <MemberScheduleSection memberId={member.id} />
-      )}
-
-      {tab === 'attendance' && (
-        <section className="space-y-4">
-          <div className={`${cardClass} p-6 text-center`}>
-            <h3 className="font-semibold text-charcoal">오늘의 출석</h3>
-            {todaySchedules.length > 0 ? (
-              <ul className="mt-3 space-y-1 text-sm text-charcoal/80">
-                {todaySchedules.map((s) => (
-                  <li key={s.id} className="tabular-nums">
-                    오늘 PT ·{' '}
-                    {new Date(s.scheduled_at).toLocaleString('ko-KR', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-2 text-sm text-amber-800">
-                오늘 예약된 PT가 없습니다. 센터에서 스케줄 등록 후 출석할 수
-                있습니다.
-              </p>
-            )}
-            {todayAttendance ? (
-              <>
-                <p className="mt-3 font-semibold text-emerald-700">
-                  ✓ 출석 완료
-                </p>
-                <p className="mt-1 text-xs text-muted">
-                  {new Date(todayAttendance.checked_in_at).toLocaleString(
-                    'ko-KR',
-                  )}
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="mt-2 text-sm text-muted">
-                  아직 오늘 출석하지 않았습니다.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => void handleCheckIn()}
-                  disabled={checkInLoading || !canCheckIn}
-                  className={`mt-4 w-full ${btnGold}`}
-                >
-                  {checkInLoading ? '처리 중…' : '출석하기 (PT 1회 차감)'}
-                </button>
-                {member.status !== 'active' && (
-                  <p className="mt-2 text-xs text-red-600">
-                    활성 회원만 출석할 수 있습니다.
-                  </p>
-                )}
-                {member.status === 'active' &&
-                  member.remaining_sessions <= 0 && (
-                    <p className="mt-2 text-xs text-red-600">
-                      잔여 PT가 없어 출석할 수 없습니다.
-                    </p>
-                  )}
-                {member.status === 'active' &&
-                  member.remaining_sessions > 0 &&
-                  memberExpired && (
-                    <p className="mt-2 text-xs text-red-600">
-                      회원권 만료일이 지나 출석할 수 없습니다.
-                    </p>
-                  )}
-                {member.status === 'active' &&
-                  member.remaining_sessions > 0 &&
-                  !memberExpired &&
-                  !hasTodayPt && (
-                    <p className="mt-2 text-xs text-red-600">
-                      오늘 PT 예약이 있어야 출석할 수 있습니다.
-                    </p>
-                  )}
-              </>
-            )}
-          </div>
-
-          <div className={`${cardClass} p-4`}>
-            <h4 className="text-sm font-semibold text-charcoal">최근 출석</h4>
-            {recentAttendance.length === 0 ? (
-              <p className="mt-2 text-sm text-muted">출석 기록이 없습니다.</p>
-            ) : (
-              <ul className="mt-2 divide-y divide-gold/15 text-sm">
-                {recentAttendance.map((a) => (
-                  <li key={a.id} className="py-2 text-muted">
-                    {new Date(a.checked_in_at).toLocaleString('ko-KR')}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </section>
+        <MemberScheduleSection
+          memberId={member.id}
+          checkIn={{
+            todaySchedules,
+            todayAttendance,
+            recentAttendance,
+            canCheckIn,
+            checkInLoading,
+            onCheckIn: () => void handleCheckIn(),
+            memberStatus: member.status,
+            remainingSessions: member.remaining_sessions,
+            memberExpired,
+            hasTodayPt,
+          }}
+        />
       )}
 
         {tab === 'payment' && member && (
@@ -677,40 +592,8 @@ export default function MemberPortalPage() {
           <MemberMyPageSection phone={member.phone} />
         )}
 
-        {tab === 'journal' && (
-          <section className={`${cardClass} overflow-hidden`}>
-            <div className="border-b border-gold/20 px-4 py-4">
-              <h3 className="font-semibold text-charcoal">운동일지</h3>
-              <p className="mt-1 text-xs text-muted">
-                트레이너가 작성한 운동 기록입니다.
-              </p>
-            </div>
-            {journals.length === 0 ? (
-              <p className="px-4 py-10 text-center text-sm text-muted">
-                아직 등록된 운동일지가 없습니다.
-              </p>
-            ) : (
-              <ul className="divide-y divide-gold/15">
-                {journals.map((j) => (
-                  <li key={j.id} className="px-4 py-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded bg-gold/20 px-2 py-0.5 text-xs font-medium whitespace-nowrap tabular-nums">
-                        {formatDate(j.trained_at)}
-                      </span>
-                      {j.title && (
-                        <span className="text-sm font-semibold text-charcoal">
-                          {j.title}
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-charcoal/85">
-                      {j.content}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+        {tab === 'journal' && member && (
+          <MemberJournalPortalSection memberId={member.id} />
         )}
       </PullToRefresh>
     </MemberLayout>

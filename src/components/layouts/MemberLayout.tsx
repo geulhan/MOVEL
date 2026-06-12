@@ -5,26 +5,48 @@ type Props = {
   children: React.ReactNode
   memberName?: string
   onLogout?: () => void
+  onDashboard?: () => void
 }
 
-export function MemberLayout({ children, memberName, onLogout }: Props) {
+export function MemberLayout({
+  children,
+  memberName,
+  onLogout,
+  onDashboard,
+}: Props) {
   return (
     <div className="min-h-screen bg-cream">
       <header className="border-b border-gold/30 bg-cream">
         <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-4">
           <div className="min-w-0">
-            <Link
-              to="/member"
-              className="inline-block transition hover:opacity-90"
-              aria-label="MOVEL 홈"
-            >
-              <img
-                src="/logo/movel-stacked-light.png"
-                alt="MOVEL"
-                className="h-[4.25rem] w-auto invert mix-blend-multiply"
-                decoding="async"
-              />
-            </Link>
+            {onDashboard ? (
+              <button
+                type="button"
+                onClick={onDashboard}
+                className="inline-block transition hover:opacity-90"
+                aria-label="대시보드 (내 정보)"
+              >
+                <img
+                  src="/logo/movel-stacked-light.png"
+                  alt="MOVEL"
+                  className="h-[4.25rem] w-auto invert mix-blend-multiply"
+                  decoding="async"
+                />
+              </button>
+            ) : (
+              <Link
+                to="/member"
+                className="inline-block transition hover:opacity-90"
+                aria-label="MOVEL 홈"
+              >
+                <img
+                  src="/logo/movel-stacked-light.png"
+                  alt="MOVEL"
+                  className="h-[4.25rem] w-auto invert mix-blend-multiply"
+                  decoding="async"
+                />
+              </Link>
+            )}
             <MovelBrandSubtitle tone="gold" className="mt-1.5" />
             {memberName && (
               <p className="mt-1 text-sm text-muted">{memberName} 님</p>
