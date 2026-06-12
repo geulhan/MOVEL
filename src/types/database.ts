@@ -891,6 +891,24 @@ export type Database = {
         }
         Returns: Json
       }
+      list_trainer_admin_accounts: {
+        Args: Record<string, never>
+        Returns: Json
+      }
+      upsert_trainer_admin_account: {
+        Args: {
+          p_trainer_id: string
+          p_username: string
+          p_password: string
+        }
+        Returns: Json
+      }
+      delete_trainer_admin_account: {
+        Args: {
+          p_trainer_id: string
+        }
+        Returns: Json
+      }
       verify_member_login: {
         Args: {
           p_phone: string

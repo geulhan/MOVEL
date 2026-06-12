@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fetchTrainers } from '../../api/trainers'
 import { PageHeader } from '../../components/admin/PageHeader'
+import { TrainerAccountManager } from '../../components/admin/TrainerAccountManager'
 import { TrainerManage } from '../../components/TrainerManage'
 import { formatSupabaseError } from '../../lib/errors'
 import type { Trainer } from '../../types/database'
@@ -25,7 +26,10 @@ export default function TrainersPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="트레이너" description="트레이너 등록 및 관리" />
+      <PageHeader
+        title="트레이너"
+        description="트레이너 등록 및 로그인 계정 관리"
+      />
 
       {error && (
         <div className="rounded-xl border border-red-300/60 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -34,6 +38,7 @@ export default function TrainersPage() {
       )}
 
       <TrainerManage trainers={trainers} onUpdated={() => void load()} />
+      <TrainerAccountManager trainers={trainers} />
     </div>
   )
 }
