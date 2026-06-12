@@ -10,8 +10,8 @@ import { fetchTrainers } from '../../api/trainers'
 import { PageHeader } from '../../components/admin/PageHeader'
 import { MemberFilterBar } from '../../components/MemberFilterBar'
 import { MemberForm } from '../../components/MemberForm'
+import { MemberSearchCombobox } from '../../components/admin/MemberSearchCombobox'
 import { MemberList } from '../../components/MemberList'
-import { SearchBar } from '../../components/SearchBar'
 import { formatSupabaseError } from '../../lib/errors'
 import type { MemberStatus, Trainer } from '../../types/database'
 import { MEMBER_STATUS_LABELS } from '../../types/database'
@@ -145,10 +145,27 @@ export default function MembersPage() {
     return applyRenewalFilter(allMembers, renewalFilter)
   }, [allMembers, activeSearch, renewalFilter, searchResults])
 
+  const suggestionMembers = useMemo(() => {
+    const term = searchInput.trim()
+    if (!term) return []
+    return searchResults ?? filterBySearch(allMembers, term)
+  }, [searchInput, searchResults, allMembers])
+
   const listEmptyMessage =
     activeSearch.trim().length > 0
       ? `"${activeSearch.trim()}" 검색 결과가 없습니다.`
       : '등록된 회원이 없습니다.'
+
+  function handleSelectMember(member: (typeof allMembers)[number]) {
+    setSearchInput(member.name)
+    setActiveSearch(member.name)
+    setSearchResults([member])
+  }
+
+  function handleClearSearch() {
+    setActiveSearch('')
+    setSearchResults(null)
+  }
 
   async function handleTrainerChange(
     memberId: string,
@@ -250,21 +267,18 @@ export default function MembersPage() {
           onChange={setRenewalFilter}
           counts={filterCounts}
         />
-        <SearchBar
+        <MemberSearchCombobox
           value={searchInput}
+          suggestions={suggestionMembers}
+          loading={searchLoading}
           onChange={setSearchInput}
-          onSearch={() => {
-            const term = searchInput.trim()
-            setActiveSearch(term)
-            if (!term) {
-              setSearchResults(null)
-            }
-          }}
+          onSelect={handleSelectMember}
+          onClear={handleClearSearch}
         />
         {activeSearch && (
           <p className="text-xs text-muted">
-            검색 중에는 전체 회원에서 조회합니다. 상단 필터는 검색어를 지우면
-            다시 적용됩니다.
+            입력하면 목록에서 바로 고를 수 있습니다. 검색 중에는 전체 회원에서
+            조회하며, 지우기를 누르면 상단 필터가 다시 적용됩니다.
           </p>
         )}
       </section>
