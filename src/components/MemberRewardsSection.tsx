@@ -37,6 +37,7 @@ import {
 import { useClientDevice } from '../hooks/useClientDevice'
 import { VerificationCodeFullscreen } from './VerificationCodeFullscreen'
 import { IosStepVerificationUpload } from './IosStepVerificationUpload'
+import { MemberRewardGuideSection } from './MemberRewardGuideSection'
 import { btnGold, btnOutline, cardClass } from '../styles/theme'
 
 type HistoryTab = 'earn' | 'spend'
@@ -341,6 +342,8 @@ export function MemberRewardsSection({ memberId, refreshToken }: Props) {
           </div>
         ) : null}
       </section>
+
+      <MemberRewardGuideSection />
 
       {/* 오늘 인증하기 */}
       <section className={`${cardClass} p-5 sm:p-6`}>

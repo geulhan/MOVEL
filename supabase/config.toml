@@ -6,3 +6,6 @@ verify_jwt = false
 
 [functions.renewal-reminders]
 verify_jwt = false
+
+[functions.pt-reminders]
+verify_jwt = false

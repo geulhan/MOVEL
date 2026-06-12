@@ -84,7 +84,7 @@ export function formatStepRewardSummary(result: StepRewardResult): string {
   return `${result.stepCount.toLocaleString()}보 인증 · 합계 SCORE +${result.totalScore} · MILE +${result.totalMile.toLocaleString()}M (${detail})`
 }
 
-async function fetchEarnRules(): Promise<EarnRules> {
+export async function fetchRewardEarnRules(): Promise<EarnRules> {
   const { data, error } = await supabase
     .from('reward_settings')
     .select('setting_value')
@@ -400,7 +400,7 @@ export async function awardPtAttendance(
   memberId: string,
   attendanceId: string,
 ): Promise<void> {
-  const rules = await fetchEarnRules()
+  const rules = await fetchRewardEarnRules()
   const eventKey = `pt_attendance:${attendanceId}`
   try {
     await awardPair(
@@ -437,7 +437,7 @@ export async function awardExerciseJournal(
   journalId: string,
   trainedAt: string,
 ): Promise<void> {
-  const rules = await fetchEarnRules()
+  const rules = await fetchRewardEarnRules()
   const date = trainedAt.slice(0, 10)
   const eventKey = `exercise_journal:${journalId}`
   try {
@@ -532,7 +532,7 @@ export async function awardStepRewardsFromVerification(
     step_source: 'ocr_verification',
   })
 
-  const rules = await fetchEarnRules()
+  const rules = await fetchRewardEarnRules()
   const planned = computeStepTierAwards(stepCount, rules)
   const awards: StepRewardTierAward[] = []
 
@@ -576,7 +576,7 @@ function isQualifyingDay(activity: DailyActivity): boolean {
 }
 
 async function checkStreakReward(memberId: string): Promise<void> {
-  const rules = await fetchEarnRules()
+  const rules = await fetchRewardEarnRules()
   const endDate = todayDateString()
 
   const dates: string[] = []
@@ -628,7 +628,7 @@ export async function awardNaverReview(
   memberId: string,
   adminNote?: string,
 ): Promise<void> {
-  const rules = await fetchEarnRules()
+  const rules = await fetchRewardEarnRules()
   const eventKey = `naver_review:${memberId}:${Date.now()}`
   await awardPair(
     memberId,
@@ -665,7 +665,7 @@ export async function awardReferralOnPayment(
     ?.referred_by_member_id
   if (!referrerId) return
 
-  const rules = await fetchEarnRules()
+  const rules = await fetchRewardEarnRules()
   const percent = rules.referral_percent ?? 10
   const mileAmount = Math.floor((paymentAmount * percent) / 100)
   if (mileAmount <= 0) return

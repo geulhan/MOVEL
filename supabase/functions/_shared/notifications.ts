@@ -65,6 +65,17 @@ async function hasDuplicate(
     return (count ?? 0) > 0
   }
 
+  if (templateKey === 'pt_reminder' && metadata.schedule_id) {
+    const { count } = await supabase
+      .from('message_logs')
+      .select('id', { count: 'exact', head: true })
+      .eq('member_id', memberId)
+      .eq('template_key', 'pt_reminder')
+      .eq('metadata->>schedule_id', String(metadata.schedule_id))
+      .in('status', ['sent', 'skipped'])
+    return (count ?? 0) > 0
+  }
+
   if (
     templateKey === 'step_verification_result' &&
     metadata.verification_id
@@ -152,6 +163,7 @@ export async function sendMemberNotification(
         approved: metadata.approved === '1' || metadata.approved === 1,
         reason: String(metadata.reason ?? ''),
         scheduledAt: String(metadata.scheduled_at ?? ''),
+        trainerName: String(metadata.trainer_name ?? ''),
       },
     )
 

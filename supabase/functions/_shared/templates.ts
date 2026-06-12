@@ -24,6 +24,18 @@ export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('ko-KR').format(Math.round(amount)) + '원'
 }
 
+export function formatScheduledAtKst(iso: string): string {
+  return new Date(iso).toLocaleString('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+}
+
 export function buildTemplateVariables(
   templateKey: TemplateKey,
   member: MemberRow,
@@ -35,6 +47,7 @@ export function buildTemplateVariables(
     approved?: boolean
     reason?: string
     scheduledAt?: string
+    trainerName?: string
   } = {},
 ): Record<string, string> {
   const portalUrl = `${config.siteUrl}/member`
@@ -72,6 +85,7 @@ export function buildTemplateVariables(
       return {
         '#{name}': member.name,
         '#{scheduledAt}': extra.scheduledAt ?? '-',
+        '#{trainerName}': extra.trainerName?.trim() || '담당 트레이너',
         '#{portalUrl}': portalUrl,
       }
     default:

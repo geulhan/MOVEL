@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   fetchMessageLogs,
+  triggerPtReminders,
   triggerRenewalReminders,
 } from '../../api/notifications'
 import { MessageCampaignPanel } from '../../components/admin/MessageCampaignPanel'
@@ -30,6 +31,7 @@ export default function MessagesPage() {
   const [logsError, setLogsError] = useState<string | null>(null)
   const [cronMessage, setCronMessage] = useState<string | null>(null)
   const [cronLoading, setCronLoading] = useState(false)
+  const [ptCronLoading, setPtCronLoading] = useState(false)
 
   const loadLogs = useCallback(async () => {
     setLogsLoading(true)
@@ -48,6 +50,26 @@ export default function MessagesPage() {
   useEffect(() => {
     void loadLogs()
   }, [loadLogs])
+
+  async function handleRunPtReminders() {
+    setPtCronLoading(true)
+    setCronMessage(null)
+    try {
+      const result = await triggerPtReminders()
+      const processed =
+        result && typeof result === 'object' && 'processed' in result
+          ? Number((result as { processed: number }).processed)
+          : 0
+      setCronMessage(`PT D-1 리마인더 실행 완료 (${processed}건)`)
+      await loadLogs()
+    } catch (err) {
+      setCronMessage(
+        err instanceof Error ? err.message : 'PT 리마인더 실행에 실패했습니다.',
+      )
+    } finally {
+      setPtCronLoading(false)
+    }
+  }
 
   async function handleRunRenewalReminders() {
     setCronLoading(true)
@@ -102,6 +124,14 @@ export default function MessagesPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void handleRunPtReminders()}
+              disabled={ptCronLoading}
+              className="rounded-lg border border-gold/40 px-4 py-2 text-sm font-medium text-charcoal transition hover:bg-cream disabled:opacity-50"
+            >
+              {ptCronLoading ? '실행 중…' : 'PT D-1 리마인더 실행'}
+            </button>
             <button
               type="button"
               onClick={() => void handleRunRenewalReminders()}

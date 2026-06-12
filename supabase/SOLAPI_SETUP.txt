@@ -25,7 +25,7 @@
    - 솔라피 콘솔 → 카카오 채널 연동
    - pfId(프로필 ID) 메모
 
-3) 알림톡 템플릿 3종 등록 및 심사 (변수명은 아래와 동일하게)
+3) 알림톡 템플릿 등록 및 심사 (변수명은 아래와 동일하게)
    [환영] welcome
      #{name}님 MOVEL 가입을 환영합니다.
      회원 포털: #{portalUrl}
@@ -38,6 +38,12 @@
    [갱신] renewal
      #{name}님 회원권 만료가 #{daysLeft}일 남았습니다. (만료일 #{expiresAt})
      잔여 PT #{remainingSessions}회 · #{portalUrl}
+
+   [PT 리마인더] pt_reminder
+     #{name}님 PT 수업이 내일 예정되어 있습니다.
+     일시: #{scheduledAt}
+     담당: #{trainerName}
+     회원 포털: #{portalUrl}
 
 4) 문자 발신번호 등록 (알림톡 실패 시 대체발송용)
 
@@ -57,8 +63,10 @@
    supabase secrets set SOLAPI_TEMPLATE_WELCOME=...
    supabase secrets set SOLAPI_TEMPLATE_PAYMENT=...
    supabase secrets set SOLAPI_TEMPLATE_RENEWAL=...
+   supabase secrets set SOLAPI_TEMPLATE_PT_REMINDER=...
    supabase functions deploy send-notification
    supabase functions deploy renewal-reminders
+   supabase functions deploy pt-reminders
 
 7) Vercel 환경 변수
    VITE_NOTIFICATION_TRIGGER_KEY = NOTIFICATION_INTERNAL_SECRET 와 동일
@@ -66,7 +74,10 @@
 8) 솔라피 키 입력 후 실발송 켜기
    supabase secrets set MESSAGING_ENABLED=true
 
-9) 갱신 안내 자동 실행 (Supabase Dashboard → Edge Functions → Cron)
-   함수: renewal-reminders
-   스케줄: 0 0 * * *  (UTC 00:00 = KST 09:00)
-   또는 관리자 → 알림 발송 → "갱신 안내 지금 실행"
+9) 자동 실행 Cron (Supabase Dashboard → Edge Functions → Cron)
+   [갱신] renewal-reminders — 0 0 * * * (UTC 00:00 = KST 09:00)
+   [PT D-1] pt-reminders — 0 * * * * (매시 정각, 수업 24시간 전 ±1시간 대상)
+   수동 테스트: 관리자 → 메시지 발송 → 발송 이력 상단 버튼
+
+10) SQL (아직이면)
+   migration_022_pt_reminder_dedup.sql

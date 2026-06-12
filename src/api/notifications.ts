@@ -114,13 +114,13 @@ export async function fetchMessageLogs(limit = 100): Promise<MessageLog[]> {
   return data ?? []
 }
 
-export async function triggerRenewalReminders(): Promise<unknown> {
+async function invokeReminderFunction(functionName: string): Promise<unknown> {
   const triggerKey = import.meta.env.VITE_NOTIFICATION_TRIGGER_KEY
   if (!triggerKey) {
     throw new Error('VITE_NOTIFICATION_TRIGGER_KEY가 설정되지 않았습니다.')
   }
 
-  const { data, error } = await supabase.functions.invoke('renewal-reminders', {
+  const { data, error } = await supabase.functions.invoke(functionName, {
     body: {},
     headers: {
       'x-mobel-notification-key': triggerKey,
@@ -129,4 +129,12 @@ export async function triggerRenewalReminders(): Promise<unknown> {
 
   if (error) throw error
   return data
+}
+
+export async function triggerRenewalReminders(): Promise<unknown> {
+  return invokeReminderFunction('renewal-reminders')
+}
+
+export async function triggerPtReminders(): Promise<unknown> {
+  return invokeReminderFunction('pt-reminders')
 }
