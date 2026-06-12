@@ -121,9 +121,8 @@ export default function TrainerPortalPage() {
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <MovelLogo
-              variant="horizontal"
-              theme="light"
-              className="hidden h-8 w-auto shrink-0 sm:block"
+              tone="cream"
+              className="hidden h-9 w-auto shrink-0 sm:block"
             />
             <div className="min-w-0">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold">

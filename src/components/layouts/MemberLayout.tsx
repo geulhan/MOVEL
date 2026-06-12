@@ -10,16 +10,15 @@ type Props = {
 export function MemberLayout({ children, memberName, onLogout }: Props) {
   return (
     <div className="min-h-screen bg-cream">
-      <header className="border-b border-gold/30 bg-white">
-        <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-4">
+      <header className="border-b border-gold/30 bg-cream">
+        <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-4">
           <div className="min-w-0">
             <MovelLogo
-              variant="stacked"
-              theme="dark"
-              className="h-10 w-auto max-w-[5.5rem]"
+              tone="charcoal"
+              className="h-12 w-auto"
               linkTo="/member"
             />
-            <MovelBrandSubtitle tone="muted" className="mt-1" />
+            <MovelBrandSubtitle tone="gold" className="mt-1.5" />
             {memberName && (
               <p className="mt-1 text-sm text-muted">{memberName} 님</p>
             )}

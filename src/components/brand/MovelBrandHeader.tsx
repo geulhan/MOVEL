@@ -1,9 +1,8 @@
 import { MovelBrandSubtitle, MovelLogo } from './MovelLogo'
 
 type Props = {
-  /** dark band behind a light logo, or plain on cream */
+  /** dark band = charcoal + cream logo, plain = cream bg + charcoal logo */
   band?: 'dark' | 'plain'
-  variant?: 'stacked' | 'horizontal'
   size?: 'sm' | 'md' | 'lg'
   linkTo?: string
   subtitle?: boolean
@@ -18,7 +17,6 @@ const HEIGHT = {
 
 export function MovelBrandHeader({
   band = 'plain',
-  variant = 'stacked',
   size = 'md',
   linkTo,
   subtitle = true,
@@ -28,11 +26,10 @@ export function MovelBrandHeader({
 
   return (
     <div
-      className={`text-center ${isDarkBand ? 'border-b border-gold/15 bg-charcoal px-4 py-8' : ''} ${className}`}
+      className={`text-center ${isDarkBand ? 'border-b border-gold/15 bg-charcoal px-4 py-8' : 'bg-cream px-4 py-6'} ${className}`}
     >
       <MovelLogo
-        variant={variant}
-        theme={isDarkBand ? 'light' : 'dark'}
+        tone={isDarkBand ? 'cream' : 'charcoal'}
         className={`mx-auto ${HEIGHT[size]}`}
         linkTo={linkTo}
       />

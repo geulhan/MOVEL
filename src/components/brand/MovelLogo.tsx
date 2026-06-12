@@ -1,43 +1,35 @@
 import { Link } from 'react-router-dom'
 
-const LOGO_SRC = {
-  'stacked-dark': '/logo/movel-stacked-dark.png',
-  'stacked-light': '/logo/movel-stacked-light.png',
-  'horizontal-light': '/logo/movel-horizontal-light.png',
-} as const
+/** Transparent PNG — color applied via CSS filter */
+const LOGO_SRC = '/logo/movel-stacked-dark.png'
 
-export type MovelLogoVariant = 'stacked' | 'horizontal'
-export type MovelLogoTheme = 'light' | 'dark'
+export type MovelLogoTone = 'charcoal' | 'cream' | 'gold'
 
 type Props = {
-  variant?: MovelLogoVariant
-  /** light = white logo on dark backgrounds, dark = black logo on light backgrounds */
-  theme?: MovelLogoTheme
+  /** charcoal on cream/white, cream or gold on charcoal */
+  tone?: MovelLogoTone
   className?: string
   alt?: string
   linkTo?: string
 }
 
-function resolveSrc(variant: MovelLogoVariant, theme: MovelLogoTheme): string {
-  if (variant === 'horizontal' && theme === 'light') {
-    return LOGO_SRC['horizontal-light']
-  }
-  if (theme === 'light') return LOGO_SRC['stacked-light']
-  return LOGO_SRC['stacked-dark']
+const TONE_CLASS: Record<MovelLogoTone, string> = {
+  charcoal: 'logo-tone-charcoal',
+  cream: 'logo-tone-cream',
+  gold: 'logo-tone-gold',
 }
 
 export function MovelLogo({
-  variant = 'stacked',
-  theme = 'dark',
+  tone = 'charcoal',
   className = 'h-12 w-auto',
   alt = 'MOVEL',
   linkTo,
 }: Props) {
   const image = (
     <img
-      src={resolveSrc(variant, theme)}
+      src={LOGO_SRC}
       alt={alt}
-      className={className}
+      className={`${TONE_CLASS[tone]} ${className}`}
       decoding="async"
     />
   )

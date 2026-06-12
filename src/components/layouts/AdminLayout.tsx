@@ -31,9 +31,8 @@ export function AdminLayout() {
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-gold/30 bg-charcoal lg:flex">
         <div className="border-b border-gold/20 px-4 py-5">
           <MovelLogo
-            variant="stacked"
-            theme="light"
-            className="h-[4.5rem] w-auto"
+            tone="cream"
+            className="h-[4.25rem] w-auto"
             linkTo="/admin"
           />
           <MovelBrandSubtitle tone="gold" className="mt-2 px-1" />
@@ -93,9 +92,8 @@ export function AdminLayout() {
         <header className="border-b border-gold/30 bg-charcoal lg:hidden">
           <div className="flex items-center justify-between gap-3 px-4 py-3">
             <MovelLogo
-              variant="horizontal"
-              theme="light"
-              className="h-8 w-auto max-w-[9.5rem]"
+              tone="cream"
+              className="h-9 w-auto"
               linkTo="/admin"
             />
             <div className="flex min-w-0 shrink items-center gap-1.5">
