@@ -128,7 +128,7 @@ export function MemberInbodySection({
       ) : (
         <div className="space-y-4 p-4">
           {latest && (
-            <InbodyMuscleFatAnalysis record={latest} history={records} />
+            <InbodyMuscleFatAnalysis record={latest} />
           )}
 
           <InbodyTrendCharts records={records} />

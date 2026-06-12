@@ -1,8 +1,12 @@
 import type { InbodyRecord } from '../../api/inbodyRecords'
-import { bodyFatPercent } from '../../lib/inbodyMetrics'
+import {
+  bodyFatPercent,
+  INBODY_CHART_SCALES,
+  type InbodyMetricId,
+} from '../../lib/inbodyMetrics'
 
 type MetricConfig = {
-  id: string
+  id: InbodyMetricId
   label: string
   unit: string
   higherIsBetter: boolean
@@ -100,14 +104,15 @@ function buildPoints(
     return a.created_at.localeCompare(b.created_at)
   })
 
-  const values = sorted.map((r) => metric.getValue(r))
-  const min = Math.min(...values)
-  const max = Math.max(...values)
-  const span = max - min || Math.max(max * 0.1, 1)
-  const yMin = min - span * 0.2
-  const yMax = max + span * 0.35
+  const scale = INBODY_CHART_SCALES[metric.id]
+  const { min: yMin, max: yMax } = scale
   const plotH = CHART_H - PAD_TOP - PAD_BOTTOM
   const plotW = CHART_W - PAD_X * 2
+
+  function valueToY(value: number): number {
+    const clamped = Math.max(yMin, Math.min(yMax, value))
+    return PAD_TOP + plotH - ((clamped - yMin) / (yMax - yMin)) * plotH
+  }
 
   return sorted.map((record, i) => {
     const value = metric.getValue(record)
@@ -116,8 +121,7 @@ function buildPoints(
       sorted.length === 1
         ? PAD_X + plotW / 2
         : PAD_X + (i / (sorted.length - 1)) * plotW
-    const y =
-      PAD_TOP + plotH - ((value - yMin) / (yMax - yMin)) * plotH
+    const y = valueToY(value)
 
     return {
       record,
@@ -136,13 +140,14 @@ function linePath(points: ChartPoint[]): string {
     .join(' ')
 }
 
-function gridLines(points: ChartPoint[]): number[] {
-  if (points.length === 0) return []
-  const ys = points.map((p) => p.y)
-  const minY = Math.min(...ys)
-  const maxY = Math.max(...ys)
-  const mid = (minY + maxY) / 2
-  return [maxY, mid, minY]
+function gridLines(metricId: InbodyMetricId): number[] {
+  const scale = INBODY_CHART_SCALES[metricId]
+  const plotH = CHART_H - PAD_TOP - PAD_BOTTOM
+  const mid = (scale.min + scale.max) / 2
+  return [scale.max, mid, scale.min].map(
+    (value) =>
+      PAD_TOP + plotH - ((value - scale.min) / (scale.max - scale.min)) * plotH,
+  )
 }
 
 type ChartCardProps = {
@@ -154,7 +159,7 @@ function TrendChartCard({ metric, records }: ChartCardProps) {
   const points = buildPoints(records, metric)
   const latest = points[points.length - 1]
   const path = linePath(points)
-  const grids = gridLines(points)
+  const grids = gridLines(metric.id)
 
   return (
     <div className="overflow-hidden rounded-2xl border border-charcoal/10 bg-white shadow-sm">

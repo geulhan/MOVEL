@@ -1,16 +1,21 @@
 import { formatDate } from '../../api/members'
 import type { InbodyRecord } from '../../api/inbodyRecords'
-import { bodyFatPercent, formatBodyFatPercent } from '../../lib/inbodyMetrics'
-
-type MetricKey = 'weight_kg' | 'skeletal_muscle_kg' | 'body_fat_kg'
+import {
+  bodyFatPercent,
+  formatBodyFatPercent,
+  INBODY_CHART_SCALES,
+  valueOnChartScale,
+  type InbodyMetricId,
+} from '../../lib/inbodyMetrics'
 
 type MetricConfig = {
-  key: MetricKey | 'body_fat_percent'
+  key: InbodyMetricId
   label: string
   subLabel: string
   unit: string
   getValue: (record: InbodyRecord) => number
   formatValue: (value: number) => string
+  tickFormat: (tick: number) => string
 }
 
 const METRICS: MetricConfig[] = [
@@ -21,6 +26,7 @@ const METRICS: MetricConfig[] = [
     unit: 'kg',
     getValue: (r) => r.weight_kg,
     formatValue: (v) => v.toFixed(1),
+    tickFormat: (t) => String(Math.round(t)),
   },
   {
     key: 'skeletal_muscle_kg',
@@ -29,6 +35,7 @@ const METRICS: MetricConfig[] = [
     unit: 'kg',
     getValue: (r) => r.skeletal_muscle_kg,
     formatValue: (v) => v.toFixed(1),
+    tickFormat: (t) => String(Math.round(t)),
   },
   {
     key: 'body_fat_kg',
@@ -37,6 +44,7 @@ const METRICS: MetricConfig[] = [
     unit: 'kg',
     getValue: (r) => r.body_fat_kg,
     formatValue: (v) => v.toFixed(1),
+    tickFormat: (t) => String(Math.round(t)),
   },
   {
     key: 'body_fat_percent',
@@ -45,36 +53,15 @@ const METRICS: MetricConfig[] = [
     unit: '%',
     getValue: bodyFatPercent,
     formatValue: (v) => formatBodyFatPercent(v).replace('%', ''),
+    tickFormat: (t) => String(Math.round(t)),
   },
 ]
 
-function rangeForValues(values: number[]): { min: number; max: number } {
-  if (values.length === 0) return { min: 0, max: 1 }
-  const min = Math.min(...values)
-  const max = Math.max(...values)
-  const span = max - min || Math.max(max * 0.1, 1)
-  return { min: min - span * 0.15, max: max + span * 0.15 }
-}
-
-function barFillPercent(value: number, min: number, max: number): number {
-  const span = max - min || 1
-  const clamped = Math.max(min, Math.min(max, value))
-  return ((clamped - min) / span) * 100
-}
-
-function buildTicks(min: number, max: number, count = 5): number[] {
-  const span = max - min
-  if (span <= 0) return [min]
-  const step = span / (count - 1)
-  return Array.from({ length: count }, (_, i) => min + step * i)
-}
-
 type Props = {
   record: InbodyRecord
-  history: InbodyRecord[]
 }
 
-export function InbodyMuscleFatAnalysis({ record, history }: Props) {
+export function InbodyMuscleFatAnalysis({ record }: Props) {
   return (
     <div className="overflow-hidden rounded-xl border border-charcoal/15 bg-white">
       <div className="border-b border-charcoal/10 bg-cream/40 px-3 py-2">
@@ -92,10 +79,8 @@ export function InbodyMuscleFatAnalysis({ record, history }: Props) {
       <div className="space-y-4 px-3 py-3 text-xs">
         {METRICS.map((metric) => {
           const value = metric.getValue(record)
-          const historyValues = history.map((r) => metric.getValue(r))
-          const { min, max } = rangeForValues(historyValues)
-          const fill = barFillPercent(value, min, max)
-          const ticks = buildTicks(min, max)
+          const scale = INBODY_CHART_SCALES[metric.key]
+          const fill = valueOnChartScale(value, scale)
 
           return (
             <div key={metric.key}>
@@ -106,7 +91,7 @@ export function InbodyMuscleFatAnalysis({ record, history }: Props) {
                 </span>
                 {metric.key === 'body_fat_percent' && (
                   <span className="ml-1 text-[10px] font-normal text-muted">
-                    · 체지방량÷체중 자동 계산
+                    · 체지방량÷체중
                   </span>
                 )}
               </p>
@@ -127,17 +112,15 @@ export function InbodyMuscleFatAnalysis({ record, history }: Props) {
               </div>
 
               <div className="relative mt-1 h-4">
-                {ticks.map((tick, i) => {
-                  const pos = barFillPercent(tick, min, max)
+                {scale.ticks.map((tick) => {
+                  const pos = valueOnChartScale(tick, scale)
                   return (
                     <span
-                      key={i}
+                      key={tick}
                       className="absolute -translate-x-1/2 text-[9px] tabular-nums text-muted"
                       style={{ left: `${pos}%` }}
                     >
-                      {metric.key === 'body_fat_percent'
-                        ? tick.toFixed(1)
-                        : tick.toFixed(0)}
+                      {metric.tickFormat(tick)}
                       <span
                         className="absolute -top-2 left-1/2 h-1.5 w-px -translate-x-1/2 bg-charcoal/25"
                         aria-hidden

@@ -29,6 +29,7 @@ import { MemberRewardsSection } from '../components/MemberRewardsSection'
 import { PullToRefresh } from '../components/PullToRefresh'
 import { MemberScheduleSection } from '../components/MemberScheduleSection'
 import { MemberJournalPortalSection } from '../components/member/MemberJournalPortalSection'
+import { MemberInbodySection } from '../components/member/MemberInbodySection'
 import { SessionCount } from '../components/SessionCount'
 
 type Tab =
@@ -36,6 +37,7 @@ type Tab =
   | 'payment'
   | 'schedule'
   | 'journal'
+  | 'inbody'
   | 'rewards'
   | 'mypage'
 type AuthMode = 'login' | 'signup'
@@ -437,6 +439,7 @@ export default function MemberPortalPage() {
   const navTabs: { id: Exclude<Tab, 'home'>; label: string }[] = [
     { id: 'schedule', label: '수업 일정' },
     { id: 'journal', label: '운동일지' },
+    { id: 'inbody', label: '인바디' },
     { id: 'payment', label: '결제' },
     { id: 'rewards', label: 'REWARDS' },
     { id: 'mypage', label: '마이페이지' },
@@ -570,6 +573,10 @@ export default function MemberPortalPage() {
 
         {tab === 'journal' && member && (
           <MemberJournalPortalSection memberId={member.id} />
+        )}
+
+        {tab === 'inbody' && member && (
+          <MemberInbodySection memberId={member.id} createdBy="member" />
         )}
       </PullToRefresh>
     </MemberLayout>

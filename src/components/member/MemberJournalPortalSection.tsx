@@ -10,8 +10,6 @@ import { formatSupabaseError } from '../../lib/errors'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/theme'
 import { ExerciseJournalPhotoGallery } from './ExerciseJournalPhotoGallery'
 import { ExerciseJournalPhotoPicker } from './ExerciseJournalPhotoPicker'
-import { MemberInbodySection } from './MemberInbodySection'
-
 type Props = {
   memberId: string
 }
@@ -92,9 +90,6 @@ export function MemberJournalPortalSection({ memberId }: Props) {
   }
 
   return (
-    <div className="space-y-4">
-      <MemberInbodySection memberId={memberId} createdBy="member" />
-
       <section className={`${cardClass} overflow-hidden`}>
         <div className="border-b border-gold/20 px-4 py-4">
           <h3 className="font-semibold text-charcoal">운동일지</h3>
@@ -210,6 +205,5 @@ export function MemberJournalPortalSection({ memberId }: Props) {
           </ul>
         )}
       </section>
-    </div>
   )
 }
