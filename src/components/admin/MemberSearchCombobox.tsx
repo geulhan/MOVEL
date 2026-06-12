@@ -9,6 +9,7 @@ type Props = {
   value: string
   suggestions: Member[]
   loading?: boolean
+  elevated?: boolean
   onChange: (value: string) => void
   onSelect: (member: Member) => void
   onClear?: () => void
@@ -18,6 +19,7 @@ export function MemberSearchCombobox({
   value,
   suggestions,
   loading = false,
+  elevated = false,
   onChange,
   onSelect,
   onClear,
@@ -128,7 +130,9 @@ export function MemberSearchCombobox({
         <div
           id={listId}
           role="listbox"
-          className="absolute z-20 mt-1 max-h-80 w-full overflow-auto rounded-xl border border-gold/30 bg-white py-1 shadow-lg"
+          className={`absolute mt-1 max-h-80 w-full overflow-auto rounded-xl border border-gold/30 bg-white py-1 shadow-lg ${
+            elevated ? 'z-[200]' : 'z-20'
+          }`}
         >
           {loading && visible.length === 0 ? (
             <p className="px-4 py-3 text-sm text-muted">검색 중…</p>
