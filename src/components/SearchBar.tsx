@@ -14,7 +14,11 @@ export function SearchBar({ value, onChange, onSearch }: Props) {
         lang="ko"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        onKeyDown={(e) => e.key === 'Enter' && onSearch()}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+            onSearch()
+          }
+        }}
         placeholder="이름, 전화번호, 트레이너로 검색"
         className={`${inputClass} flex-1`}
       />

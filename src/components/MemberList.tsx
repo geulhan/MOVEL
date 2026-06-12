@@ -17,6 +17,7 @@ type Props = {
   deductingId: string | null
   updatingStatusId: string | null
   updatingTrainerId: string | null
+  emptyMessage?: string
 }
 
 export function MemberList({
@@ -30,6 +31,7 @@ export function MemberList({
   deductingId,
   updatingStatusId,
   updatingTrainerId,
+  emptyMessage = '등록된 회원이 없습니다.',
 }: Props) {
   return (
     <section className="card overflow-hidden">
@@ -46,7 +48,7 @@ export function MemberList({
         </p>
       ) : members.length === 0 ? (
         <p className="px-6 py-12 text-center text-sm text-muted">
-          등록된 회원이 없습니다.
+          {emptyMessage}
         </p>
       ) : (
         <div className="table-scroll">

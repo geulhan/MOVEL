@@ -7,16 +7,22 @@ import { calcSessionExpiry } from '../utils/period'
 
 export { normalizeMember }
 
+function escapeIlikePattern(term: string): string {
+  return term.replace(/[%_\\,().]/g, '\\$&')
+}
+
 export async function fetchMembers(search?: string): Promise<Member[]> {
   let query = supabase
     .from('members')
     .select('*')
     .order('registered_at', { ascending: false })
+    .limit(5000)
 
   const term = search?.trim()
   if (term) {
+    const pattern = `%${escapeIlikePattern(term)}%`
     query = query.or(
-      `name.ilike.%${term}%,phone.ilike.%${term}%,trainer_name.ilike.%${term}%`,
+      `name.ilike.${pattern},phone.ilike.${pattern},trainer_name.ilike.${pattern}`,
     )
   }
 

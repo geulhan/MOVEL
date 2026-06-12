@@ -80,17 +80,25 @@ export function computeRenewalStats(members: Member[]): RenewalStats {
   }
 }
 
+function normalizeSearchText(value: string): string {
+  return value.normalize('NFC').trim().toLowerCase().replace(/\s+/g, '')
+}
+
 export function filterBySearch(members: Member[], term: string): Member[] {
-  const q = term.trim().toLowerCase()
+  const q = normalizeSearchText(term)
   if (!q) return members
 
+  const qDigits = term.replace(/\D/g, '')
+
   return members.filter((m) => {
+    const name = normalizeSearchText(m.name)
+    const trainer = normalizeSearchText(m.trainer_name ?? '')
     const phone = m.phone.replace(/\D/g, '')
-    const qDigits = q.replace(/\D/g, '')
+
     return (
-      m.name.toLowerCase().includes(q) ||
-      (qDigits && phone.includes(qDigits)) ||
-      (m.trainer_name?.toLowerCase().includes(q) ?? false)
+      name.includes(q) ||
+      trainer.includes(q) ||
+      (qDigits.length > 0 && phone.includes(qDigits))
     )
   })
 }

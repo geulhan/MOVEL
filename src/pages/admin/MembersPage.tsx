@@ -33,6 +33,10 @@ export default function MembersPage() {
   const [trainers, setTrainers] = useState<Trainer[]>([])
   const [searchInput, setSearchInput] = useState('')
   const [activeSearch, setActiveSearch] = useState('')
+  const [searchResults, setSearchResults] = useState<
+    Awaited<ReturnType<typeof fetchMembers>> | null
+  >(null)
+  const [searchLoading, setSearchLoading] = useState(false)
   const [renewalFilter, setRenewalFilter] = useState<RenewalFilter>('all')
   const [loading, setLoading] = useState(true)
   const [deductingId, setDeductingId] = useState<string | null>(null)
@@ -73,6 +77,42 @@ export default function MembersPage() {
   }, [loadMembers])
 
   useEffect(() => {
+    const term = searchInput.trim()
+    if (!term) {
+      setActiveSearch('')
+      setSearchResults(null)
+      setSearchLoading(false)
+      return
+    }
+
+    setSearchLoading(true)
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const [serverMatches, clientMatches] = await Promise.all([
+            fetchMembers(term),
+            Promise.resolve(filterBySearch(allMembers, term)),
+          ])
+          const merged = new Map<string, (typeof serverMatches)[number]>()
+          for (const member of [...serverMatches, ...clientMatches]) {
+            merged.set(member.id, member)
+          }
+          setSearchResults([...merged.values()])
+          setActiveSearch(term)
+        } catch (err) {
+          setSearchResults(filterBySearch(allMembers, term))
+          setActiveSearch(term)
+          setError(formatSupabaseError(err))
+        } finally {
+          setSearchLoading(false)
+        }
+      })()
+    }, 250)
+
+    return () => window.clearTimeout(timer)
+  }, [searchInput, allMembers])
+
+  useEffect(() => {
     if (!toast) return
     const timer = window.setTimeout(() => setToast(null), 3000)
     return () => window.clearTimeout(timer)
@@ -98,11 +138,17 @@ export default function MembersPage() {
   )
 
   const displayMembers = useMemo(() => {
-    let list = allMembers
-    list = filterBySearch(list, activeSearch)
-    list = applyRenewalFilter(list, renewalFilter)
-    return list
-  }, [allMembers, activeSearch, renewalFilter])
+    const term = activeSearch.trim()
+    if (term) {
+      return searchResults ?? filterBySearch(allMembers, term)
+    }
+    return applyRenewalFilter(allMembers, renewalFilter)
+  }, [allMembers, activeSearch, renewalFilter, searchResults])
+
+  const listEmptyMessage =
+    activeSearch.trim().length > 0
+      ? `"${activeSearch.trim()}" 검색 결과가 없습니다.`
+      : '등록된 회원이 없습니다.'
 
   async function handleTrainerChange(
     memberId: string,
@@ -207,14 +253,27 @@ export default function MembersPage() {
         <SearchBar
           value={searchInput}
           onChange={setSearchInput}
-          onSearch={() => setActiveSearch(searchInput.trim())}
+          onSearch={() => {
+            const term = searchInput.trim()
+            setActiveSearch(term)
+            if (!term) {
+              setSearchResults(null)
+            }
+          }}
         />
+        {activeSearch && (
+          <p className="text-xs text-muted">
+            검색 중에는 전체 회원에서 조회합니다. 상단 필터는 검색어를 지우면
+            다시 적용됩니다.
+          </p>
+        )}
       </section>
 
       <MemberList
         members={displayMembers}
         trainers={trainers}
-        loading={loading}
+        loading={loading || searchLoading}
+        emptyMessage={listEmptyMessage}
         onOpenDetail={(id) => navigate(`/admin/member/${id}`)}
         onDeduct={(id) => void handleDeduct(id)}
         onStatusChange={(id, s) => void handleStatusChange(id, s)}
