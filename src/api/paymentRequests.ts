@@ -1,7 +1,10 @@
 import { PAYMENT_REQUEST_EXPIRY_DAYS } from '../constants/pricing'
+import type { PaymentCategory } from '../constants/paymentCategories'
 import { supabase } from '../lib/supabase'
 import type { Member, PaymentHistory, PaymentRequest } from '../types/database'
-import { createMemberPayment, syncMemberPaymentTotal } from './payments'
+import { assignCenterPass } from './centerPasses'
+import { assignFacilitySubscription } from './facilityProducts'
+import { createPaymentRecord, syncMemberPaymentTotal } from './payments'
 import { redeemMilesForPayment } from './rewards'
 import { todayDateString } from './members'
 
@@ -15,8 +18,18 @@ function addDaysIso(days: number): string {
   return date.toISOString()
 }
 
+function normalizePaymentRequest(row: PaymentRequest): PaymentRequest {
+  return {
+    ...row,
+    category: row.category ?? 'pt',
+    sessions: row.sessions ?? null,
+    duration_days: row.duration_days ?? null,
+  }
+}
+
 export async function fetchPaymentRequests(options?: {
   status?: PaymentRequest['status']
+  category?: PaymentCategory | 'all'
   memberId?: string
   limit?: number
 }): Promise<PaymentRequestWithMember[]> {
@@ -28,6 +41,9 @@ export async function fetchPaymentRequests(options?: {
   if (options?.status) {
     query = query.eq('status', options.status)
   }
+  if (options?.category && options.category !== 'all') {
+    query = query.eq('category', options.category)
+  }
   if (options?.memberId) {
     query = query.eq('member_id', options.memberId)
   }
@@ -37,7 +53,9 @@ export async function fetchPaymentRequests(options?: {
 
   const { data, error } = await query
   if (error) throw error
-  const requests = data ?? []
+  const requests = (data ?? []).map((row) =>
+    normalizePaymentRequest(row as PaymentRequest),
+  )
   if (requests.length === 0) return []
 
   const memberIds = [...new Set(requests.map((row) => row.member_id))]
@@ -68,7 +86,7 @@ export async function fetchMemberPendingPaymentRequests(
     .order('created_at', { ascending: false })
 
   if (error) throw error
-  return data ?? []
+  return (data ?? []).map((row) => normalizePaymentRequest(row as PaymentRequest))
 }
 
 async function expireStalePaymentRequests(memberId?: string): Promise<void> {
@@ -88,9 +106,11 @@ async function expireStalePaymentRequests(memberId?: string): Promise<void> {
 
 export async function createPaymentRequest(input: {
   memberId: string
+  category: PaymentCategory
   packageId?: string | null
   label: string
-  sessions: number
+  sessions?: number | null
+  durationDays?: number | null
   listAmount: number
   amount: number
   discountNote?: string | null
@@ -99,9 +119,6 @@ export async function createPaymentRequest(input: {
 }): Promise<PaymentRequest> {
   if (!input.label.trim()) {
     throw new Error('결제 요청 제목을 입력해 주세요.')
-  }
-  if (!Number.isInteger(input.sessions) || input.sessions < 1) {
-    throw new Error('PT 횟수는 1 이상이어야 합니다.')
   }
   if (!Number.isFinite(input.amount) || input.amount < 0) {
     throw new Error('결제 금액을 올바르게 입력해 주세요.')
@@ -113,6 +130,16 @@ export async function createPaymentRequest(input: {
     throw new Error('결제 금액은 정가보다 클 수 없습니다.')
   }
 
+  if (input.category === 'pt') {
+    if (!Number.isInteger(input.sessions) || (input.sessions ?? 0) < 1) {
+      throw new Error('PT 횟수는 1 이상이어야 합니다.')
+    }
+  } else {
+    if (!Number.isInteger(input.durationDays) || (input.durationDays ?? 0) < 1) {
+      throw new Error('이용 기간(일)은 1 이상이어야 합니다.')
+    }
+  }
+
   const discountAmount = Math.max(0, Math.round(input.listAmount - input.amount))
   const now = new Date().toISOString()
 
@@ -120,16 +147,20 @@ export async function createPaymentRequest(input: {
     .from('payment_requests')
     .update({ status: 'cancelled', updated_at: now })
     .eq('member_id', input.memberId)
+    .eq('category', input.category)
     .eq('status', 'pending')
 
   const { data, error } = await supabase
     .from('payment_requests')
     .insert({
       member_id: input.memberId,
+      category: input.category,
       status: 'pending',
       package_id: input.packageId ?? null,
       label: input.label.trim(),
-      sessions: input.sessions,
+      sessions: input.category === 'pt' ? input.sessions ?? null : null,
+      duration_days:
+        input.category === 'pt' ? null : input.durationDays ?? null,
       list_amount: Math.round(input.listAmount),
       amount: Math.round(input.amount),
       discount_amount: discountAmount,
@@ -142,7 +173,7 @@ export async function createPaymentRequest(input: {
     .single()
 
   if (error) throw error
-  return data
+  return normalizePaymentRequest(data as PaymentRequest)
 }
 
 export async function cancelPaymentRequest(requestId: string): Promise<void> {
@@ -163,7 +194,6 @@ export async function cancelPaymentRequest(requestId: string): Promise<void> {
   }
 }
 
-/** 센터 방문·계좌이체 등 오프라인 결제 완료 처리 */
 export async function completePaymentRequestManually(
   requestId: string,
   options?: { milesToUse?: number },
@@ -180,7 +210,10 @@ export async function completePaymentRequestManually(
     throw new Error('이미 처리된 결제 요청입니다.')
   }
 
-  return fulfillPaymentRequest(request, options?.milesToUse ?? 0)
+  return fulfillPaymentRequest(
+    normalizePaymentRequest(request as PaymentRequest),
+    options?.milesToUse ?? 0,
+  )
 }
 
 async function fulfillPaymentRequest(
@@ -192,11 +225,13 @@ async function fulfillPaymentRequest(
   if (request.note) noteParts.push(request.note)
 
   const contractAmount = Number(request.amount)
-  const payment = await createMemberPayment(request.member_id, {
+  const category = request.category ?? 'pt'
+  const payment = await createPaymentRecord(request.member_id, {
     amount: contractAmount,
-    sessions: request.sessions,
     paid_at: todayDateString(),
     note: noteParts.join(' · '),
+    category,
+    sessions: category === 'pt' ? request.sessions ?? 1 : 0,
   })
 
   let finalPayment = payment
@@ -232,6 +267,33 @@ async function fulfillPaymentRequest(
       payment_request_id: request.id,
     })
     .eq('id', payment.id)
+
+  const startsAt = todayDateString()
+  if (category === 'center_pass') {
+    await assignCenterPass({
+      memberId: request.member_id,
+      productId: request.package_id,
+      label: request.label,
+      startsAt,
+      durationDays: request.duration_days ?? undefined,
+      amount: contractAmount,
+      note: request.note,
+      paymentHistoryId: payment.id,
+      createdBy: 'payment_request',
+    })
+  } else if (category === 'locker_towel') {
+    await assignFacilitySubscription({
+      memberId: request.member_id,
+      productId: request.package_id,
+      label: request.label,
+      startsAt,
+      durationDays: request.duration_days ?? undefined,
+      amount: contractAmount,
+      note: request.note,
+      paymentHistoryId: payment.id,
+      createdBy: 'payment_request',
+    })
+  }
 
   const { error: updateError } = await supabase
     .from('payment_requests')

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { PAYMENT_CATEGORY_LABELS } from '../../constants/paymentCategories'
 import { formatCurrency, todayDateString } from '../../api/members'
 import {
   assignCenterPass,
@@ -125,8 +126,11 @@ export function CenterPassManager() {
     <div className="space-y-4">
       <div className="rounded-xl border border-gold/30 bg-white p-4 text-sm text-muted">
         PT 횟수와 별개인 <strong className="text-charcoal">센터 기간 이용권</strong>
-        입니다. 상품은 기본 비활성 상태이며, 추후 판매·배포 시 활성화해 사용할 수
-        있습니다.
+        입니다. 상품 가격·활성화는{' '}
+        <Link to="/admin/payments" className="font-semibold text-charcoal underline">
+          결제 관리 → {PAYMENT_CATEGORY_LABELS.center_pass}
+        </Link>
+        에서 설정하고, 여기서는 회원 부여·이용권 목록을 관리합니다.
       </div>
 
       {toast && (

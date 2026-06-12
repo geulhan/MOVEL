@@ -174,6 +174,7 @@ export async function assignCenterPass(input: {
   durationDays?: number
   amount?: number | null
   note?: string | null
+  paymentHistoryId?: string | null
   createdBy?: string
 }): Promise<CenterPass> {
   if (!input.startsAt) throw new Error('시작일을 입력해 주세요.')
@@ -215,6 +216,7 @@ export async function assignCenterPass(input: {
       status,
       amount: input.amount ?? null,
       note: input.note?.trim() || null,
+      payment_history_id: input.paymentHistoryId ?? null,
       created_by: input.createdBy ?? 'admin',
     })
     .select('*')

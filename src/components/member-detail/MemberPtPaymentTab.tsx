@@ -235,7 +235,7 @@ export function MemberPtPaymentTab() {
               onClick={() => setShowRequestModal(true)}
               className={btnOutline}
             >
-              결제 요청 보내기
+              결제 요청 (PT·이용권·라커)
             </button>
             <button
               type="button"

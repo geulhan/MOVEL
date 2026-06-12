@@ -9,9 +9,15 @@ import {
   type PaymentRequestWithMember,
 } from '../../api/paymentRequests'
 import { CompletePaymentModal } from '../../components/admin/CompletePaymentModal'
-import { PtPricingEditor } from '../../components/admin/PtPricingEditor'
+import { PaymentCategoryPricingPanel } from '../../components/admin/PaymentCategoryPricingPanel'
 import { PageHeader } from '../../components/admin/PageHeader'
+import {
+  PAYMENT_CATEGORIES,
+  PAYMENT_CATEGORY_LABELS,
+  type PaymentCategory,
+} from '../../constants/paymentCategories'
 import { PAYMENT_REQUEST_STATUS_LABELS } from '../../constants/pricing'
+import { formatPaymentRequestDetail } from '../../lib/paymentRequestDisplay'
 import type { PaymentRequestStatus } from '../../types/database'
 
 type AdminTab = 'pricing' | 'requests'
@@ -35,6 +41,9 @@ export default function PaymentsPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | PaymentRequestStatus>(
     'pending',
   )
+  const [categoryFilter, setCategoryFilter] = useState<PaymentCategory | 'all'>(
+    'all',
+  )
   const [requests, setRequests] = useState<PaymentRequestWithMember[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -50,6 +59,7 @@ export default function PaymentsPage() {
       setRequests(
         await fetchPaymentRequests({
           status: statusFilter === 'all' ? undefined : statusFilter,
+          category: categoryFilter,
           limit: 100,
         }),
       )
@@ -60,7 +70,7 @@ export default function PaymentsPage() {
     } finally {
       setLoading(false)
     }
-  }, [statusFilter])
+  }, [statusFilter, categoryFilter])
 
   useEffect(() => {
     if (adminTab === 'requests') {
@@ -107,7 +117,7 @@ export default function PaymentsPage() {
     <div className="space-y-6">
       <PageHeader
         title="결제 관리"
-        description="PT 기본 가격, 결제 요청(할인), 오프라인 완료 처리 및 MILE 사용을 관리합니다."
+        description="PT · 센터 이용권 · 라커·수건 상품 설정, 결제 요청(할인), 오프라인 완료 처리 및 MILE 사용을 관리합니다."
       />
 
       <nav className="chip-scroll -mx-1 px-1">
@@ -116,7 +126,7 @@ export default function PaymentsPage() {
           onClick={() => setAdminTab('pricing')}
           className={`chip ${adminTab === 'pricing' ? 'chip-active' : 'chip-inactive'}`}
         >
-          기본 가격
+          상품 · 가격
         </button>
         <button
           type="button"
@@ -128,13 +138,38 @@ export default function PaymentsPage() {
       </nav>
 
       {adminTab === 'pricing' ? (
-        <PtPricingEditor />
+        <PaymentCategoryPricingPanel />
       ) : (
         <div className="space-y-4">
           <div className="rounded-xl border border-gold/30 bg-white p-4 text-sm text-muted">
-            회원 상세 → PT·결제 탭에서 「결제 요청 보내기」로 할인가를 포함한
-            요청을 보낼 수 있습니다. 회원 앱 결제 탭에서 확인합니다.
+            회원 상세 → PT·결제 탭에서 카테고리별 「결제 요청 보내기」로
+            할인가를 포함한 요청을 보낼 수 있습니다. 회원 앱 결제 탭에서
+            확인합니다.
           </div>
+
+          <nav className="chip-scroll -mx-1 px-1">
+            <button
+              type="button"
+              onClick={() => setCategoryFilter('all')}
+              className={`chip ${
+                categoryFilter === 'all' ? 'chip-active' : 'chip-inactive'
+              }`}
+            >
+              전체 항목
+            </button>
+            {PAYMENT_CATEGORIES.map((category) => (
+              <button
+                key={category}
+                type="button"
+                onClick={() => setCategoryFilter(category)}
+                className={`chip ${
+                  categoryFilter === category ? 'chip-active' : 'chip-inactive'
+                }`}
+              >
+                {PAYMENT_CATEGORY_LABELS[category]}
+              </button>
+            ))}
+          </nav>
 
           <nav className="chip-scroll -mx-1 px-1">
             {STATUS_FILTERS.map((filter) => (
@@ -171,6 +206,7 @@ export default function PaymentsPage() {
               <thead>
                 <tr className="border-b border-gold/20 bg-cream/60 text-left text-xs text-muted">
                   <th className="px-4 py-3 font-semibold">요청일</th>
+                  <th className="px-4 py-3 font-semibold">항목</th>
                   <th className="px-4 py-3 font-semibold">회원</th>
                   <th className="px-4 py-3 font-semibold">내용</th>
                   <th className="px-4 py-3 font-semibold">금액</th>
@@ -181,13 +217,13 @@ export default function PaymentsPage() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-muted">
+                    <td colSpan={7} className="px-4 py-8 text-center text-muted">
                       불러오는 중…
                     </td>
                   </tr>
                 ) : requests.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-muted">
+                    <td colSpan={7} className="px-4 py-8 text-center text-muted">
                       결제 요청이 없습니다.
                     </td>
                   </tr>
@@ -199,6 +235,9 @@ export default function PaymentsPage() {
                       <tr key={request.id} className="border-b border-gold/10">
                         <td className="px-4 py-3 whitespace-nowrap text-xs">
                           {formatWhen(request.created_at)}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-xs font-semibold">
+                          {PAYMENT_CATEGORY_LABELS[request.category ?? 'pt']}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           {request.member ? (
@@ -220,7 +259,7 @@ export default function PaymentsPage() {
                         <td className="px-4 py-3">
                           <p className="font-medium">{request.label}</p>
                           <p className="text-xs text-muted">
-                            PT {request.sessions}회
+                            {formatPaymentRequestDetail(request)}
                             {discount && ` · ${discount}`}
                           </p>
                           {request.expires_at && request.status === 'pending' && (

@@ -9,8 +9,13 @@ import {
   calcMaxRedeemableMiles,
   fetchRewardBalance,
 } from '../../api/rewards'
+import { PAYMENT_CATEGORY_LABELS } from '../../constants/paymentCategories'
 import { PAYMENT_REQUEST_EXPIRY_DAYS } from '../../constants/pricing'
 import { REDEMPTION_MAX_PERCENT } from '../../constants/rewards'
+import {
+  formatPaymentRequestDetail,
+  paymentRequestFulfillmentHint,
+} from '../../lib/paymentRequestDisplay'
 import type { PaymentRequest } from '../../types/database'
 import { cardClass } from '../../styles/theme'
 
@@ -72,12 +77,12 @@ export function MemberPaymentSection({ memberId }: Props) {
         <section className={`${cardClass} p-5`}>
           <h3 className="text-base font-semibold text-charcoal">결제 요청</h3>
           <p className="mt-2 text-sm text-muted">
-            현재 대기 중인 결제 요청이 없습니다. 재등록·추가 PT는 센터에
-            문의해 주세요.
+            현재 대기 중인 결제 요청이 없습니다. PT · 센터 이용권 · 라커·수건
+            결제는 센터에 문의해 주세요.
           </p>
           {catalogAmount != null && (
             <p className="mt-3 text-xs text-muted">
-              기본 패키지 예시: {formatCurrency(catalogAmount)}부터
+              PT 기본 패키지 예시: {formatCurrency(catalogAmount)}부터
             </p>
           )}
         </section>
@@ -87,18 +92,19 @@ export function MemberPaymentSection({ memberId }: Props) {
           const amount = Number(request.amount)
           const maxMiles = calcMaxRedeemableMiles(amount, availableMiles)
           const minCash = amount - maxMiles
+          const category = request.category ?? 'pt'
           return (
             <section key={request.id} className={`${cardClass} p-5`}>
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-gold-dark">
-                    결제 요청
+                    결제 요청 · {PAYMENT_CATEGORY_LABELS[category]}
                   </p>
                   <h3 className="mt-1 text-lg font-bold text-charcoal">
                     {request.label}
                   </h3>
                   <p className="mt-1 text-sm text-muted">
-                    PT {request.sessions}회
+                    {formatPaymentRequestDetail(request)}
                   </p>
                 </div>
                 <div className="text-right">
@@ -129,8 +135,8 @@ export function MemberPaymentSection({ memberId }: Props) {
               <div className="mt-4 rounded-xl border border-gold/30 bg-cream/50 px-4 py-3 text-sm text-charcoal">
                 <p className="font-semibold">센터 결제 안내</p>
                 <p className="mt-1 text-muted">
-                  센터 방문 또는 안내받은 계좌로 입금해 주세요. 확인 후 PT가
-                  등록됩니다.
+                  센터 방문 또는 안내받은 계좌로 입금해 주세요. 확인 후{' '}
+                  {paymentRequestFulfillmentHint(category)}
                 </p>
                 {maxMiles > 0 && (
                   <p className="mt-2 rounded-lg bg-gold/10 px-3 py-2 text-xs text-charcoal">

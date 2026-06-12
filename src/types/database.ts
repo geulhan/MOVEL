@@ -61,6 +61,8 @@ export type PeriodExtension = {
 
 export type PaymentHistorySource = 'admin' | 'payment_request' | 'pg'
 
+export type PaymentCategory = 'pt' | 'center_pass' | 'locker_towel'
+
 export type PaymentHistory = {
   id: string
   member_id: string
@@ -68,6 +70,7 @@ export type PaymentHistory = {
   sessions: number
   paid_at: string
   note: string | null
+  category?: PaymentCategory
   source?: PaymentHistorySource
   payment_request_id?: string | null
   created_at: string
@@ -79,9 +82,11 @@ export type PaymentRequest = {
   id: string
   member_id: string
   status: PaymentRequestStatus
+  category: PaymentCategory
   package_id: string | null
   label: string
-  sessions: number
+  sessions: number | null
+  duration_days: number | null
   list_amount: number
   amount: number
   discount_amount: number
@@ -358,6 +363,44 @@ export type CenterPass = {
   updated_at: string
 }
 
+export type FacilitySubType = 'locker' | 'towel' | 'bundle'
+
+export type FacilityProduct = {
+  id: string
+  label: string
+  sub_type: FacilitySubType
+  duration_days: number
+  list_amount: number
+  description: string | null
+  is_active: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export type FacilitySubscriptionStatus =
+  | 'scheduled'
+  | 'active'
+  | 'expired'
+  | 'cancelled'
+
+export type MemberFacilitySubscription = {
+  id: string
+  member_id: string
+  product_id: string | null
+  label: string
+  sub_type: FacilitySubType
+  starts_at: string
+  ends_at: string
+  status: FacilitySubscriptionStatus
+  amount: number | null
+  note: string | null
+  payment_history_id: string | null
+  created_by: string
+  created_at: string
+  updated_at: string
+}
+
 export type MemberInsert = {
   name: string
   phone: string
@@ -425,6 +468,7 @@ export type Database = {
           sessions: number
           paid_at: string
           note?: string | null
+          category?: PaymentCategory
           source?: PaymentHistorySource
           payment_request_id?: string | null
         },
@@ -433,6 +477,7 @@ export type Database = {
           amount?: number
           sessions?: number
           note?: string | null
+          category?: PaymentCategory
           source?: PaymentHistorySource
           payment_request_id?: string | null
         }
@@ -442,9 +487,11 @@ export type Database = {
         {
           member_id: string
           status?: PaymentRequestStatus
+          category?: PaymentCategory
           package_id?: string | null
           label: string
-          sessions: number
+          sessions?: number | null
+          duration_days?: number | null
           list_amount: number
           amount: number
           discount_amount?: number
@@ -715,6 +762,56 @@ export type Database = {
           rejection_reason?: string | null
           mile_awarded?: number
           reviewed_at?: string | null
+        }
+      >
+      facility_products: TableDef<
+        FacilityProduct,
+        {
+          label: string
+          sub_type?: FacilitySubType
+          duration_days: number
+          list_amount?: number
+          description?: string | null
+          is_active?: boolean
+          sort_order?: number
+        },
+        {
+          label?: string
+          sub_type?: FacilitySubType
+          duration_days?: number
+          list_amount?: number
+          description?: string | null
+          is_active?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+      >
+      member_facility_subscriptions: TableDef<
+        MemberFacilitySubscription,
+        {
+          member_id: string
+          product_id?: string | null
+          label: string
+          sub_type?: FacilitySubType
+          starts_at: string
+          ends_at: string
+          status?: FacilitySubscriptionStatus
+          amount?: number | null
+          note?: string | null
+          payment_history_id?: string | null
+          created_by?: string
+        },
+        {
+          product_id?: string | null
+          label?: string
+          sub_type?: FacilitySubType
+          starts_at?: string
+          ends_at?: string
+          status?: FacilitySubscriptionStatus
+          amount?: number | null
+          note?: string | null
+          payment_history_id?: string | null
+          updated_at?: string
         }
       >
       center_pass_products: TableDef<

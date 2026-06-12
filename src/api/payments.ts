@@ -3,24 +3,28 @@ import { notifyPaymentDone } from './notifications'
 import { awardReferralOnPayment } from './rewards'
 import { recalcMemberExpiry } from './period'
 import { supabase } from '../lib/supabase'
-import type { PaymentHistory } from '../types/database'
+import type { PaymentCategory, PaymentHistory } from '../types/database'
 
-export async function createMemberPayment(
+export async function createPaymentRecord(
   memberId: string,
   input: {
     amount: number
-    sessions: number
     paid_at: string
     note?: string | null
+    category?: PaymentCategory
+    sessions?: number
   },
 ): Promise<PaymentHistory> {
+  const category = input.category ?? 'pt'
+  const sessions = category === 'pt' ? (input.sessions ?? 1) : 0
+
   if (!input.paid_at) {
     throw new Error('결제일을 입력해 주세요.')
   }
   if (!Number.isFinite(input.amount) || input.amount < 0) {
     throw new Error('결제 금액을 올바르게 입력해 주세요.')
   }
-  if (!Number.isInteger(input.sessions) || input.sessions < 1) {
+  if (category === 'pt' && (!Number.isInteger(sessions) || sessions < 1)) {
     throw new Error('등록 횟수는 1 이상의 정수여야 합니다.')
   }
 
@@ -29,17 +33,20 @@ export async function createMemberPayment(
     .insert({
       member_id: memberId,
       amount: input.amount,
-      sessions: input.sessions,
+      sessions,
       paid_at: input.paid_at,
       note: input.note?.trim() || null,
+      category,
     })
     .select()
     .single()
 
   if (error) throw error
 
-  await applySessionsDeltaToMember(memberId, input.sessions)
-  await recalcMemberExpiry(memberId)
+  if (category === 'pt' && sessions > 0) {
+    await applySessionsDeltaToMember(memberId, sessions)
+    await recalcMemberExpiry(memberId)
+  }
   await syncMemberPaymentTotal(memberId)
 
   try {
@@ -50,6 +57,21 @@ export async function createMemberPayment(
 
   notifyPaymentDone(memberId, data.id)
   return data
+}
+
+export async function createMemberPayment(
+  memberId: string,
+  input: {
+    amount: number
+    sessions: number
+    paid_at: string
+    note?: string | null
+  },
+): Promise<PaymentHistory> {
+  return createPaymentRecord(memberId, {
+    ...input,
+    category: 'pt',
+  })
 }
 
 export async function updatePayment(

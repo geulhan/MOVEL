@@ -1,31 +1,54 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { formatCurrency } from '../../api/members'
+import { fetchCenterPassProducts } from '../../api/centerPasses'
+import {
+  fetchFacilityProducts,
+  getActiveFacilityProducts,
+} from '../../api/facilityProducts'
 import { createPaymentRequest } from '../../api/paymentRequests'
 import { fetchPtPricing, getActivePackages } from '../../api/pricing'
+import {
+  PAYMENT_CATEGORIES,
+  PAYMENT_CATEGORY_LABELS,
+  type PaymentCategory,
+} from '../../constants/paymentCategories'
 import type { PtPackage } from '../../constants/pricing'
+import type { CenterPassProduct, FacilityProduct } from '../../types/database'
 import { btnOutline, btnPrimary, inputClass } from '../../styles/theme'
 
 type Props = {
   memberId: string
   memberName: string
   open: boolean
+  initialCategory?: PaymentCategory
   onClose: () => void
   onSuccess: () => Promise<void>
   onError: (message: string) => void
+}
+
+type CatalogItem = {
+  id: string
+  label: string
+  listAmount: number
+  sessions?: number
+  durationDays?: number
 }
 
 export function PaymentRequestModal({
   memberId,
   memberName,
   open,
+  initialCategory = 'pt',
   onClose,
   onSuccess,
   onError,
 }: Props) {
-  const [packages, setPackages] = useState<PtPackage[]>([])
+  const [category, setCategory] = useState<PaymentCategory>(initialCategory)
+  const [catalog, setCatalog] = useState<CatalogItem[]>([])
   const [packageId, setPackageId] = useState('')
   const [label, setLabel] = useState('')
   const [sessions, setSessions] = useState('10')
+  const [durationDays, setDurationDays] = useState('30')
   const [listAmount, setListAmount] = useState('0')
   const [amount, setAmount] = useState('0')
   const [discountNote, setDiscountNote] = useState('')
@@ -35,19 +58,61 @@ export function PaymentRequestModal({
 
   useEffect(() => {
     if (!open) return
+    setCategory(initialCategory)
+  }, [open, initialCategory])
+
+  useEffect(() => {
+    if (!open) return
     setLoadingPackages(true)
-    void fetchPtPricing()
-      .then((pricing) => {
-        const active = getActivePackages(pricing)
-        setPackages(active)
-        if (active[0]) {
-          applyPackage(active[0])
-          setPackageId(active[0].id)
+
+    void (async () => {
+      try {
+        let items: CatalogItem[] = []
+        if (category === 'pt') {
+          const pricing = await fetchPtPricing()
+          items = getActivePackages(pricing).map((pkg: PtPackage) => ({
+            id: pkg.id,
+            label: pkg.label,
+            listAmount: pkg.amount,
+            sessions: pkg.sessions,
+          }))
+        } else if (category === 'center_pass') {
+          const products = await fetchCenterPassProducts()
+          items = products
+            .filter((product: CenterPassProduct) => product.is_active)
+            .map((product) => ({
+              id: product.id,
+              label: product.label,
+              listAmount: Number(product.list_amount),
+              durationDays: product.duration_days,
+            }))
+        } else {
+          const products = await fetchFacilityProducts()
+          items = getActiveFacilityProducts(products).map((product: FacilityProduct) => ({
+            id: product.id,
+            label: product.label,
+            listAmount: Number(product.list_amount),
+            durationDays: product.duration_days,
+          }))
         }
-      })
-      .catch(() => onError('기본 가격을 불러올 수 없습니다.'))
-      .finally(() => setLoadingPackages(false))
-  }, [open, onError])
+
+        setCatalog(items)
+        if (items[0]) {
+          applyCatalogItem(items[0])
+          setPackageId(items[0].id)
+        } else {
+          setPackageId('')
+          setLabel('')
+          setListAmount('0')
+          setAmount('0')
+        }
+      } catch {
+        onError('상품 목록을 불러올 수 없습니다.')
+      } finally {
+        setLoadingPackages(false)
+      }
+    })()
+  }, [open, category, onError])
 
   const discountAmount = useMemo(() => {
     const list = Number(listAmount.replace(/,/g, ''))
@@ -56,17 +121,18 @@ export function PaymentRequestModal({
     return Math.max(0, list - final)
   }, [listAmount, amount])
 
-  function applyPackage(pkg: PtPackage) {
-    setLabel(pkg.label)
-    setSessions(String(pkg.sessions))
-    setListAmount(String(pkg.amount))
-    setAmount(String(pkg.amount))
+  function applyCatalogItem(item: CatalogItem) {
+    setLabel(item.label)
+    setListAmount(String(item.listAmount))
+    setAmount(String(item.listAmount))
+    if (item.sessions != null) setSessions(String(item.sessions))
+    if (item.durationDays != null) setDurationDays(String(item.durationDays))
   }
 
   function handlePackageChange(id: string) {
     setPackageId(id)
-    const pkg = packages.find((item) => item.id === id)
-    if (pkg) applyPackage(pkg)
+    const item = catalog.find((row) => row.id === id)
+    if (item) applyCatalogItem(item)
   }
 
   function handleClose() {
@@ -77,6 +143,7 @@ export function PaymentRequestModal({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     const parsedSessions = Number(sessions)
+    const parsedDuration = Number(durationDays)
     const parsedList = Number(listAmount.replace(/,/g, ''))
     const parsedAmount = Number(amount.replace(/,/g, ''))
 
@@ -84,8 +151,13 @@ export function PaymentRequestModal({
       onError('결제 요청 제목을 입력해 주세요.')
       return
     }
-    if (!Number.isInteger(parsedSessions) || parsedSessions < 1) {
-      onError('PT 횟수는 1 이상이어야 합니다.')
+    if (category === 'pt') {
+      if (!Number.isInteger(parsedSessions) || parsedSessions < 1) {
+        onError('PT 횟수는 1 이상이어야 합니다.')
+        return
+      }
+    } else if (!Number.isInteger(parsedDuration) || parsedDuration < 1) {
+      onError('이용 기간(일)은 1 이상이어야 합니다.')
       return
     }
     if (!Number.isFinite(parsedAmount) || parsedAmount < 0) {
@@ -97,9 +169,11 @@ export function PaymentRequestModal({
     try {
       await createPaymentRequest({
         memberId,
+        category,
         packageId: packageId || null,
         label: label.trim(),
-        sessions: parsedSessions,
+        sessions: category === 'pt' ? parsedSessions : null,
+        durationDays: category === 'pt' ? null : parsedDuration,
         listAmount: parsedList,
         amount: parsedAmount,
         discountNote: discountNote.trim() || null,
@@ -131,26 +205,42 @@ export function PaymentRequestModal({
       <div className="relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-gold/30 bg-white p-5 shadow-xl sm:p-6">
         <h3 className="text-lg font-semibold text-charcoal">결제 요청 보내기</h3>
         <p className="mt-1 text-sm text-muted">
-          {memberName}님 회원 앱에 결제 요청이 표시됩니다. 할인가를 적용할 수
-          있습니다.
+          {memberName}님 회원 앱에 결제 요청이 표시됩니다.
         </p>
+
+        <nav className="chip-scroll mt-4 -mx-1 px-1">
+          {PAYMENT_CATEGORIES.map((item) => (
+            <button
+              key={item}
+              type="button"
+              onClick={() => setCategory(item)}
+              className={`chip ${category === item ? 'chip-active' : 'chip-inactive'}`}
+            >
+              {PAYMENT_CATEGORY_LABELS[item]}
+            </button>
+          ))}
+        </nav>
 
         <form onSubmit={(e) => void handleSubmit(e)} className="mt-5 space-y-4">
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-charcoal/70">
-              기본 패키지
+              상품 선택
             </span>
             <select
               value={packageId}
               onChange={(e) => handlePackageChange(e.target.value)}
               className={inputClass}
-              disabled={loadingPackages || saving}
+              disabled={loadingPackages || saving || catalog.length === 0}
             >
-              {packages.map((pkg) => (
-                <option key={pkg.id} value={pkg.id}>
-                  {pkg.label} · {formatCurrency(pkg.amount)}
-                </option>
-              ))}
+              {catalog.length === 0 ? (
+                <option value="">활성 상품 없음 — 결제 관리에서 설정</option>
+              ) : (
+                catalog.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.label} · {formatCurrency(item.listAmount)}
+                  </option>
+                ))
+              )}
             </select>
           </label>
 
@@ -169,19 +259,35 @@ export function PaymentRequestModal({
           </label>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium text-charcoal/70">
-                PT 횟수
-              </span>
-              <input
-                type="number"
-                min={1}
-                value={sessions}
-                onChange={(e) => setSessions(e.target.value)}
-                className={inputClass}
-                disabled={saving}
-              />
-            </label>
+            {category === 'pt' ? (
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-charcoal/70">
+                  PT 횟수
+                </span>
+                <input
+                  type="number"
+                  min={1}
+                  value={sessions}
+                  onChange={(e) => setSessions(e.target.value)}
+                  className={inputClass}
+                  disabled={saving}
+                />
+              </label>
+            ) : (
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-charcoal/70">
+                  이용 기간 (일)
+                </span>
+                <input
+                  type="number"
+                  min={1}
+                  value={durationDays}
+                  onChange={(e) => setDurationDays(e.target.value)}
+                  className={inputClass}
+                  disabled={saving}
+                />
+              </label>
+            )}
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-charcoal/70">
                 정가 (원)
@@ -250,7 +356,7 @@ export function PaymentRequestModal({
           <div className="flex gap-2 pt-1">
             <button
               type="submit"
-              disabled={saving || loadingPackages}
+              disabled={saving || loadingPackages || catalog.length === 0}
               className={`flex-1 ${btnPrimary}`}
             >
               {saving ? '보내는 중…' : '결제 요청 보내기'}
