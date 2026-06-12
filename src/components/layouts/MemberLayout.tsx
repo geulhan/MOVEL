@@ -16,7 +16,7 @@ export function MemberLayout({ children, memberName, onLogout }: Props) {
             <MovelLogo
               variant="stacked"
               tone="charcoal"
-              className="h-14 w-auto"
+              className="h-[4.5rem] w-auto"
               linkTo="/member"
             />
             <MovelBrandSubtitle tone="gold" className="mt-1.5" />

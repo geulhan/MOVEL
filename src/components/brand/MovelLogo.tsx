@@ -1,31 +1,26 @@
 import { Link } from 'react-router-dom'
+import { MovelLogoSvg } from './MovelLogoSvg'
 
 const LOGO_SRC = {
-  'stacked-dark': '/logo/movel-stacked-dark.png',
   'stacked-light': '/logo/movel-stacked-light.png',
-  'horizontal-dark': '/logo/movel-horizontal-dark.png',
   'horizontal-light': '/logo/movel-horizontal-light.png',
 } as const
 
 export type MovelLogoVariant = 'stacked' | 'horizontal'
 export type MovelLogoTone = 'charcoal' | 'cream'
 
+const FILL = {
+  charcoal: '#1c1c1c',
+  cream: '#f5f0e8',
+} as const
+
 type Props = {
   variant?: MovelLogoVariant
-  /** charcoal = black logo on cream/white, cream = white logo on charcoal */
+  /** charcoal = dark logo on cream/white, cream = light logo on charcoal */
   tone?: MovelLogoTone
   className?: string
   alt?: string
   linkTo?: string
-}
-
-function resolveSrc(variant: MovelLogoVariant, tone: MovelLogoTone): string {
-  if (variant === 'horizontal') {
-    return tone === 'cream'
-      ? LOGO_SRC['horizontal-light']
-      : LOGO_SRC['horizontal-dark']
-  }
-  return tone === 'cream' ? LOGO_SRC['stacked-light'] : LOGO_SRC['stacked-dark']
 }
 
 export function MovelLogo({
@@ -35,14 +30,25 @@ export function MovelLogo({
   alt = 'MOVEL',
   linkTo,
 }: Props) {
-  const image = (
-    <img
-      src={resolveSrc(variant, tone)}
-      alt={alt}
-      className={`${tone === 'cream' ? 'mix-blend-screen' : ''} ${className}`.trim()}
-      decoding="async"
-    />
-  )
+  const content =
+    tone === 'charcoal' ? (
+      <MovelLogoSvg
+        variant={variant}
+        fill={FILL.charcoal}
+        className={className}
+      />
+    ) : (
+      <img
+        src={
+          variant === 'horizontal'
+            ? LOGO_SRC['horizontal-light']
+            : LOGO_SRC['stacked-light']
+        }
+        alt={alt}
+        className={`mix-blend-screen ${className}`.trim()}
+        decoding="async"
+      />
+    )
 
   if (linkTo) {
     return (
@@ -51,12 +57,12 @@ export function MovelLogo({
         className="inline-block transition hover:opacity-90"
         aria-label="MOVEL 홈"
       >
-        {image}
+        {content}
       </Link>
     )
   }
 
-  return image
+  return content
 }
 
 export function MovelBrandSubtitle({
