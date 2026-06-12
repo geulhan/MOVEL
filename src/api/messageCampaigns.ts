@@ -8,7 +8,7 @@ export type MessageCampaignKind =
   | 'welcome'
   | 'payment_done'
   | 'renewal'
-  | 'renewal_pending'
+  | 'pt_reminder'
 
 export type WelcomeTarget = {
   member: Member
@@ -24,6 +24,23 @@ export type RenewalTarget = {
   daysLeft: number
   notifyTier: number
   alreadySent: boolean
+}
+
+export type PtReminderTarget = {
+  member: Member
+  scheduleId: string
+  scheduledAt: string
+  trainerName: string
+}
+
+const PT_REMINDER_HOURS = 24
+const PT_REMINDER_WINDOW_HOURS = 1
+
+type ScheduleQueryRow = {
+  id: string
+  member_id: string
+  scheduled_at: string
+  trainer_id: string | null
 }
 
 function daysBetween(from: string, to: string): number {
@@ -160,9 +177,84 @@ export async function fetchRenewalTargets(): Promise<RenewalTarget[]> {
   return buildRenewalTargets()
 }
 
-export async function fetchRenewalPendingTargets(): Promise<RenewalTarget[]> {
-  const rows = await buildRenewalTargets()
-  return rows.filter((row) => !row.alreadySent)
+async function fetchNotifiedPtScheduleIds(): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from('message_logs')
+    .select('metadata')
+    .eq('template_key', 'pt_reminder')
+    .in('status', ['sent', 'skipped'])
+
+  if (error) throw error
+
+  const ids = new Set<string>()
+  for (const row of data ?? []) {
+    const scheduleId = (row.metadata as { schedule_id?: string } | null)?.schedule_id
+    if (scheduleId) ids.add(scheduleId)
+  }
+  return ids
+}
+
+export function formatScheduledAtKst(iso: string): string {
+  return new Date(iso).toLocaleString('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+}
+
+export async function fetchPtReminderPendingTargets(): Promise<PtReminderTarget[]> {
+  const now = Date.now()
+  const hourMs = 60 * 60 * 1000
+  const maxAhead =
+    PT_REMINDER_HOURS * hourMs + PT_REMINDER_WINDOW_HOURS * hourMs
+  const windowStart = new Date(now).toISOString()
+  const windowEnd = new Date(now + maxAhead).toISOString()
+
+  const [members, schedulesResult, trainersResult, notifiedIds] =
+    await Promise.all([
+      fetchMembers(),
+      supabase
+        .from('pt_schedules')
+        .select('id, member_id, scheduled_at, trainer_id')
+        .eq('status', 'scheduled')
+        .gte('scheduled_at', windowStart)
+        .lte('scheduled_at', windowEnd),
+      supabase.from('trainers').select('id, name'),
+      fetchNotifiedPtScheduleIds(),
+    ])
+
+  if (schedulesResult.error) throw schedulesResult.error
+  if (trainersResult.error) throw trainersResult.error
+
+  const memberById = new Map(members.map((member) => [member.id, member]))
+  const trainerById = new Map(
+    (trainersResult.data ?? []).map((trainer) => [trainer.id, trainer.name]),
+  )
+
+  return ((schedulesResult.data ?? []) as ScheduleQueryRow[])
+    .filter((schedule) => !notifiedIds.has(schedule.id))
+    .map((schedule) => {
+      const member = memberById.get(schedule.member_id)
+      if (!member || member.status === 'terminated') return null
+      const trainerName =
+        (schedule.trainer_id
+          ? trainerById.get(schedule.trainer_id)
+          : null) ??
+        member.trainer_name ??
+        ''
+      return {
+        member,
+        scheduleId: schedule.id,
+        scheduledAt: schedule.scheduled_at,
+        trainerName,
+      }
+    })
+    .filter((row): row is PtReminderTarget => row !== null)
+    .sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt))
 }
 
 export async function sendWelcomeMessage(
@@ -185,6 +277,23 @@ export async function sendRenewalMessage(
   return sendNotification('renewal', memberId, {
     metadata: { days_left: daysLeft },
   })
+}
+
+export async function sendPtReminderMessage(
+  target: Pick<PtReminderTarget, 'member' | 'scheduleId' | 'scheduledAt' | 'trainerName'>,
+): Promise<SendNotificationResult> {
+  return sendNotification('pt_reminder', target.member.id, {
+    metadata: {
+      schedule_id: target.scheduleId,
+      scheduled_at: formatScheduledAtKst(target.scheduledAt),
+      trainer_name: target.trainerName,
+    },
+  })
+}
+
+export function formatPtReminderSummary(target: PtReminderTarget): string {
+  const trainer = target.trainerName.trim() || '담당 트레이너'
+  return `${formatScheduledAtKst(target.scheduledAt)} · ${trainer}`
 }
 
 export function formatPaymentSummary(payment: PaymentHistory): string {

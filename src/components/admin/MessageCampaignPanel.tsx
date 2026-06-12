@@ -2,17 +2,20 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   fetchPaymentTargets,
-  fetchRenewalPendingTargets,
+  fetchPtReminderPendingTargets,
   fetchRenewalTargets,
   fetchWelcomeTargets,
   formatPaymentSummary,
+  formatPtReminderSummary,
   formatRenewalSummary,
   renewalReminderLabel,
   sendPaymentMessage,
+  sendPtReminderMessage,
   sendRenewalMessage,
   sendWelcomeMessage,
   type MessageCampaignKind,
   type PaymentTarget,
+  type PtReminderTarget,
   type RenewalTarget,
   type WelcomeTarget,
 } from '../../api/messageCampaigns'
@@ -54,11 +57,11 @@ const PANEL_COPY: Record<
       '잔여 PT 5회 이하 또는 만료 7일 이내 회원 전체입니다. 발송 여부를 확인하고 수동 발송할 수 있습니다.',
     empty: '재등록 안내 대상 회원이 없습니다.',
   },
-  renewal_pending: {
-    title: '재등록 알림',
+  pt_reminder: {
+    title: 'PT D-1 리마인더',
     description:
-      '갱신 안내 알림톡이 아직 발송되지 않은 회원입니다. D-7·D-3·D-1 구간별로 한 번씩 발송됩니다.',
-    empty: '발송 대기 중인 재등록 알림이 없습니다.',
+      '수업 24시간 전 알림톡이 아직 발송되지 않은 예약입니다. 자동 발송 대상(24시간 전 ±1시간)과 그 이전에 누락된 예약이 표시됩니다.',
+    empty: '발송 대기 중인 PT 리마인더가 없습니다.',
   },
 }
 
@@ -80,6 +83,7 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
   const [welcomeRows, setWelcomeRows] = useState<WelcomeTarget[]>([])
   const [paymentRows, setPaymentRows] = useState<PaymentTarget[]>([])
   const [renewalRows, setRenewalRows] = useState<RenewalTarget[]>([])
+  const [ptReminderRows, setPtReminderRows] = useState<PtReminderTarget[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [rowStatus, setRowStatus] = useState<Record<string, RowStatus>>({})
   const [bulkSending, setBulkSending] = useState(false)
@@ -93,8 +97,8 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
         setWelcomeRows(await fetchWelcomeTargets())
       } else if (kind === 'payment_done') {
         setPaymentRows(await fetchPaymentTargets())
-      } else if (kind === 'renewal_pending') {
-        setRenewalRows(await fetchRenewalPendingTargets())
+      } else if (kind === 'pt_reminder') {
+        setPtReminderRows(await fetchPtReminderPendingTargets())
       } else {
         setRenewalRows(await fetchRenewalTargets())
       }
@@ -111,14 +115,15 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
     void load()
   }, [load])
 
-  const memberIds = useMemo(() => {
+  const rowKeys = useMemo(() => {
     if (kind === 'welcome') return welcomeRows.map((row) => row.member.id)
     if (kind === 'payment_done') return paymentRows.map((row) => row.member.id)
-    if (kind === 'renewal' || kind === 'renewal_pending') {
-      return renewalRows.map((row) => row.member.id)
+    if (kind === 'renewal') return renewalRows.map((row) => row.member.id)
+    if (kind === 'pt_reminder') {
+      return ptReminderRows.map((row) => row.scheduleId)
     }
     return []
-  }, [kind, welcomeRows, paymentRows, renewalRows])
+  }, [kind, welcomeRows, paymentRows, renewalRows, ptReminderRows])
 
   const filteredWelcome = useMemo(
     () =>
@@ -149,14 +154,25 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
     return renewalRows.filter((row) => ids.has(row.member.id))
   }, [renewalRows, search])
 
+  const filteredPtReminder = useMemo(() => {
+    const ids = new Set(
+      filterBySearch(
+        ptReminderRows.map((row) => row.member),
+        search,
+      ).map((member) => member.id),
+    )
+    return ptReminderRows.filter((row) => ids.has(row.member.id))
+  }, [ptReminderRows, search])
+
   const visibleIds = useMemo(() => {
     if (kind === 'welcome') return filteredWelcome.map((row) => row.member.id)
     if (kind === 'payment_done') return filteredPayment.map((row) => row.member.id)
-    if (kind === 'renewal' || kind === 'renewal_pending') {
-      return filteredRenewal.map((row) => row.member.id)
+    if (kind === 'renewal') return filteredRenewal.map((row) => row.member.id)
+    if (kind === 'pt_reminder') {
+      return filteredPtReminder.map((row) => row.scheduleId)
     }
     return []
-  }, [kind, filteredWelcome, filteredPayment, filteredRenewal])
+  }, [kind, filteredWelcome, filteredPayment, filteredRenewal, filteredPtReminder])
 
   const allVisibleSelected =
     visibleIds.length > 0 && visibleIds.every((id) => selected.has(id))
@@ -182,28 +198,33 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
     })
   }
 
-  async function sendOne(memberId: string): Promise<SendNotificationResult> {
+  async function sendOne(rowKey: string): Promise<SendNotificationResult> {
     if (kind === 'welcome') {
-      return sendWelcomeMessage(memberId)
+      return sendWelcomeMessage(rowKey)
     }
     if (kind === 'payment_done') {
-      const row = paymentRows.find((item) => item.member.id === memberId)
+      const row = paymentRows.find((item) => item.member.id === rowKey)
       if (!row) throw new Error('결제 정보를 찾을 수 없습니다.')
-      return sendPaymentMessage(memberId, row.payment.id)
+      return sendPaymentMessage(rowKey, row.payment.id)
     }
-    const row = renewalRows.find((item) => item.member.id === memberId)
+    if (kind === 'pt_reminder') {
+      const row = ptReminderRows.find((item) => item.scheduleId === rowKey)
+      if (!row) throw new Error('예약 정보를 찾을 수 없습니다.')
+      return sendPtReminderMessage(row)
+    }
+    const row = renewalRows.find((item) => item.member.id === rowKey)
     if (!row) throw new Error('회원 정보를 찾을 수 없습니다.')
-    return sendRenewalMessage(memberId, row.notifyTier)
+    return sendRenewalMessage(rowKey, row.notifyTier)
   }
 
-  async function handleSendOne(memberId: string) {
-    setSendingId(memberId)
+  async function handleSendOne(rowKey: string) {
+    setSendingId(rowKey)
     setError(null)
     try {
-      const result = await sendOne(memberId)
+      const result = await sendOne(rowKey)
       setRowStatus((prev) => ({
         ...prev,
-        [memberId]: {
+        [rowKey]: {
           status: result.status,
           message: resultLabel(result),
         },
@@ -215,7 +236,7 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
     } catch (err) {
       setRowStatus((prev) => ({
         ...prev,
-        [memberId]: {
+        [rowKey]: {
           status: 'failed',
           message: err instanceof Error ? err.message : '발송 실패',
         },
@@ -226,7 +247,7 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
   }
 
   async function handleBulkSend() {
-    const ids = memberIds.filter((id) => selected.has(id))
+    const ids = rowKeys.filter((id) => selected.has(id))
     if (ids.length === 0) {
       setError('발송할 회원을 선택해 주세요.')
       return
@@ -240,12 +261,12 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
     let sent = 0
     let failed = 0
 
-    for (const memberId of ids) {
+    for (const rowKey of ids) {
       try {
-        const result = await sendOne(memberId)
+        const result = await sendOne(rowKey)
         setRowStatus((prev) => ({
           ...prev,
-          [memberId]: {
+          [rowKey]: {
             status: result.status,
             message: resultLabel(result),
           },
@@ -256,7 +277,7 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
         failed += 1
         setRowStatus((prev) => ({
           ...prev,
-          [memberId]: {
+          [rowKey]: {
             status: 'failed',
             message: err instanceof Error ? err.message : '발송 실패',
           },
@@ -279,9 +300,11 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
       ? filteredWelcome.length
       : kind === 'payment_done'
         ? filteredPayment.length
-        : kind === 'renewal' || kind === 'renewal_pending'
+        : kind === 'renewal'
           ? filteredRenewal.length
-          : 0
+          : kind === 'pt_reminder'
+            ? filteredPtReminder.length
+            : 0
 
   return (
     <div className="space-y-4">
@@ -385,7 +408,7 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
                   onSend={() => void handleSendOne(member.id)}
                 />
               ))
-            ) : kind === 'renewal' || kind === 'renewal_pending' ? (
+            ) : kind === 'renewal' ? (
               filteredRenewal.map(({ member, daysLeft, notifyTier, alreadySent }) => (
                 <CampaignRow
                   key={member.id}
@@ -393,20 +416,30 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
                   name={member.name}
                   phone={member.phone}
                   detail={`${formatRenewalSummary(member, daysLeft)} · 발송 구간 ${renewalReminderLabel(notifyTier)}`}
-                  badge={
-                    kind === 'renewal_pending' || !alreadySent
-                      ? renewalReminderLabel(notifyTier)
-                      : '발송 완료'
-                  }
-                  badgeTone={
-                    kind === 'renewal' && alreadySent ? 'muted' : 'alert'
-                  }
+                  badge={alreadySent ? '발송 완료' : renewalReminderLabel(notifyTier)}
+                  badgeTone={alreadySent ? 'muted' : 'alert'}
                   selected={selected.has(member.id)}
                   onToggle={() => toggleOne(member.id)}
                   rowStatus={rowStatus[member.id]}
                   sending={sendingId === member.id}
                   onSend={() => void handleSendOne(member.id)}
-                  sendDisabled={kind === 'renewal' && alreadySent}
+                  sendDisabled={alreadySent}
+                />
+              ))
+            ) : kind === 'pt_reminder' ? (
+              filteredPtReminder.map((row) => (
+                <CampaignRow
+                  key={row.scheduleId}
+                  memberId={row.member.id}
+                  name={row.member.name}
+                  phone={row.member.phone}
+                  detail={formatPtReminderSummary(row)}
+                  badge="미발송"
+                  selected={selected.has(row.scheduleId)}
+                  onToggle={() => toggleOne(row.scheduleId)}
+                  rowStatus={rowStatus[row.scheduleId]}
+                  sending={sendingId === row.scheduleId}
+                  onSend={() => void handleSendOne(row.scheduleId)}
                 />
               ))
             ) : null}

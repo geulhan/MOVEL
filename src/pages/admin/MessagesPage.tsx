@@ -17,7 +17,7 @@ const SEND_TABS: Array<{ id: MessageCampaignKind; label: string }> = [
   { id: 'welcome', label: '신규회원' },
   { id: 'payment_done', label: '결제안내' },
   { id: 'renewal', label: '재등록' },
-  { id: 'renewal_pending', label: '재등록 알림' },
+  { id: 'pt_reminder', label: 'PT 리마인더' },
 ]
 
 function formatWhen(iso: string | null): string {
