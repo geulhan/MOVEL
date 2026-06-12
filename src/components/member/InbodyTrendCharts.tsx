@@ -1,7 +1,7 @@
 import type { InbodyRecord } from '../../api/inbodyRecords'
 import {
   bodyFatPercent,
-  INBODY_CHART_SCALES,
+  resolveChartScale,
   type InbodyMetricId,
 } from '../../lib/inbodyMetrics'
 
@@ -104,14 +104,16 @@ function buildPoints(
     return a.created_at.localeCompare(b.created_at)
   })
 
-  const scale = INBODY_CHART_SCALES[metric.id]
+  const values = sorted.map((r) => metric.getValue(r))
+  const scale = resolveChartScale(values, metric.id)
   const { min: yMin, max: yMax } = scale
   const plotH = CHART_H - PAD_TOP - PAD_BOTTOM
   const plotW = CHART_W - PAD_X * 2
+  const ySpan = yMax - yMin || 1
 
   function valueToY(value: number): number {
     const clamped = Math.max(yMin, Math.min(yMax, value))
-    return PAD_TOP + plotH - ((clamped - yMin) / (yMax - yMin)) * plotH
+    return PAD_TOP + plotH - ((clamped - yMin) / ySpan) * plotH
   }
 
   return sorted.map((record, i) => {
@@ -140,13 +142,13 @@ function linePath(points: ChartPoint[]): string {
     .join(' ')
 }
 
-function gridLines(metricId: InbodyMetricId): number[] {
-  const scale = INBODY_CHART_SCALES[metricId]
+function gridLines(scale: { min: number; max: number }): number[] {
   const plotH = CHART_H - PAD_TOP - PAD_BOTTOM
+  const span = scale.max - scale.min || 1
   const mid = (scale.min + scale.max) / 2
   return [scale.max, mid, scale.min].map(
     (value) =>
-      PAD_TOP + plotH - ((value - scale.min) / (scale.max - scale.min)) * plotH,
+      PAD_TOP + plotH - ((value - scale.min) / span) * plotH,
   )
 }
 
@@ -156,10 +158,17 @@ type ChartCardProps = {
 }
 
 function TrendChartCard({ metric, records }: ChartCardProps) {
+  const sorted = [...records].sort((a, b) => {
+    const cmp = a.measured_at.localeCompare(b.measured_at)
+    if (cmp !== 0) return cmp
+    return a.created_at.localeCompare(b.created_at)
+  })
+  const values = sorted.map((r) => metric.getValue(r))
+  const scale = resolveChartScale(values, metric.id)
   const points = buildPoints(records, metric)
   const latest = points[points.length - 1]
   const path = linePath(points)
-  const grids = gridLines(metric.id)
+  const grids = gridLines(scale)
 
   return (
     <div className="overflow-hidden rounded-2xl border border-charcoal/10 bg-white shadow-sm">

@@ -127,11 +127,11 @@ export function MemberInbodySection({
         <p className="px-4 py-8 text-center text-sm text-muted">불러오는 중…</p>
       ) : (
         <div className="space-y-4 p-4">
-          {latest && (
-            <InbodyMuscleFatAnalysis record={latest} />
-          )}
-
           <InbodyTrendCharts records={records} />
+
+          {latest && (
+            <InbodyMuscleFatAnalysis record={latest} history={records} />
+          )}
 
           {allowInput && (
             <form

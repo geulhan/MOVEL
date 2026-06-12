@@ -3,7 +3,7 @@ import type { InbodyRecord } from '../../api/inbodyRecords'
 import {
   bodyFatPercent,
   formatBodyFatPercent,
-  INBODY_CHART_SCALES,
+  resolveChartScale,
   valueOnChartScale,
   type InbodyMetricId,
 } from '../../lib/inbodyMetrics'
@@ -26,7 +26,7 @@ const METRICS: MetricConfig[] = [
     unit: 'kg',
     getValue: (r) => r.weight_kg,
     formatValue: (v) => v.toFixed(1),
-    tickFormat: (t) => String(Math.round(t)),
+    tickFormat: (t) => t.toFixed(0),
   },
   {
     key: 'skeletal_muscle_kg',
@@ -35,7 +35,7 @@ const METRICS: MetricConfig[] = [
     unit: 'kg',
     getValue: (r) => r.skeletal_muscle_kg,
     formatValue: (v) => v.toFixed(1),
-    tickFormat: (t) => String(Math.round(t)),
+    tickFormat: (t) => t.toFixed(0),
   },
   {
     key: 'body_fat_kg',
@@ -44,7 +44,7 @@ const METRICS: MetricConfig[] = [
     unit: 'kg',
     getValue: (r) => r.body_fat_kg,
     formatValue: (v) => v.toFixed(1),
-    tickFormat: (t) => String(Math.round(t)),
+    tickFormat: (t) => t.toFixed(0),
   },
   {
     key: 'body_fat_percent',
@@ -53,15 +53,16 @@ const METRICS: MetricConfig[] = [
     unit: '%',
     getValue: bodyFatPercent,
     formatValue: (v) => formatBodyFatPercent(v).replace('%', ''),
-    tickFormat: (t) => String(Math.round(t)),
+    tickFormat: (t) => t.toFixed(0),
   },
 ]
 
 type Props = {
   record: InbodyRecord
+  history: InbodyRecord[]
 }
 
-export function InbodyMuscleFatAnalysis({ record }: Props) {
+export function InbodyMuscleFatAnalysis({ record, history }: Props) {
   return (
     <div className="overflow-hidden rounded-xl border border-charcoal/15 bg-white">
       <div className="border-b border-charcoal/10 bg-cream/40 px-3 py-2">
@@ -72,14 +73,15 @@ export function InbodyMuscleFatAnalysis({ record }: Props) {
           </span>
         </p>
         <p className="mt-0.5 text-xs text-muted">
-          측정일 {formatDate(record.measured_at)}
+          측정일 {formatDate(record.measured_at)} · 축은 내 측정 이력 기준
         </p>
       </div>
 
       <div className="space-y-4 px-3 py-3 text-xs">
         {METRICS.map((metric) => {
           const value = metric.getValue(record)
-          const scale = INBODY_CHART_SCALES[metric.key]
+          const historyValues = history.map((r) => metric.getValue(r))
+          const scale = resolveChartScale(historyValues, metric.key)
           const fill = valueOnChartScale(value, scale)
 
           return (
@@ -112,11 +114,11 @@ export function InbodyMuscleFatAnalysis({ record }: Props) {
               </div>
 
               <div className="relative mt-1 h-4">
-                {scale.ticks.map((tick) => {
+                {scale.ticks.map((tick, i) => {
                   const pos = valueOnChartScale(tick, scale)
                   return (
                     <span
-                      key={tick}
+                      key={i}
                       className="absolute -translate-x-1/2 text-[9px] tabular-nums text-muted"
                       style={{ left: `${pos}%` }}
                     >
