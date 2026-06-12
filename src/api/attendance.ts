@@ -4,8 +4,12 @@ import { localDayEndIso, localDayStartIso } from '../utils/date'
 import { awardPtAttendance, reversePtAttendance } from './rewards'
 import {
   fetchMemberSchedules,
+  fetchSchedulesInRange,
   getTodayScheduledPts,
+  scheduleStatusLabel,
   updateScheduleStatus,
+  type PtSchedule,
+  type ScheduleStatus,
 } from './schedule'
 import { deductSession, fetchMembers, restoreOneSession } from './members'
 
@@ -221,6 +225,172 @@ export async function fetchMemberAttendance(
     deducted: true,
   }))
 }
+
+export type CenterAttendanceDisplayStatus =
+  | 'attended'
+  | 'no_show'
+  | 'scheduled'
+  | 'absent'
+  | 'walk_in'
+
+export type CenterAttendanceRow = {
+  key: string
+  memberId: string
+  memberName: string
+  trainerName: string | null
+  scheduleId: string | null
+  scheduledAt: string | null
+  scheduleStatus: ScheduleStatus | null
+  displayStatus: CenterAttendanceDisplayStatus
+  checkedInAt: string | null
+  attendanceId: string | null
+  method: string | null
+}
+
+export type CenterAttendanceSummary = {
+  scheduled: number
+  attended: number
+  noShow: number
+  absent: number
+  walkIn: number
+}
+
+const DISPLAY_STATUS_LABELS: Record<CenterAttendanceDisplayStatus, string> = {
+  attended: '출석',
+  no_show: '노쇼',
+  scheduled: '예정',
+  absent: '미출석',
+  walk_in: '출석(예약없음)',
+}
+
+export function centerAttendanceStatusLabel(
+  status: CenterAttendanceDisplayStatus,
+): string {
+  return DISPLAY_STATUS_LABELS[status]
+}
+
+function isSchedulePast(scheduledAt: string): boolean {
+  return new Date(scheduledAt).getTime() < Date.now()
+}
+
+function deriveDisplayStatus(input: {
+  attended: boolean
+  scheduleStatus: ScheduleStatus | null
+  scheduledAt: string | null
+  hasSchedule: boolean
+}): CenterAttendanceDisplayStatus {
+  if (input.attended && !input.hasSchedule) return 'walk_in'
+  if (input.attended) return 'attended'
+  if (input.scheduleStatus === 'no_show') return 'no_show'
+  if (input.scheduleStatus === 'scheduled' && input.scheduledAt) {
+    return isSchedulePast(input.scheduledAt) ? 'absent' : 'scheduled'
+  }
+  if (input.scheduleStatus === 'completed' && !input.attended) return 'absent'
+  return 'scheduled'
+}
+
+/** 오늘 센터 전체 PT 예약·출석·노쇼 현황 */
+export async function fetchTodayCenterAttendanceBoard(): Promise<{
+  rows: CenterAttendanceRow[]
+  summary: CenterAttendanceSummary
+}> {
+  const start = localDayStartIso()
+  const end = localDayEndIso()
+
+  const [schedules, attendanceRows, members] = await Promise.all([
+    fetchSchedulesInRange(start, end),
+    fetchAttendanceRecords(),
+    fetchMembers(),
+  ])
+
+  const nameById = new Map(members.map((m) => [m.id, m.name]))
+  const trainerByMemberId = new Map(
+    members.map((m) => [m.id, m.trainer_name ?? null]),
+  )
+
+  const todayAttendance = attendanceRows.filter((row) => {
+    const checked = row.checked_in_at
+    return checked >= start && checked <= end
+  })
+
+  const attendanceByMember = new Map<string, AttendanceRecord>()
+  for (const row of todayAttendance) {
+    if (!attendanceByMember.has(row.member_id)) {
+      attendanceByMember.set(row.member_id, row)
+    }
+  }
+
+  const activeSchedules = (schedules as PtSchedule[]).filter(
+    (s) => s.status !== 'cancelled',
+  )
+
+  const rows: CenterAttendanceRow[] = activeSchedules.map((schedule) => {
+    const attendance = attendanceByMember.get(schedule.member_id) ?? null
+    const attended = Boolean(attendance)
+  const displayStatus = deriveDisplayStatus({
+      attended,
+      scheduleStatus: schedule.status,
+      scheduledAt: schedule.scheduled_at,
+      hasSchedule: true,
+    })
+
+    return {
+      key: `schedule-${schedule.id}`,
+      memberId: schedule.member_id,
+      memberName:
+        schedule.member_name ?? nameById.get(schedule.member_id) ?? '회원',
+      trainerName:
+        schedule.trainer_name ?? trainerByMemberId.get(schedule.member_id) ?? null,
+      scheduleId: schedule.id,
+      scheduledAt: schedule.scheduled_at,
+      scheduleStatus: schedule.status,
+      displayStatus,
+      checkedInAt: attendance?.checked_in_at ?? null,
+      attendanceId: attendance?.id ?? null,
+      method: attendance?.method ?? null,
+    }
+  })
+
+  for (const [memberId, attendance] of attendanceByMember.entries()) {
+    const hasScheduleRow = rows.some((row) => row.memberId === memberId)
+    if (hasScheduleRow) continue
+
+    rows.push({
+      key: `walkin-${attendance.id}`,
+      memberId,
+      memberName: attendance.member_name,
+      trainerName: trainerByMemberId.get(memberId) ?? null,
+      scheduleId: null,
+      scheduledAt: null,
+      scheduleStatus: null,
+      displayStatus: 'walk_in',
+      checkedInAt: attendance.checked_in_at,
+      attendanceId: attendance.id,
+      method: attendance.method,
+    })
+  }
+
+  rows.sort((a, b) => {
+    const aTime = a.scheduledAt ? new Date(a.scheduledAt).getTime() : Number.MAX_SAFE_INTEGER
+    const bTime = b.scheduledAt ? new Date(b.scheduledAt).getTime() : Number.MAX_SAFE_INTEGER
+    if (aTime !== bTime) return aTime - bTime
+    return a.memberName.localeCompare(b.memberName, 'ko')
+  })
+
+  const summary: CenterAttendanceSummary = {
+    scheduled: rows.filter((r) => r.displayStatus === 'scheduled').length,
+    attended: rows.filter(
+      (r) => r.displayStatus === 'attended' || r.displayStatus === 'walk_in',
+    ).length,
+    noShow: rows.filter((r) => r.displayStatus === 'no_show').length,
+    absent: rows.filter((r) => r.displayStatus === 'absent').length,
+    walkIn: rows.filter((r) => r.displayStatus === 'walk_in').length,
+  }
+
+  return { rows, summary }
+}
+
+export { scheduleStatusLabel }
 
 export function attendanceMethodLabel(method: string): string {
   switch (method) {

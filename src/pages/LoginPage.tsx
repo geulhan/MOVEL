@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { loginAdmin } from '../api/adminAuth'
 import { formatSupabaseError } from '../lib/errors'
-import { isAdminAuthenticated } from '../lib/adminSession'
+import { getAdminSession, isAdminAuthenticated } from '../lib/adminSession'
 import {
   clearRememberedAdminLogin,
   loadRememberedAdminLogin,
@@ -18,9 +18,6 @@ type LoginLocationState = {
 export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const redirectTo =
-    (location.state as LoginLocationState | null)?.from?.pathname ?? '/admin'
-
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [rememberLogin, setRememberLogin] = useState(false)
@@ -36,7 +33,17 @@ export default function LoginPage() {
   }, [])
 
   if (isAdminAuthenticated()) {
-    return <Navigate to={redirectTo} replace />
+    const session = getAdminSession()
+    const from = (location.state as LoginLocationState | null)?.from?.pathname
+    if (session?.role === 'trainer') {
+      return <Navigate to="/admin/members" replace />
+    }
+    return (
+      <Navigate
+        to={from && from.startsWith('/admin') ? from : '/admin'}
+        replace
+      />
+    )
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -50,13 +57,20 @@ export default function LoginPage() {
 
     setLoading(true)
     try {
-      await loginAdmin(username, password)
+      const info = await loginAdmin(username, password)
       if (rememberLogin) {
         saveRememberedAdminLogin(username, password)
       } else {
         clearRememberedAdminLogin()
       }
-      navigate(redirectTo, { replace: true })
+      const fromState = (location.state as LoginLocationState | null)?.from?.pathname
+      const target =
+        info.role === 'trainer'
+          ? '/admin/members'
+          : fromState && fromState.startsWith('/admin')
+            ? fromState
+            : '/admin'
+      navigate(target, { replace: true })
     } catch (err) {
       setError(
         err instanceof Error && err.message
@@ -76,10 +90,11 @@ export default function LoginPage() {
             Admin
           </p>
           <h1 className="mt-1 text-xl font-bold text-charcoal">
-            관리자 로그인
+            관리자 · 트레이너 로그인
           </h1>
           <p className="mt-2 text-sm text-muted">
-            모벨 퍼포먼스 트레이닝 관리자 페이지에 접속합니다.
+            관리자는 전체 메뉴, 트레이너는 회원 관리·PT 스케줄만 이용할 수
+            있습니다.
           </p>
 
           <form className="mt-5 space-y-3" onSubmit={handleSubmit}>

@@ -1,16 +1,7 @@
 import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom'
+import { navItemsForSession } from '../../lib/adminPermissions'
 import { clearAdminAuth, getAdminSession } from '../../lib/adminSession'
 import { SetupBanner } from '../SetupBanner'
-const navItems = [
-  { to: '/admin', end: true, label: '대시보드', icon: '◈' },
-  { to: '/admin/members', end: false, label: '회원 관리', icon: '◎' },
-  { to: '/admin/schedule', end: false, label: 'PT 스케줄', icon: '▦' },
-  { to: '/admin/attendance', end: false, label: '출석부', icon: '✓' },
-  { to: '/admin/trainers', end: false, label: '트레이너', icon: '★' },
-  { to: '/admin/rewards', end: false, label: '마일리지 관리', icon: '◆' },
-  { to: '/admin/payments', end: false, label: '결제 관리', icon: '₩' },
-  { to: '/admin/messages', end: false, label: '메시지 발송', icon: '✉' },
-] as const
 
 function MemberPortalLink({ className = '' }: { className?: string }) {
   return (
@@ -26,6 +17,8 @@ function MemberPortalLink({ className = '' }: { className?: string }) {
 export function AdminLayout() {
   const navigate = useNavigate()
   const session = getAdminSession()
+  const navItems = navItemsForSession(session)
+  const roleLabel = session?.role === 'trainer' ? '트레이너' : '관리자'
 
   function handleLogout() {
     clearAdminAuth()
@@ -71,15 +64,18 @@ export function AdminLayout() {
           {session && (
             <p className="truncate px-1 text-xs text-cream/60">
               {session.username}
+              <span className="ml-1 text-cream/40">({roleLabel})</span>
             </p>
           )}
           <MemberPortalLink className="w-full !border-gold/40 !bg-gold/10 !text-gold hover:!bg-gold/20" />
-          <Link
-            to="/trainer"
-            className="block w-full truncate rounded-lg border border-cream/15 px-3 py-2 text-center text-xs whitespace-nowrap text-cream/80 transition hover:bg-charcoal-light"
-          >
-            트레이너 출석부 →
-          </Link>
+          {session?.role === 'admin' && (
+            <Link
+              to="/trainer"
+              className="block w-full truncate rounded-lg border border-cream/15 px-3 py-2 text-center text-xs whitespace-nowrap text-cream/80 transition hover:bg-charcoal-light"
+            >
+              트레이너 출석부 →
+            </Link>
+          )}
           <button
             type="button"
             onClick={handleLogout}
@@ -132,14 +128,17 @@ export function AdminLayout() {
           {session && (
             <span className="mr-auto text-sm font-medium text-muted">
               {session.username} 님
+              <span className="ml-1 text-xs text-muted">({roleLabel})</span>
             </span>
           )}
-          <Link
-            to="/trainer"
-            className="inline-flex shrink-0 items-center rounded-lg border border-gold/40 px-4 py-2 text-sm font-medium whitespace-nowrap text-charcoal transition hover:bg-cream"
-          >
-            트레이너 출석부
-          </Link>
+          {session?.role === 'admin' && (
+            <Link
+              to="/trainer"
+              className="inline-flex shrink-0 items-center rounded-lg border border-gold/40 px-4 py-2 text-sm font-medium whitespace-nowrap text-charcoal transition hover:bg-cream"
+            >
+              트레이너 출석부
+            </Link>
+          )}
           <MemberPortalLink className="!border-gold !bg-cream !text-charcoal hover:!bg-gold/20" />
           <button
             type="button"

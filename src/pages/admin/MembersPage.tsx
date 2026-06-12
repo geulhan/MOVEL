@@ -8,6 +8,8 @@ import {
 } from '../../api/members'
 import { fetchTrainers } from '../../api/trainers'
 import { PageHeader } from '../../components/admin/PageHeader'
+import { isTrainerStaff } from '../../lib/adminPermissions'
+import { getAdminSession } from '../../lib/adminSession'
 import { MemberFilterBar } from '../../components/MemberFilterBar'
 import { MemberForm } from '../../components/MemberForm'
 import { MemberSearchCombobox } from '../../components/admin/MemberSearchCombobox'
@@ -27,6 +29,8 @@ import {
 
 export default function MembersPage() {
   const navigate = useNavigate()
+  const session = getAdminSession()
+  const isTrainer = isTrainerStaff(session)
   const [allMembers, setAllMembers] = useState<
     Awaited<ReturnType<typeof fetchMembers>>
   >([])
@@ -76,6 +80,11 @@ export default function MembersPage() {
     void loadMembers()
   }, [loadMembers])
 
+  const scopedMembers = useMemo(() => {
+    if (!isTrainer || !session?.trainerId) return allMembers
+    return allMembers.filter((member) => member.trainer_id === session.trainerId)
+  }, [allMembers, isTrainer, session?.trainerId])
+
   useEffect(() => {
     const term = searchInput.trim()
     if (!term) {
@@ -91,16 +100,22 @@ export default function MembersPage() {
         try {
           const [serverMatches, clientMatches] = await Promise.all([
             fetchMembers(term),
-            Promise.resolve(filterBySearch(allMembers, term)),
+            Promise.resolve(filterBySearch(scopedMembers, term)),
           ])
+          const trainerFilter = (member: (typeof serverMatches)[number]) =>
+            !isTrainer ||
+            !session?.trainerId ||
+            member.trainer_id === session.trainerId
+
           const merged = new Map<string, (typeof serverMatches)[number]>()
           for (const member of [...serverMatches, ...clientMatches]) {
+            if (!trainerFilter(member)) continue
             merged.set(member.id, member)
           }
           setSearchResults([...merged.values()])
           setActiveSearch(term)
         } catch (err) {
-          setSearchResults(filterBySearch(allMembers, term))
+          setSearchResults(filterBySearch(scopedMembers, term))
           setActiveSearch(term)
           setError(formatSupabaseError(err))
         } finally {
@@ -110,7 +125,7 @@ export default function MembersPage() {
     }, 250)
 
     return () => window.clearTimeout(timer)
-  }, [searchInput, allMembers])
+  }, [searchInput, scopedMembers, isTrainer, session?.trainerId])
 
   useEffect(() => {
     if (!toast) return
@@ -119,37 +134,37 @@ export default function MembersPage() {
   }, [toast])
 
   const renewalStats = useMemo(
-    () => computeRenewalStats(allMembers),
-    [allMembers],
+    () => computeRenewalStats(scopedMembers),
+    [scopedMembers],
   )
 
   const filterCounts = useMemo(
     () => ({
-      all: allMembers.length,
-      active: allMembers.filter((m) => m.status === 'active').length,
-      unregistered: allMembers.filter(isUnregisteredMember).length,
-      renewal: allMembers.filter(isRenewalTarget).length,
-      expiring: allMembers.filter((m) =>
+      all: scopedMembers.length,
+      active: scopedMembers.filter((m) => m.status === 'active').length,
+      unregistered: scopedMembers.filter(isUnregisteredMember).length,
+      renewal: scopedMembers.filter(isRenewalTarget).length,
+      expiring: scopedMembers.filter((m) =>
         isExpiringSoon(m.expires_at, m.status),
       ).length,
       terminated: renewalStats.terminatedCount,
     }),
-    [allMembers, renewalStats.terminatedCount],
+    [scopedMembers, renewalStats.terminatedCount],
   )
 
   const displayMembers = useMemo(() => {
     const term = activeSearch.trim()
     if (term) {
-      return searchResults ?? filterBySearch(allMembers, term)
+      return searchResults ?? filterBySearch(scopedMembers, term)
     }
-    return applyRenewalFilter(allMembers, renewalFilter)
-  }, [allMembers, activeSearch, renewalFilter, searchResults])
+    return applyRenewalFilter(scopedMembers, renewalFilter)
+  }, [scopedMembers, activeSearch, renewalFilter, searchResults])
 
   const suggestionMembers = useMemo(() => {
     const term = searchInput.trim()
     if (!term) return []
-    return searchResults ?? filterBySearch(allMembers, term)
-  }, [searchInput, searchResults, allMembers])
+    return searchResults ?? filterBySearch(scopedMembers, term)
+  }, [searchInput, searchResults, scopedMembers])
 
   const listEmptyMessage =
     activeSearch.trim().length > 0
@@ -233,7 +248,11 @@ export default function MembersPage() {
     <div className="space-y-6">
       <PageHeader
         title="회원 관리"
-        description="등록·검색·PT 차감 및 상세 관리"
+        description={
+          isTrainer
+            ? '담당 회원 조회 및 상세 관리'
+            : '등록·검색·PT 차감 및 상세 관리'
+        }
       />
 
       {toast && (
@@ -253,11 +272,13 @@ export default function MembersPage() {
         </div>
       )}
 
-      <MemberForm
-        trainers={trainers}
-        members={allMembers}
-        onCreated={() => void loadMembers()}
-      />
+      {!isTrainer && (
+        <MemberForm
+          trainers={trainers}
+          members={allMembers}
+          onCreated={() => void loadMembers()}
+        />
+      )}
 
       <section className="space-y-3">
         <MemberFilterBar
@@ -293,6 +314,7 @@ export default function MembersPage() {
         deductingId={deductingId}
         updatingStatusId={updatingStatusId}
         updatingTrainerId={updatingTrainerId}
+        readOnly={isTrainer}
       />
     </div>
   )

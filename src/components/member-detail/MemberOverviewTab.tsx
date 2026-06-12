@@ -15,11 +15,14 @@ import { extendMemberPeriod } from '../../api/period'
 import { SESSION_DAYS_PER_SESSION } from '../../constants/session'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/theme'
 import { MEMBER_STATUS_LABELS } from '../../types/database'
+import { isFullAdmin } from '../../lib/adminPermissions'
+import { getAdminSession } from '../../lib/adminSession'
 import { isUnregisteredMember } from '../../utils/renewal'
 import { useMemberDetail } from './MemberDetailContext'
 import { formatDateTime, ProfileField } from './ui'
 
 export function MemberOverviewTab() {
+  const canManagePayments = isFullAdmin(getAdminSession())
   const navigate = useNavigate()
   const {
     member,
@@ -124,14 +127,16 @@ export function MemberOverviewTab() {
       <section className={`${cardClass} card-pad`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-base font-semibold text-charcoal">기본 정보</h3>
-          <button
-            type="button"
-            onClick={() => void handlePasswordReset()}
-            disabled={resettingPassword}
-            className={btnOutline}
-          >
-            {resettingPassword ? '초기화 중…' : '비밀번호 초기화'}
-          </button>
+          {canManagePayments && (
+            <button
+              type="button"
+              onClick={() => void handlePasswordReset()}
+              disabled={resettingPassword}
+              className={btnOutline}
+            >
+              {resettingPassword ? '초기화 중…' : '비밀번호 초기화'}
+            </button>
+          )}
         </div>
         {passwordResetMessage && (
           <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
@@ -156,10 +161,12 @@ export function MemberOverviewTab() {
             value={formatDate(member.expires_at)}
             highlight={expired}
           />
-          <ProfileField
-            label="총 결제"
-            value={formatCurrency(Number(member.payment_amount))}
-          />
+          {canManagePayments && (
+            <ProfileField
+              label="총 결제"
+              value={formatCurrency(Number(member.payment_amount))}
+            />
+          )}
           <ProfileField
             label="잔여 PT"
             value={`${member.remaining_sessions} / ${member.total_sessions}회`}
@@ -167,35 +174,31 @@ export function MemberOverviewTab() {
         </dl>
       </section>
 
-      {isUnregisteredMember(member) && (
+      {canManagePayments && isUnregisteredMember(member) && (
         <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
           <p className="font-semibold">미등록 회원 (자가가입)</p>
           <p className="mt-1">
-            PT·결제 탭에서 첫 결제를 등록해 주세요.
+            센터에서 결제 등록 후 PT 횟수를 반영해 주세요.
           </p>
-          <Link
-            to={`${basePath}/pt`}
-            className="mt-2 inline-block text-sm font-semibold text-sky-700 underline"
-          >
-            PT·결제로 이동 →
-          </Link>
         </div>
       )}
 
       <section className="grid gap-3 sm:grid-cols-2">
-        <Link
-          to={`${basePath}/pt`}
-          className={`${cardClass} card-pad block transition hover:border-gold/50 ${
-            isUnregisteredMember(member) ? 'ring-2 ring-sky-300/60' : ''
-          }`}
-        >
-          <p className="text-sm font-semibold text-charcoal">PT · 결제</p>
-          <p className="mt-1 text-xs text-muted">
-            {isUnregisteredMember(member)
-              ? '첫 결제·PT 횟수 등록 필요'
-              : `결제 ${payments.length}건 · 잔여 ${member.remaining_sessions}회`}
-          </p>
-        </Link>
+        {canManagePayments && (
+          <Link
+            to={`${basePath}/pt`}
+            className={`${cardClass} card-pad block transition hover:border-gold/50 ${
+              isUnregisteredMember(member) ? 'ring-2 ring-sky-300/60' : ''
+            }`}
+          >
+            <p className="text-sm font-semibold text-charcoal">PT · 결제</p>
+            <p className="mt-1 text-xs text-muted">
+              {isUnregisteredMember(member)
+                ? '첫 결제·PT 횟수 등록 필요'
+                : `결제 ${payments.length}건 · 잔여 ${member.remaining_sessions}회`}
+            </p>
+          </Link>
+        )}
         <Link
           to={`${basePath}/journal`}
           className={`${cardClass} card-pad block transition hover:border-gold/50`}
@@ -219,6 +222,7 @@ export function MemberOverviewTab() {
         </Link>
       </section>
 
+      {canManagePayments && (
       <section className={`${cardClass} overflow-hidden`}>
         <button
           type="button"
@@ -291,7 +295,9 @@ export function MemberOverviewTab() {
           </div>
         )}
       </section>
+      )}
 
+      {canManagePayments && (
       <section className="rounded-xl border border-red-200 bg-red-50/40 p-5 sm:p-6">
         <h3 className="text-sm font-semibold text-red-800">위험 구역</h3>
         <p className="mt-1 text-sm text-red-700/90">
@@ -307,6 +313,7 @@ export function MemberOverviewTab() {
           {deletingMember ? '삭제 중…' : '회원 삭제'}
         </button>
       </section>
+      )}
     </div>
   )
 }

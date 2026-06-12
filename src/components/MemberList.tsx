@@ -18,6 +18,7 @@ type Props = {
   updatingStatusId: string | null
   updatingTrainerId: string | null
   emptyMessage?: string
+  readOnly?: boolean
 }
 
 export function MemberList({
@@ -32,13 +33,15 @@ export function MemberList({
   updatingStatusId,
   updatingTrainerId,
   emptyMessage = '등록된 회원이 없습니다.',
+  readOnly = false,
 }: Props) {
   return (
     <section className="card overflow-hidden">
       <div className="card-header">
         <h2 className="text-lg font-semibold text-charcoal">회원 목록</h2>
         <p className="mt-1 text-sm text-muted">
-          {members.length}명 · 트레이너·상태는 목록에서 바로 변경
+          {members.length}명
+          {readOnly ? '' : ' · 트레이너·상태는 목록에서 바로 변경'}
         </p>
       </div>
 
@@ -61,8 +64,8 @@ export function MemberList({
                 <th className="px-4 py-3">기간</th>
                 <th className="px-4 py-3">상태</th>
                 <th className="px-4 py-3">PT</th>
-                <th className="px-4 py-3">결제</th>
-                <th className="px-4 py-3">차감</th>
+                {!readOnly && <th className="px-4 py-3">결제</th>}
+                {!readOnly && <th className="px-4 py-3">차감</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gold/15">
@@ -99,27 +102,33 @@ export function MemberList({
                       {formatPhone(member.phone)}
                     </td>
                     <td className="px-4 py-3.5">
-                      <select
-                        value={member.trainer_id ?? ''}
-                        disabled={
-                          updatingTrainerId === member.id ||
-                          trainers.length === 0
-                        }
-                        onChange={(e) =>
-                          onTrainerChange(
-                            member.id,
-                            e.target.value || null,
-                          )
-                        }
-                        className="select-compact w-[5.5rem]"
-                      >
-                        <option value="">미지정</option>
-                        {trainers.map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {t.name}
-                          </option>
-                        ))}
-                      </select>
+                      {readOnly ? (
+                        <span className="text-sm text-charcoal/80">
+                          {member.trainer_name ?? '미지정'}
+                        </span>
+                      ) : (
+                        <select
+                          value={member.trainer_id ?? ''}
+                          disabled={
+                            updatingTrainerId === member.id ||
+                            trainers.length === 0
+                          }
+                          onChange={(e) =>
+                            onTrainerChange(
+                              member.id,
+                              e.target.value || null,
+                            )
+                          }
+                          className="select-compact w-[5.5rem]"
+                        >
+                          <option value="">미지정</option>
+                          {trainers.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                     </td>
                     <td className="px-4 py-3.5 whitespace-nowrap text-xs leading-5">
                       <div className="text-charcoal/70">
@@ -136,25 +145,31 @@ export function MemberList({
                       </div>
                     </td>
                     <td className="px-4 py-3.5">
-                      <select
-                        value={member.status}
-                        disabled={updatingStatusId === member.id}
-                        onChange={(e) =>
-                          onStatusChange(
-                            member.id,
-                            e.target.value as MemberStatus,
-                          )
-                        }
-                        className="select-compact min-w-[5.25rem]"
-                      >
-                        {(Object.keys(MEMBER_STATUS_LABELS) as MemberStatus[]).map(
-                          (key) => (
-                            <option key={key} value={key}>
-                              {MEMBER_STATUS_LABELS[key]}
-                            </option>
-                          ),
-                        )}
-                      </select>
+                      {readOnly ? (
+                        <span className="text-sm text-charcoal/80">
+                          {MEMBER_STATUS_LABELS[member.status]}
+                        </span>
+                      ) : (
+                        <select
+                          value={member.status}
+                          disabled={updatingStatusId === member.id}
+                          onChange={(e) =>
+                            onStatusChange(
+                              member.id,
+                              e.target.value as MemberStatus,
+                            )
+                          }
+                          className="select-compact min-w-[5.25rem]"
+                        >
+                          {(Object.keys(MEMBER_STATUS_LABELS) as MemberStatus[]).map(
+                            (key) => (
+                              <option key={key} value={key}>
+                                {MEMBER_STATUS_LABELS[key]}
+                              </option>
+                            ),
+                          )}
+                        </select>
+                      )}
                     </td>
                     <td className="px-4 py-3.5">
                       <SessionCount
@@ -162,28 +177,32 @@ export function MemberList({
                         remaining={member.remaining_sessions}
                       />
                     </td>
-                    <td className="px-4 py-3.5 whitespace-nowrap text-charcoal/80 tabular-nums">
-                      {formatCurrency(Number(member.payment_amount))}
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <button
-                        type="button"
-                        onClick={() => onDeduct(member.id)}
-                        disabled={!canDeduct || deductingId === member.id}
-                        title={
-                          member.status !== 'active'
-                            ? '활성 회원만 차감 가능'
-                            : expired
-                              ? '만료된 회원'
-                              : noSessions
-                                ? '남은 횟수 없음'
-                                : undefined
-                        }
-                        className={btnOutline}
-                      >
-                        {deductingId === member.id ? '…' : '-1회'}
-                      </button>
-                    </td>
+                    {!readOnly && (
+                      <td className="px-4 py-3.5 whitespace-nowrap text-charcoal/80 tabular-nums">
+                        {formatCurrency(Number(member.payment_amount))}
+                      </td>
+                    )}
+                    {!readOnly && (
+                      <td className="px-4 py-3.5">
+                        <button
+                          type="button"
+                          onClick={() => onDeduct(member.id)}
+                          disabled={!canDeduct || deductingId === member.id}
+                          title={
+                            member.status !== 'active'
+                              ? '활성 회원만 차감 가능'
+                              : expired
+                                ? '만료된 회원'
+                                : noSessions
+                                  ? '남은 횟수 없음'
+                                  : undefined
+                          }
+                          className={btnOutline}
+                        >
+                          {deductingId === member.id ? '…' : '-1회'}
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 )
               })}

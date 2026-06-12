@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { PageHeader } from '../../components/admin/PageHeader'
 import { PtScheduleCalendar } from '../../components/admin/PtScheduleCalendar'
+import { getAdminSession } from '../../lib/adminSession'
 
 export default function SchedulePage() {
+  const session = getAdminSession()
   const [toast, setToast] = useState<string | null>(null)
 
   useEffect(() => {
@@ -24,7 +26,12 @@ export default function SchedulePage() {
         </div>
       )}
 
-      <PtScheduleCalendar onToast={setToast} />
+      <PtScheduleCalendar
+        onToast={setToast}
+        trainerId={
+          session?.role === 'trainer' ? session.trainerId ?? undefined : undefined
+        }
+      />
     </div>
   )
 }

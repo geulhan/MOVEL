@@ -49,9 +49,10 @@ function toLocalIso(dateStr: string, timeStr: string): string {
 
 type Props = {
   onToast?: (msg: string) => void
+  trainerId?: string
 }
 
-export function PtScheduleCalendar({ onToast }: Props) {
+export function PtScheduleCalendar({ onToast, trainerId }: Props) {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
@@ -85,27 +86,39 @@ export function PtScheduleCalendar({ onToast }: Props) {
       ])
       const memberMap = new Map(memberData.map((m) => [m.id, m.name]))
       const trainerMap = new Map(trainerData.map((t) => [t.id, t.name]))
+      const enriched = scheduleData.map((s) => ({
+        ...s,
+        member_name: memberMap.get(s.member_id),
+        trainer_name: s.trainer_id ? trainerMap.get(s.trainer_id) : undefined,
+      }))
       setSchedules(
-        scheduleData.map((s) => ({
-          ...s,
-          member_name: memberMap.get(s.member_id),
-          trainer_name: s.trainer_id
-            ? trainerMap.get(s.trainer_id)
-            : undefined,
-        })),
+        trainerId
+          ? enriched.filter((schedule) => schedule.trainer_id === trainerId)
+          : enriched,
       )
-      setMembers(memberData.filter((m) => m.status !== 'terminated'))
+      const activeMembers = memberData.filter((m) => m.status !== 'terminated')
+      setMembers(
+        trainerId
+          ? activeMembers.filter((member) => member.trainer_id === trainerId)
+          : activeMembers,
+      )
       setTrainers(trainerData)
     } catch (err) {
       setError(formatSupabaseError(err))
     } finally {
       setLoading(false)
     }
-  }, [range.startIso, range.endIso])
+  }, [range.startIso, range.endIso, trainerId])
 
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    if (trainerId) {
+      setFormTrainerId(trainerId)
+    }
+  }, [trainerId])
 
   const byDate = useMemo(() => {
     const map = new Map<string, PtSchedule[]>()
@@ -424,6 +437,7 @@ export function PtScheduleCalendar({ onToast }: Props) {
                 <select
                   value={formTrainerId}
                   onChange={(e) => setFormTrainerId(e.target.value)}
+                  disabled={Boolean(trainerId)}
                   className={inputClass}
                 >
                   <option value="">미지정</option>

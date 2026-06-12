@@ -1,5 +1,5 @@
-import { AttendanceBook } from '../../components/admin/AttendanceBook'
+import { CenterAttendanceBoard } from '../../components/admin/CenterAttendanceBoard'
 
 export default function AttendancePage() {
-  return <AttendanceBook role="admin" />
+  return <CenterAttendanceBoard />
 }

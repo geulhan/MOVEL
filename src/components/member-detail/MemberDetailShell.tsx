@@ -1,22 +1,18 @@
 import { NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { formatPhone } from '../../api/members'
+import { getMemberDetailTabs } from '../../lib/adminPermissions'
+import { getAdminSession } from '../../lib/adminSession'
 import { btnLinkSm, btnNavBack } from '../../styles/theme'
 import { PtAlertBadge } from '../PtAlertBadge'
 import { StatusBadge } from '../StatusBadge'
 import { MemberDetailProvider, useMemberDetail } from './MemberDetailContext'
-
-const MAIN_TABS = [
-  { to: '', end: true, label: '개요' },
-  { to: 'pt', end: false, label: 'PT·결제' },
-  { to: 'attendance', end: false, label: '출석' },
-  { to: 'records', end: false, label: '메모·상담' },
-] as const
 
 function MemberDetailShellInner() {
   const navigate = useNavigate()
   const location = useLocation()
   const { member, loading, error } = useMemberDetail()
   const isJournalPage = location.pathname.endsWith('/journal')
+  const mainTabs = getMemberDetailTabs(getAdminSession())
 
   if (loading && !member) {
     return <p className="py-16 text-center text-sm text-muted">불러오는 중…</p>
@@ -77,7 +73,7 @@ function MemberDetailShellInner() {
 
       {!isJournalPage && (
         <nav className="chip-scroll -mx-1 px-1">
-          {MAIN_TABS.map((tab) => (
+          {mainTabs.map((tab) => (
             <NavLink
               key={tab.label}
               to={tab.to ? `${basePath}/${tab.to}` : basePath}

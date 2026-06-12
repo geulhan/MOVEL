@@ -16,6 +16,8 @@ import {
   type MemberAttendanceRow,
 } from '../../api/attendance'
 import { fetchPeriodExtensions } from '../../api/period'
+import { isTrainerStaff } from '../../lib/adminPermissions'
+import { getAdminSession } from '../../lib/adminSession'
 import type { Member, PaymentHistory, PeriodExtension } from '../../types/database'
 
 type MemberDetailContextValue = {
@@ -54,6 +56,20 @@ export function MemberDetailProvider({
     setError(null)
     try {
       const m = await fetchMemberById(memberId)
+      const session = getAdminSession()
+      if (
+        isTrainerStaff(session) &&
+        session?.trainerId &&
+        m.trainer_id !== session.trainerId
+      ) {
+        setMember(null)
+        setPayments([])
+        setAttendance([])
+        setPeriodExtensions([])
+        setError('담당 회원만 조회할 수 있습니다.')
+        return
+      }
+
       const [p, att, ext] = await Promise.all([
         fetchPaymentHistory(memberId),
         fetchMemberAttendance(memberId, m.trainer_name),

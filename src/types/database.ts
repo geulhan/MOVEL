@@ -21,10 +21,14 @@ export type Trainer = {
   created_at: string
 }
 
+export type AdminRole = 'admin' | 'trainer'
+
 export type AdminUser = {
   id: string
   username: string
   password_hash: string
+  role: AdminRole
+  trainer_id: string | null
   created_at: string
 }
 
@@ -864,8 +868,13 @@ export type Database = {
       >
       admin_users: TableDef<
         AdminUser,
-        { username: string; password_hash: string },
-        never
+        {
+          username: string
+          password_hash: string
+          role?: AdminRole
+          trainer_id?: string | null
+        },
+        { role?: AdminRole; trainer_id?: string | null }
       >
       member_credentials: TableDef<
         MemberCredential,

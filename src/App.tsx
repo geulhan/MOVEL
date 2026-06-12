@@ -1,7 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AdminLayout } from './components/layouts/AdminLayout'
-import DashboardPage from './pages/admin/DashboardPage'
+import AdminHomePage from './pages/admin/AdminHomePage'
 import MembersPage from './pages/admin/MembersPage'
 import { MemberAttendanceTab } from './components/member-detail/MemberAttendanceTab'
 import { MemberDetailShell } from './components/member-detail/MemberDetailShell'
@@ -31,7 +31,7 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/admin" element={<ProtectedRoute />}>
           <Route element={<AdminLayout />}>
-            <Route index element={<DashboardPage />} />
+            <Route index element={<AdminHomePage />} />
             <Route path="members" element={<MembersPage />} />
             <Route path="member/:memberId" element={<MemberDetailShell />}>
               <Route index element={<MemberOverviewTab />} />
