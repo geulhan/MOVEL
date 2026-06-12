@@ -44,6 +44,7 @@ export const DEFAULT_REWARD_RULES = {
   exercise_journal: { score: 5, mile: 100 },
   streak_7day: { score: 50, mile: 3000 },
   naver_review: { score: 0, mile: 2000 },
+  center_photo: { score: 0, mile: 500 },
   referral_percent: 10,
 } as const
 
@@ -71,6 +72,7 @@ export type RewardEventType =
   | 'exercise_journal'
   | 'streak_7day'
   | 'naver_review'
+  | 'center_photo'
   | 'referral_referrer'
   | 'referral_new_member'
   | 'redemption'
@@ -85,6 +87,7 @@ export const REWARD_EVENT_LABELS: Record<RewardEventType, string> = {
   exercise_journal: '운동일지 작성',
   streak_7day: '7일 연속 활동',
   naver_review: '네이버 리뷰',
+  center_photo: '센터 사진 인증',
   referral_referrer: '지인 소개 (소개자)',
   referral_new_member: '지인 소개 (신규 회원)',
   redemption: '재등록 결제 사용',

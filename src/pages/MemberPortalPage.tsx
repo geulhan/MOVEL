@@ -31,6 +31,7 @@ import { MemberLayout } from '../components/layouts/MemberLayout'
 import { btnGold, btnPrimary, cardClass, inputClass } from '../styles/theme'
 import type { Member } from '../types/database'
 import { MEMBER_STATUS_LABELS } from '../types/database'
+import { MemberCenterPassSection } from '../components/member/MemberCenterPassSection'
 import { MemberPaymentSection } from '../components/member/MemberPaymentSection'
 import { MemberRewardsSection } from '../components/MemberRewardsSection'
 import { PullToRefresh } from '../components/PullToRefresh'
@@ -500,7 +501,8 @@ export default function MemberPortalPage() {
           </div>
         )}
 
-        {tab === 'home' && (
+        {tab === 'home' && member && (
+        <>
         <section className={`${cardClass} space-y-4 p-6`}>
           {member.total_sessions === 0 && (
             <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
@@ -556,6 +558,11 @@ export default function MemberPortalPage() {
             </div>
           </dl>
         </section>
+        <MemberCenterPassSection
+          memberId={member.id}
+          refreshToken={refreshToken}
+        />
+        </>
       )}
 
       {tab === 'schedule' && member && (

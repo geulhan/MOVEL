@@ -313,6 +313,51 @@ export type StepVerification = {
   created_at: string
 }
 
+export type CenterPhotoStatus = 'pending' | 'approved' | 'rejected'
+
+export type CenterPhotoSubmission = {
+  id: string
+  member_id: string
+  submission_date: string
+  image_url: string
+  image_path: string | null
+  status: CenterPhotoStatus
+  rejection_reason: string | null
+  mile_awarded: number
+  reviewed_at: string | null
+  created_at: string
+}
+
+export type CenterPassStatus = 'scheduled' | 'active' | 'expired' | 'cancelled'
+
+export type CenterPassProduct = {
+  id: string
+  label: string
+  duration_days: number
+  list_amount: number
+  description: string | null
+  is_active: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export type CenterPass = {
+  id: string
+  member_id: string
+  product_id: string | null
+  label: string
+  starts_at: string
+  ends_at: string
+  status: CenterPassStatus
+  amount: number | null
+  note: string | null
+  payment_history_id: string | null
+  created_by: string
+  created_at: string
+  updated_at: string
+}
+
 export type MemberInsert = {
   name: string
   phone: string
@@ -651,6 +696,71 @@ export type Database = {
           ai_confidence?: number | null
           ocr_raw_text?: string | null
           reviewed_at?: string | null
+        }
+      >
+      center_photo_submissions: TableDef<
+        CenterPhotoSubmission,
+        {
+          member_id: string
+          submission_date?: string
+          image_url: string
+          image_path?: string | null
+          status?: CenterPhotoStatus
+          rejection_reason?: string | null
+          mile_awarded?: number
+          reviewed_at?: string | null
+        },
+        {
+          status?: CenterPhotoStatus
+          rejection_reason?: string | null
+          mile_awarded?: number
+          reviewed_at?: string | null
+        }
+      >
+      center_pass_products: TableDef<
+        CenterPassProduct,
+        {
+          label: string
+          duration_days: number
+          list_amount?: number
+          description?: string | null
+          is_active?: boolean
+          sort_order?: number
+        },
+        {
+          label?: string
+          duration_days?: number
+          list_amount?: number
+          description?: string | null
+          is_active?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+      >
+      center_passes: TableDef<
+        CenterPass,
+        {
+          member_id: string
+          product_id?: string | null
+          label: string
+          starts_at: string
+          ends_at: string
+          status?: CenterPassStatus
+          amount?: number | null
+          note?: string | null
+          payment_history_id?: string | null
+          created_by?: string
+        },
+        {
+          product_id?: string | null
+          label?: string
+          starts_at?: string
+          ends_at?: string
+          status?: CenterPassStatus
+          amount?: number | null
+          note?: string | null
+          payment_history_id?: string | null
+          updated_at?: string
         }
       >
       admin_users: TableDef<

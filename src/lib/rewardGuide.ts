@@ -73,6 +73,13 @@ export function buildMemberRewardGuide(
       mile: formatRewardAmount(rules.naver_review.mile, 'M'),
     },
     {
+      key: 'center_photo',
+      title: REWARD_EVENT_LABELS.center_photo,
+      description: '센터에서 촬영한 사진 업로드 · 하루 1회',
+      score: formatRewardAmount(rules.center_photo.score, '점'),
+      mile: formatRewardAmount(rules.center_photo.mile, 'M'),
+    },
+    {
       key: 'referral',
       title: '지인 소개',
       description: `소개 회원 결제 시 결제금액의 ${rules.referral_percent}% MILE (소개자·신규 회원)`,

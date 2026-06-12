@@ -431,6 +431,36 @@ export async function reversePtAttendance(
   })
 }
 
+/** 센터 사진 인증 리워드 (하루 1회) */
+export async function awardCenterPhoto(
+  memberId: string,
+  submissionId: string,
+): Promise<number> {
+  const rules = await fetchRewardEarnRules()
+  const date = todayDateString()
+  const eventKey = `center_photo:${memberId}:${date}`
+  const mile = rules.center_photo.mile
+  try {
+    await awardPair(
+      memberId,
+      'center_photo',
+      eventKey,
+      rules.center_photo.score,
+      mile,
+      {
+        reference_type: 'center_photo_submissions',
+        reference_id: submissionId,
+        note: '센터 사진 인증',
+        created_by: 'system',
+      },
+    )
+  } catch (err) {
+    if (err instanceof Error && err.message === 'ALREADY_AWARDED') return 0
+    throw err
+  }
+  return mile
+}
+
 /** 운동일지 작성 리워드 */
 export async function awardExerciseJournal(
   memberId: string,

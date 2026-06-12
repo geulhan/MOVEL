@@ -37,6 +37,7 @@ import {
 import { useClientDevice } from '../hooks/useClientDevice'
 import { VerificationCodeFullscreen } from './VerificationCodeFullscreen'
 import { IosStepVerificationUpload } from './IosStepVerificationUpload'
+import { MemberCenterPhotoSection } from './MemberCenterPhotoSection'
 import { MemberRewardGuideSection } from './MemberRewardGuideSection'
 import { btnGold, btnOutline, cardClass } from '../styles/theme'
 
@@ -344,6 +345,12 @@ export function MemberRewardsSection({ memberId, refreshToken }: Props) {
       </section>
 
       <MemberRewardGuideSection />
+
+      <MemberCenterPhotoSection
+        memberId={memberId}
+        refreshToken={refreshToken}
+        onSuccess={() => void load()}
+      />
 
       {/* 오늘 인증하기 */}
       <section className={`${cardClass} p-5 sm:p-6`}>

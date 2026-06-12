@@ -10,6 +10,7 @@ import {
 } from '../../api/rewards'
 import { fetchMembers } from '../../api/members'
 import { PageHeader } from '../../components/admin/PageHeader'
+import { CenterPhotoSubmissionsPanel } from '../../components/admin/CenterPhotoSubmissionsPanel'
 import { StepVerificationsPanel } from '../../components/admin/StepVerificationsPanel'
 import {
   REWARD_EVENT_LABELS,
@@ -20,7 +21,7 @@ import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/them
 import type { Member } from '../../types/database'
 
 type HistoryTab = 'earn' | 'spend'
-type RewardsAdminTab = 'balances' | 'steps'
+type RewardsAdminTab = 'balances' | 'steps' | 'center_photo'
 
 export default function RewardsPage() {
   const [adminTab, setAdminTab] = useState<RewardsAdminTab>('balances')
@@ -152,10 +153,21 @@ export default function RewardsPage() {
         >
           걸음 인증
         </button>
+        <button
+          type="button"
+          onClick={() => setAdminTab('center_photo')}
+          className={`chip ${adminTab === 'center_photo' ? 'chip-active' : 'chip-inactive'}`}
+        >
+          센터 사진
+        </button>
       </nav>
 
       {adminTab === 'steps' ? (
         <StepVerificationsPanel />
+      ) : null}
+
+      {adminTab === 'center_photo' ? (
+        <CenterPhotoSubmissionsPanel />
       ) : null}
 
       {adminTab === 'balances' && error && (
