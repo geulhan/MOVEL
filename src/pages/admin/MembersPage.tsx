@@ -272,14 +272,6 @@ export default function MembersPage() {
         </div>
       )}
 
-      {!isTrainer && (
-        <MemberForm
-          trainers={trainers}
-          members={allMembers}
-          onCreated={() => void loadMembers()}
-        />
-      )}
-
       <section className="space-y-3">
         <MemberFilterBar
           active={renewalFilter}
@@ -316,6 +308,14 @@ export default function MembersPage() {
         updatingTrainerId={updatingTrainerId}
         readOnly={isTrainer}
       />
+
+      {!isTrainer && (
+        <MemberForm
+          trainers={trainers}
+          members={allMembers}
+          onCreated={() => void loadMembers()}
+        />
+      )}
     </div>
   )
 }
