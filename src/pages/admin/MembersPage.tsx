@@ -157,9 +157,7 @@ export default function MembersPage() {
       : '등록된 회원이 없습니다.'
 
   function handleSelectMember(member: (typeof allMembers)[number]) {
-    setSearchInput(member.name)
-    setActiveSearch(member.name)
-    setSearchResults([member])
+    navigate(`/admin/member/${member.id}`)
   }
 
   function handleClearSearch() {
