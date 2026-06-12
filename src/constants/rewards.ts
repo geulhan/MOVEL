@@ -43,8 +43,8 @@ export const DEFAULT_REWARD_RULES = {
   steps_15000: { score: 20, mile: 700 },
   exercise_journal: { score: 5, mile: 100 },
   streak_7day: { score: 50, mile: 3000 },
-  naver_review: { score: 0, mile: 2000 },
-  center_photo: { score: 0, mile: 500 },
+  naver_review: { score: 0, mile: 10000 },
+  center_photo: { score: 20, mile: 500 },
   referral_percent: 10,
 } as const
 

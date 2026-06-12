@@ -344,15 +344,6 @@ export function MemberRewardsSection({ memberId, refreshToken }: Props) {
         ) : null}
       </section>
 
-      <MemberRewardGuideSection />
-
-      <MemberCenterPhotoSection
-        memberId={memberId}
-        refreshToken={refreshToken}
-        onSuccess={() => void load()}
-      />
-
-      {/* 오늘 인증하기 */}
       <section className={`${cardClass} p-5 sm:p-6`}>
         <h4 className="text-sm font-bold text-charcoal">오늘 인증하기</h4>
         <p className="mt-1 text-xs leading-relaxed text-muted">
@@ -596,6 +587,12 @@ export function MemberRewardsSection({ memberId, refreshToken }: Props) {
         </div>
       )}
 
+      <MemberCenterPhotoSection
+        memberId={memberId}
+        refreshToken={refreshToken}
+        onSuccess={() => void load()}
+      />
+
       <section className={`${cardClass} overflow-hidden`}>
         <div className="flex border-b border-gold/20">
           {(
@@ -661,6 +658,8 @@ export function MemberRewardsSection({ memberId, refreshToken }: Props) {
           </button>
         </div>
       </section>
+
+      <MemberRewardGuideSection />
     </div>
   )
 }

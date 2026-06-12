@@ -120,7 +120,7 @@ from (
 where not exists (select 1 from public.center_pass_products limit 1);
 
 update public.reward_settings
-set setting_value = setting_value || '{"center_photo": {"score": 0, "mile": 500}}'::jsonb,
+set setting_value = setting_value || '{"center_photo": {"score": 20, "mile": 500}}'::jsonb,
     updated_at = now()
 where branch_id is null
   and setting_key = 'earn_rules'

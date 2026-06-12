@@ -66,18 +66,18 @@ export function buildMemberRewardGuide(
       mile: formatRewardAmount(rules.streak_7day.mile, 'M'),
     },
     {
+      key: 'center_photo',
+      title: REWARD_EVENT_LABELS.center_photo,
+      description: '센터에서 카메라로 촬영 · 날짜·시간 표시 · 하루 1회',
+      score: formatRewardAmount(rules.center_photo.score, '점'),
+      mile: formatRewardAmount(rules.center_photo.mile, 'M'),
+    },
+    {
       key: 'naver_review',
       title: REWARD_EVENT_LABELS.naver_review,
       description: '네이버 리뷰 작성 시 (센터 확인 후)',
       score: '-',
       mile: formatRewardAmount(rules.naver_review.mile, 'M'),
-    },
-    {
-      key: 'center_photo',
-      title: REWARD_EVENT_LABELS.center_photo,
-      description: '센터에서 촬영한 사진 업로드 · 하루 1회',
-      score: formatRewardAmount(rules.center_photo.score, '점'),
-      mile: formatRewardAmount(rules.center_photo.mile, 'M'),
     },
     {
       key: 'referral',
