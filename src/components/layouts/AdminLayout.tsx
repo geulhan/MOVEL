@@ -1,6 +1,7 @@
 import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom'
 import { navItemsForSession } from '../../lib/adminPermissions'
 import { clearAdminAuth, getAdminSession } from '../../lib/adminSession'
+import { MovelBrandSubtitle, MovelLogo } from '../brand/MovelLogo'
 import { SetupBanner } from '../SetupBanner'
 
 function MemberPortalLink({ className = '' }: { className?: string }) {
@@ -28,16 +29,17 @@ export function AdminLayout() {
   return (
     <div className="flex min-h-screen bg-cream">
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-gold/30 bg-charcoal lg:flex">
-        <div className="border-b border-gold/20 px-5 py-5">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold">
+        <div className="border-b border-gold/20 px-4 py-5">
+          <MovelLogo
+            variant="stacked"
+            theme="light"
+            className="h-[4.5rem] w-auto"
+            linkTo="/admin"
+          />
+          <MovelBrandSubtitle tone="gold" className="mt-2 px-1" />
+          <p className="mt-1 px-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-cream/40">
             Admin
           </p>
-          <Link
-            to="/admin"
-            className="mt-1.5 block truncate text-base font-bold text-cream transition hover:text-gold"
-          >
-            모벨 퍼포먼스 트레이닝
-          </Link>
         </div>
         <nav className="flex flex-1 flex-col gap-0.5 p-3">
           {navItems.map((item) => (
@@ -90,12 +92,12 @@ export function AdminLayout() {
         {/* 모바일 헤더 */}
         <header className="border-b border-gold/30 bg-charcoal lg:hidden">
           <div className="flex items-center justify-between gap-3 px-4 py-3">
-            <Link
-              to="/admin"
-              className="min-w-0 truncate text-sm font-bold text-cream transition hover:text-gold"
-            >
-              모벨 퍼포먼스 트레이닝
-            </Link>
+            <MovelLogo
+              variant="horizontal"
+              theme="light"
+              className="h-8 w-auto max-w-[9.5rem]"
+              linkTo="/admin"
+            />
             <div className="flex min-w-0 shrink items-center gap-1.5">
               <MemberPortalLink className="!px-2.5 !py-1.5 !text-[11px]" />
               <button

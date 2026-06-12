@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { MovelBrandHeader } from '../components/brand/MovelBrandHeader'
 import { SiteUrlCopy } from '../components/SiteUrlCopy'
 import {
   getAdminLoginUrl,
@@ -12,22 +13,15 @@ export default function HomePage() {
   const adminUrl = getAdminLoginUrl()
 
   return (
-    <div className="min-h-screen bg-cream px-4 py-10">
-      <div className="mx-auto max-w-md space-y-5">
-        <header className="text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-dark">
-            MOVEL
-          </p>
-          <h1 className="mt-2 text-2xl font-bold text-charcoal">
-            모벨 퍼포먼스 트레이닝
-          </h1>
-          <p className="mt-2 text-sm leading-relaxed text-muted">
-            회원·관리자 페이지로 이동하세요. 주소창에는{' '}
-            <strong className="text-charcoal">아래 전체 주소</strong>를
-            입력해야 합니다. <code className="text-charcoal">/member</code>만
-            입력하면 다른 페이지(광고 등)로 연결될 수 있습니다.
-          </p>
-        </header>
+    <div className="min-h-screen bg-cream">
+      <MovelBrandHeader band="dark" size="lg" />
+      <div className="mx-auto max-w-md space-y-5 px-4 py-8">
+        <p className="text-center text-sm leading-relaxed text-muted">
+          회원·관리자 페이지로 이동하세요. 주소창에는{' '}
+          <strong className="text-charcoal">아래 전체 주소</strong>를
+          입력해야 합니다. <code className="text-charcoal">/member</code>만
+          입력하면 다른 페이지(광고 등)로 연결될 수 있습니다.
+        </p>
 
         <section className={`${cardClass} space-y-4 p-6`}>
           <div>

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchTrainers } from '../api/trainers'
+import { MovelBrandHeader } from '../components/brand/MovelBrandHeader'
+import { MovelLogo } from '../components/brand/MovelLogo'
 import { AttendanceBook } from '../components/admin/AttendanceBook'
 import { formatSupabaseError } from '../lib/errors'
 import {
@@ -58,8 +60,9 @@ export default function TrainerPortalPage() {
 
   if (!session) {
     return (
-      <div className="min-h-screen bg-cream px-4 py-10">
-        <div className="mx-auto max-w-md space-y-4">
+      <div className="min-h-screen bg-cream">
+        <MovelBrandHeader band="dark" size="md" linkTo="/" />
+        <div className="mx-auto max-w-md space-y-4 px-4 py-8">
           <section className={`${cardClass} card-pad`}>
             <p className="text-xs font-semibold uppercase tracking-[0.15em] text-gold-dark">
               Trainer
@@ -115,14 +118,21 @@ export default function TrainerPortalPage() {
   return (
     <div className="min-h-screen bg-cream">
       <header className="border-b border-gold/30 bg-charcoal">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold">
-              Trainer
-            </p>
-            <h1 className="truncate text-sm font-bold text-cream">
-              {session.trainerName} · 출석부
-            </h1>
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <MovelLogo
+              variant="horizontal"
+              theme="light"
+              className="hidden h-8 w-auto shrink-0 sm:block"
+            />
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold">
+                Trainer
+              </p>
+              <h1 className="truncate text-sm font-bold text-cream">
+                {session.trainerName} · 출석부
+              </h1>
+            </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <Link

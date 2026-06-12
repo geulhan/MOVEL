@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { MovelBrandSubtitle, MovelLogo } from '../brand/MovelLogo'
 
 type Props = {
   children: React.ReactNode
@@ -11,15 +12,16 @@ export function MemberLayout({ children, memberName, onLogout }: Props) {
     <div className="min-h-screen bg-cream">
       <header className="border-b border-gold/30 bg-white">
         <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-gold-dark">
-              Member
-            </p>
-            <h1 className="text-lg font-bold text-charcoal">
-              모벨 퍼포먼스
-            </h1>
+          <div className="min-w-0">
+            <MovelLogo
+              variant="stacked"
+              theme="dark"
+              className="h-10 w-auto max-w-[5.5rem]"
+              linkTo="/member"
+            />
+            <MovelBrandSubtitle tone="muted" className="mt-1" />
             {memberName && (
-              <p className="text-sm text-muted">{memberName} 님</p>
+              <p className="mt-1 text-sm text-muted">{memberName} 님</p>
             )}
           </div>
           <div className="flex flex-col items-end gap-1">

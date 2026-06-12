@@ -9,6 +9,7 @@ import {
   loadRememberedAdminLogin,
   saveRememberedAdminLogin,
 } from '../lib/rememberLogin'
+import { MovelBrandHeader } from '../components/brand/MovelBrandHeader'
 import { btnPrimary, cardClass, inputClass } from '../styles/theme'
 
 type LoginLocationState = {
@@ -83,8 +84,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-cream px-4 py-10">
-      <div className="mx-auto max-w-md space-y-4">
+    <div className="min-h-screen bg-cream">
+      <MovelBrandHeader band="dark" size="lg" linkTo="/" />
+      <div className="mx-auto max-w-md space-y-4 px-4 py-8">
         <section className={`${cardClass} card-pad`}>
           <p className="text-xs font-semibold uppercase tracking-[0.15em] text-gold-dark">
             Admin
