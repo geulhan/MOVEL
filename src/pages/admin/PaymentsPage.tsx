@@ -87,16 +87,19 @@ export default function PaymentsPage() {
     }
   }, [adminTab, load])
 
-  async function handleCompleteConfirm(milesToUse: number) {
+  async function handleCompleteConfirm(options: {
+    milesToUse: number
+    startsAt?: string
+  }) {
     if (!completeTarget) return
     setActionId(completeTarget.id)
     setToast(null)
     setError(null)
     try {
-      await completePaymentRequestManually(completeTarget.id, { milesToUse })
+      await completePaymentRequestManually(completeTarget.id, options)
       setToast(
-        milesToUse > 0
-          ? `결제 완료 (MILE ${milesToUse.toLocaleString()}M 사용)`
+        options.milesToUse > 0
+          ? `결제 완료 (MILE ${options.milesToUse.toLocaleString()}M 사용)`
           : '결제가 완료 처리되었습니다.',
       )
       setCompleteTarget(null)
@@ -161,44 +164,39 @@ export default function PaymentsPage() {
             확인합니다.
           </div>
 
-          <nav className="chip-scroll -mx-1 px-1">
-            <button
-              type="button"
-              onClick={() => setCategoryFilter('all')}
-              className={`chip ${
-                categoryFilter === 'all' ? 'chip-active' : 'chip-inactive'
-              }`}
-            >
-              전체 항목
-            </button>
-            {PAYMENT_CATEGORIES.map((category) => (
-              <button
-                key={category}
-                type="button"
-                onClick={() => setCategoryFilter(category)}
-                className={`chip ${
-                  categoryFilter === category ? 'chip-active' : 'chip-inactive'
-                }`}
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 text-sm">
+              <span className="text-muted">항목</span>
+              <select
+                value={categoryFilter}
+                onChange={(e) =>
+                  setCategoryFilter(e.target.value as PaymentCategory | 'all')
+                }
+                className="rounded-lg border border-gold/30 bg-white px-3 py-2 text-sm"
               >
-                {PAYMENT_CATEGORY_LABELS[category]}
-              </button>
-            ))}
-          </nav>
-
-          <nav className="chip-scroll -mx-1 px-1">
-            {STATUS_FILTERS.map((filter) => (
-              <button
-                key={filter.id}
-                type="button"
-                onClick={() => setStatusFilter(filter.id)}
-                className={`chip ${
-                  statusFilter === filter.id ? 'chip-active' : 'chip-inactive'
-                }`}
-              >
-                {filter.label}
-              </button>
-            ))}
-          </nav>
+                <option value="all">전체</option>
+                {PAYMENT_CATEGORIES.map((category) => (
+                  <option key={category} value={category}>
+                    {PAYMENT_CATEGORY_LABELS[category]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <nav className="chip-scroll -mx-1 flex-1 px-1">
+              {STATUS_FILTERS.map((filter) => (
+                <button
+                  key={filter.id}
+                  type="button"
+                  onClick={() => setStatusFilter(filter.id)}
+                  className={`chip ${
+                    statusFilter === filter.id ? 'chip-active' : 'chip-inactive'
+                  }`}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </nav>
+          </div>
 
           {toast && (
             <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">

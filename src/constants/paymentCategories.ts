@@ -19,3 +19,10 @@ export const FACILITY_SUB_TYPE_LABELS: Record<FacilitySubType, string> = {
   towel: '수건',
   bundle: '라커 + 수건',
 }
+
+/** PT 외 기간 단위 이용 (시작일·기간일 적용) */
+export function isPeriodPaymentCategory(
+  category: PaymentCategory,
+): category is 'center_pass' | 'locker_towel' {
+  return category === 'center_pass' || category === 'locker_towel'
+}

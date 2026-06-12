@@ -1,19 +1,25 @@
 import { useEffect, useMemo, useState } from 'react'
-import { formatCurrency } from '../../api/members'
+import { formatCurrency, todayDateString } from '../../api/members'
 import type { PaymentRequestWithMember } from '../../api/paymentRequests'
 import {
   calcMaxRedeemableMiles,
   fetchRewardBalance,
 } from '../../api/rewards'
+import { isPeriodPaymentCategory } from '../../constants/paymentCategories'
 import { REDEMPTION_MAX_PERCENT } from '../../constants/rewards'
 import { btnGold, btnOutline, inputClass } from '../../styles/theme'
+
+export type CompletePaymentOptions = {
+  milesToUse: number
+  startsAt?: string
+}
 
 type Props = {
   request: PaymentRequestWithMember | null
   open: boolean
   saving: boolean
   onClose: () => void
-  onConfirm: (milesToUse: number) => Promise<void>
+  onConfirm: (options: CompletePaymentOptions) => Promise<void>
 }
 
 export function CompletePaymentModal({
@@ -25,10 +31,14 @@ export function CompletePaymentModal({
 }: Props) {
   const [availableMiles, setAvailableMiles] = useState(0)
   const [milesInput, setMilesInput] = useState('')
+  const [startsAt, setStartsAt] = useState(todayDateString())
   const [loadingBalance, setLoadingBalance] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const contractAmount = request ? Number(request.amount) : 0
+  const category = request?.category ?? 'pt'
+  const showStartsAt = request ? isPeriodPaymentCategory(category) : false
+
   const maxUsable = useMemo(
     () => calcMaxRedeemableMiles(contractAmount, availableMiles),
     [contractAmount, availableMiles],
@@ -45,6 +55,7 @@ export function CompletePaymentModal({
   useEffect(() => {
     if (!open || !request) return
     setMilesInput('')
+    setStartsAt(request.starts_at ?? todayDateString())
     setError(null)
     setLoadingBalance(true)
     void fetchRewardBalance(request.member_id)
@@ -57,8 +68,15 @@ export function CompletePaymentModal({
 
   async function handleSubmit() {
     setError(null)
+    if (showStartsAt && !startsAt.trim()) {
+      setError('이용 시작일을 입력해 주세요.')
+      return
+    }
     try {
-      await onConfirm(milesToUse)
+      await onConfirm({
+        milesToUse,
+        startsAt: showStartsAt ? startsAt : undefined,
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : '완료 처리에 실패했습니다.')
     }
@@ -102,6 +120,24 @@ export function CompletePaymentModal({
             </dd>
           </div>
         </dl>
+
+        {showStartsAt && (
+          <label className="mt-4 block text-sm">
+            <span className="mb-1 block font-medium text-charcoal">
+              이용 시작일
+            </span>
+            <input
+              type="date"
+              value={startsAt}
+              onChange={(e) => setStartsAt(e.target.value)}
+              className={inputClass}
+              disabled={saving}
+            />
+            <p className="mt-1 text-xs text-muted">
+              결제 완료와 함께 이용권이 이 날짜부터 자동 등록됩니다.
+            </p>
+          </label>
+        )}
 
         <label className="mt-4 block text-sm">
           <span className="mb-1 block font-medium text-charcoal">

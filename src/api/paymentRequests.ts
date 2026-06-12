@@ -24,6 +24,7 @@ function normalizePaymentRequest(row: PaymentRequest): PaymentRequest {
     category: row.category ?? 'pt',
     sessions: row.sessions ?? null,
     duration_days: row.duration_days ?? null,
+    starts_at: row.starts_at ?? null,
   }
 }
 
@@ -115,6 +116,7 @@ export async function createPaymentRequest(input: {
   amount: number
   discountNote?: string | null
   note?: string | null
+  startsAt?: string | null
   createdBy?: string
 }): Promise<PaymentRequest> {
   if (!input.label.trim()) {
@@ -137,6 +139,9 @@ export async function createPaymentRequest(input: {
   } else {
     if (!Number.isInteger(input.durationDays) || (input.durationDays ?? 0) < 1) {
       throw new Error('이용 기간(일)은 1 이상이어야 합니다.')
+    }
+    if (!input.startsAt?.trim()) {
+      throw new Error('이용 시작일을 입력해 주세요.')
     }
   }
 
@@ -161,6 +166,7 @@ export async function createPaymentRequest(input: {
       sessions: input.category === 'pt' ? input.sessions ?? null : null,
       duration_days:
         input.category === 'pt' ? null : input.durationDays ?? null,
+      starts_at: input.category === 'pt' ? null : input.startsAt?.trim() ?? null,
       list_amount: Math.round(input.listAmount),
       amount: Math.round(input.amount),
       discount_amount: discountAmount,
@@ -196,7 +202,7 @@ export async function cancelPaymentRequest(requestId: string): Promise<void> {
 
 export async function completePaymentRequestManually(
   requestId: string,
-  options?: { milesToUse?: number },
+  options?: { milesToUse?: number; startsAt?: string },
 ): Promise<PaymentHistory> {
   const { data: request, error } = await supabase
     .from('payment_requests')
@@ -212,14 +218,18 @@ export async function completePaymentRequestManually(
 
   return fulfillPaymentRequest(
     normalizePaymentRequest(request as PaymentRequest),
-    options?.milesToUse ?? 0,
+    {
+      milesToUse: options?.milesToUse ?? 0,
+      startsAt: options?.startsAt,
+    },
   )
 }
 
 async function fulfillPaymentRequest(
   request: PaymentRequest,
-  milesToUse = 0,
+  options: { milesToUse?: number; startsAt?: string } = {},
 ): Promise<PaymentHistory> {
+  const milesToUse = options.milesToUse ?? 0
   const noteParts = [request.label]
   if (request.discount_note) noteParts.push(request.discount_note)
   if (request.note) noteParts.push(request.note)
@@ -268,7 +278,10 @@ async function fulfillPaymentRequest(
     })
     .eq('id', payment.id)
 
-  const startsAt = todayDateString()
+  const startsAt =
+    options.startsAt?.trim() ||
+    request.starts_at?.trim() ||
+    todayDateString()
   if (category === 'center_pass') {
     await assignCenterPass({
       memberId: request.member_id,

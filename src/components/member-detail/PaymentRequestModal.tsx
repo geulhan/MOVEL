@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { formatCurrency } from '../../api/members'
+import { formatCurrency, todayDateString } from '../../api/members'
 import { fetchCenterPassProducts } from '../../api/centerPasses'
 import {
   fetchFacilityProducts,
@@ -10,6 +10,7 @@ import { fetchPtPricing, getActivePackages } from '../../api/pricing'
 import {
   PAYMENT_CATEGORIES,
   PAYMENT_CATEGORY_LABELS,
+  isPeriodPaymentCategory,
   type PaymentCategory,
 } from '../../constants/paymentCategories'
 import type { PtPackage } from '../../constants/pricing'
@@ -49,6 +50,7 @@ export function PaymentRequestModal({
   const [label, setLabel] = useState('')
   const [sessions, setSessions] = useState('10')
   const [durationDays, setDurationDays] = useState('30')
+  const [startsAt, setStartsAt] = useState(todayDateString())
   const [listAmount, setListAmount] = useState('0')
   const [amount, setAmount] = useState('0')
   const [discountNote, setDiscountNote] = useState('')
@@ -156,9 +158,15 @@ export function PaymentRequestModal({
         onError('PT 횟수는 1 이상이어야 합니다.')
         return
       }
-    } else if (!Number.isInteger(parsedDuration) || parsedDuration < 1) {
-      onError('이용 기간(일)은 1 이상이어야 합니다.')
-      return
+    } else {
+      if (!Number.isInteger(parsedDuration) || parsedDuration < 1) {
+        onError('이용 기간(일)은 1 이상이어야 합니다.')
+        return
+      }
+      if (!startsAt.trim()) {
+        onError('이용 시작일을 입력해 주세요.')
+        return
+      }
     }
     if (!Number.isFinite(parsedAmount) || parsedAmount < 0) {
       onError('결제 금액을 올바르게 입력해 주세요.')
@@ -174,6 +182,7 @@ export function PaymentRequestModal({
         label: label.trim(),
         sessions: category === 'pt' ? parsedSessions : null,
         durationDays: category === 'pt' ? null : parsedDuration,
+        startsAt: isPeriodPaymentCategory(category) ? startsAt : null,
         listAmount: parsedList,
         amount: parsedAmount,
         discountNote: discountNote.trim() || null,
@@ -274,19 +283,33 @@ export function PaymentRequestModal({
                 />
               </label>
             ) : (
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-charcoal/70">
-                  이용 기간 (일)
-                </span>
-                <input
-                  type="number"
-                  min={1}
-                  value={durationDays}
-                  onChange={(e) => setDurationDays(e.target.value)}
-                  className={inputClass}
-                  disabled={saving}
-                />
-              </label>
+              <>
+                <label className="block">
+                  <span className="mb-1 block text-xs font-medium text-charcoal/70">
+                    이용 기간 (일)
+                  </span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={durationDays}
+                    onChange={(e) => setDurationDays(e.target.value)}
+                    className={inputClass}
+                    disabled={saving}
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-xs font-medium text-charcoal/70">
+                    이용 시작일
+                  </span>
+                  <input
+                    type="date"
+                    value={startsAt}
+                    onChange={(e) => setStartsAt(e.target.value)}
+                    className={inputClass}
+                    disabled={saving}
+                  />
+                </label>
+              </>
             )}
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-charcoal/70">
@@ -303,6 +326,12 @@ export function PaymentRequestModal({
               />
             </label>
           </div>
+
+          {isPeriodPaymentCategory(category) && (
+            <p className="text-xs text-muted">
+              결제 완료 시 설정한 시작일부터 이용권이 자동 등록됩니다.
+            </p>
+          )}
 
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-charcoal/70">

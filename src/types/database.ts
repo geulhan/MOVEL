@@ -87,6 +87,7 @@ export type PaymentRequest = {
   label: string
   sessions: number | null
   duration_days: number | null
+  starts_at: string | null
   list_amount: number
   amount: number
   discount_amount: number
@@ -492,6 +493,7 @@ export type Database = {
           label: string
           sessions?: number | null
           duration_days?: number | null
+          starts_at?: string | null
           list_amount: number
           amount: number
           discount_amount?: number

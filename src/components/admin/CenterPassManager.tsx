@@ -15,10 +15,7 @@ import { fetchMembers } from '../../api/members'
 import type { Member } from '../../types/database'
 import { btnGold, cardClass, inputClass } from '../../styles/theme'
 
-type AdminTab = 'passes' | 'assign'
-
 export function CenterPassManager() {
-  const [adminTab, setAdminTab] = useState<AdminTab>('passes')
   const [products, setProducts] = useState<CenterPassProduct[]>([])
   const [passes, setPasses] = useState<CenterPassWithMember[]>([])
   const [members, setMembers] = useState<Member[]>([])
@@ -72,7 +69,6 @@ export function CenterPassManager() {
       setToast('센터 이용권이 등록되었습니다.')
       setNote('')
       await load()
-      setAdminTab('passes')
     } catch (err) {
       setError(err instanceof Error ? err.message : '이용권 등록 실패')
     } finally {
@@ -96,11 +92,6 @@ export function CenterPassManager() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-gold/30 bg-white p-4 text-sm text-muted">
-        PT 횟수와 별개인 <strong className="text-charcoal">센터 기간 이용권</strong>
-        회원 부여·목록을 관리합니다. 결제 요청 완료 시에도 자동 등록됩니다.
-      </div>
-
       {toast && (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           {toast}
@@ -112,30 +103,12 @@ export function CenterPassManager() {
         </div>
       )}
 
-      <nav className="chip-scroll -mx-1 px-1">
-        {(
-          [
-            { id: 'passes' as const, label: '회원 이용권 목록' },
-            { id: 'assign' as const, label: '이용권 부여' },
-          ] as const
-        ).map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setAdminTab(tab.id)}
-            className={`chip ${adminTab === tab.id ? 'chip-active' : 'chip-inactive'}`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </nav>
-
-      {loading ? (
-        <p className="text-sm text-muted">불러오는 중…</p>
-      ) : adminTab === 'assign' ? (
-        <section className={`${cardClass} space-y-4 p-5 sm:p-6`}>
-          <h3 className="text-sm font-bold text-charcoal">회원에게 이용권 부여</h3>
-          <label className="block text-sm">
+      <details className={`${cardClass} group p-5 sm:p-6`}>
+        <summary className="cursor-pointer text-sm font-bold text-charcoal">
+          수동 이용권 부여 (결제 없이)
+        </summary>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <label className="block text-sm sm:col-span-2">
             <span className="mb-1 block text-muted">회원</span>
             <select
               value={memberId}
@@ -151,13 +124,13 @@ export function CenterPassManager() {
             </select>
           </label>
           <label className="block text-sm">
-            <span className="mb-1 block text-muted">상품 (선택)</span>
+            <span className="mb-1 block text-muted">상품</span>
             <select
               value={productId}
               onChange={(e) => setProductId(e.target.value)}
               className={inputClass}
             >
-              <option value="">직접 기간 입력</option>
+              <option value="">직접 입력</option>
               {products.map((product) => (
                 <option key={product.id} value={product.id}>
                   {product.label} ({product.duration_days}일)
@@ -174,7 +147,7 @@ export function CenterPassManager() {
               className={inputClass}
             />
           </label>
-          <label className="block text-sm">
+          <label className="block text-sm sm:col-span-2">
             <span className="mb-1 block text-muted">메모</span>
             <input
               type="text"
@@ -184,17 +157,27 @@ export function CenterPassManager() {
               className={inputClass}
             />
           </label>
-          <button
-            type="button"
-            disabled={saving}
-            onClick={() => void handleAssignPass()}
-            className={btnGold}
-          >
-            {saving ? '등록 중…' : '이용권 등록'}
-          </button>
-        </section>
-      ) : (
-        <section className={`${cardClass} overflow-hidden`}>
+        </div>
+        <button
+          type="button"
+          disabled={saving}
+          onClick={() => void handleAssignPass()}
+          className={`mt-4 ${btnGold}`}
+        >
+          {saving ? '등록 중…' : '이용권 등록'}
+        </button>
+      </details>
+
+      <section className={`${cardClass} overflow-hidden`}>
+        <div className="border-b border-gold/15 px-5 py-3">
+          <h3 className="text-sm font-bold text-charcoal">회원 이용권</h3>
+          <p className="mt-0.5 text-xs text-muted">
+            결제 완료 시 자동 등록됩니다.
+          </p>
+        </div>
+        {loading ? (
+          <p className="px-5 py-8 text-sm text-muted">불러오는 중…</p>
+        ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
@@ -249,8 +232,8 @@ export function CenterPassManager() {
               </tbody>
             </table>
           </div>
-        </section>
-      )}
+        )}
+      </section>
     </div>
   )
 }
