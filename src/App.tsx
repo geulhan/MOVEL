@@ -17,7 +17,6 @@ import TrainersPage from './pages/admin/TrainersPage'
 import RewardsPage from './pages/admin/RewardsPage'
 import MessagesPage from './pages/admin/MessagesPage'
 import PaymentsPage from './pages/admin/PaymentsPage'
-import FacilityPage from './pages/admin/FacilityPage'
 import MemberPortalPage from './pages/MemberPortalPage'
 import TrainerPortalPage from './pages/TrainerPortalPage'
 import HomePage from './pages/HomePage'
@@ -51,7 +50,10 @@ export default function App() {
             <Route path="rewards" element={<RewardsPage />} />
             <Route path="messages" element={<MessagesPage />} />
             <Route path="payments" element={<PaymentsPage />} />
-            <Route path="facility" element={<FacilityPage />} />
+            <Route
+              path="facility"
+              element={<Navigate to="/admin/payments?category=center_pass" replace />}
+            />
           </Route>
         </Route>
         <Route path="/member/:memberId" element={<MemberAdminDetailRedirect />} />

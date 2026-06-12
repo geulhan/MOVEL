@@ -1,15 +1,32 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   PAYMENT_CATEGORIES,
   PAYMENT_CATEGORY_LABELS,
   type PaymentCategory,
 } from '../../constants/paymentCategories'
-import { CenterPassProductEditor } from './CenterPassProductEditor'
+import { CenterPassAdminPanel } from './CenterPassAdminPanel'
 import { LockerTowelProductEditor } from './LockerTowelProductEditor'
 import { PtPricingEditor } from './PtPricingEditor'
 
-export function PaymentCategoryPricingPanel() {
-  const [category, setCategory] = useState<PaymentCategory>('pt')
+type Props = {
+  initialCategory?: PaymentCategory
+  onCategoryChange?: (category: PaymentCategory) => void
+}
+
+export function PaymentCategoryPricingPanel({
+  initialCategory = 'pt',
+  onCategoryChange,
+}: Props) {
+  const [category, setCategory] = useState<PaymentCategory>(initialCategory)
+
+  useEffect(() => {
+    setCategory(initialCategory)
+  }, [initialCategory])
+
+  function selectCategory(next: PaymentCategory) {
+    setCategory(next)
+    onCategoryChange?.(next)
+  }
 
   return (
     <div className="space-y-4">
@@ -18,7 +35,7 @@ export function PaymentCategoryPricingPanel() {
           <button
             key={item}
             type="button"
-            onClick={() => setCategory(item)}
+            onClick={() => selectCategory(item)}
             className={`chip ${category === item ? 'chip-active' : 'chip-inactive'}`}
           >
             {PAYMENT_CATEGORY_LABELS[item]}
@@ -29,7 +46,7 @@ export function PaymentCategoryPricingPanel() {
       {category === 'pt' ? (
         <PtPricingEditor />
       ) : category === 'center_pass' ? (
-        <CenterPassProductEditor />
+        <CenterPassAdminPanel />
       ) : (
         <LockerTowelProductEditor />
       )}

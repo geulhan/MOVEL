@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { formatCurrency, formatPhone } from '../../api/members'
 import {
   cancelPaymentRequest,
@@ -36,7 +36,16 @@ function formatWhen(iso: string | null): string {
   return new Date(iso).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
 }
 
+function parsePricingCategory(value: string | null): PaymentCategory {
+  if (value === 'center_pass' || value === 'locker_towel' || value === 'pt') {
+    return value
+  }
+  return 'pt'
+}
+
 export default function PaymentsPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const pricingCategory = parsePricingCategory(searchParams.get('category'))
   const [adminTab, setAdminTab] = useState<AdminTab>('pricing')
   const [statusFilter, setStatusFilter] = useState<'all' | PaymentRequestStatus>(
     'pending',
@@ -138,7 +147,12 @@ export default function PaymentsPage() {
       </nav>
 
       {adminTab === 'pricing' ? (
-        <PaymentCategoryPricingPanel />
+        <PaymentCategoryPricingPanel
+          initialCategory={pricingCategory}
+          onCategoryChange={(category) => {
+            setSearchParams({ category }, { replace: true })
+          }}
+        />
       ) : (
         <div className="space-y-4">
           <div className="rounded-xl border border-gold/30 bg-white p-4 text-sm text-muted">

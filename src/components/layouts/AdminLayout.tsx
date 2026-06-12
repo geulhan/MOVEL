@@ -9,7 +9,6 @@ const navItems = [
   { to: '/admin/trainers', end: false, label: '트레이너', icon: '★' },
   { to: '/admin/rewards', end: false, label: '마일리지 관리', icon: '◆' },
   { to: '/admin/payments', end: false, label: '결제 관리', icon: '₩' },
-  { to: '/admin/facility', end: false, label: '센터 이용권', icon: '◇' },
   { to: '/admin/messages', end: false, label: '메시지 발송', icon: '✉' },
 ] as const
 

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { PAYMENT_CATEGORY_LABELS } from '../../constants/paymentCategories'
-import { formatCurrency, todayDateString } from '../../api/members'
+import { todayDateString } from '../../api/members'
 import {
   assignCenterPass,
   cancelCenterPass,
@@ -9,18 +8,17 @@ import {
   fetchCenterPassProducts,
   fetchCenterPasses,
   formatCenterPassPeriod,
-  saveCenterPassProduct,
   type CenterPassProduct,
   type CenterPassWithMember,
 } from '../../api/centerPasses'
 import { fetchMembers } from '../../api/members'
 import type { Member } from '../../types/database'
-import { btnGold, btnOutline, cardClass, inputClass } from '../../styles/theme'
+import { btnGold, cardClass, inputClass } from '../../styles/theme'
 
-type AdminTab = 'products' | 'passes' | 'assign'
+type AdminTab = 'passes' | 'assign'
 
 export function CenterPassManager() {
-  const [adminTab, setAdminTab] = useState<AdminTab>('products')
+  const [adminTab, setAdminTab] = useState<AdminTab>('passes')
   const [products, setProducts] = useState<CenterPassProduct[]>([])
   const [passes, setPasses] = useState<CenterPassWithMember[]>([])
   const [members, setMembers] = useState<Member[]>([])
@@ -56,32 +54,6 @@ export function CenterPassManager() {
   useEffect(() => {
     void load()
   }, [load])
-
-  async function handleToggleProduct(product: CenterPassProduct) {
-    setSaving(true)
-    setError(null)
-    try {
-      await saveCenterPassProduct({
-        id: product.id,
-        label: product.label,
-        durationDays: product.duration_days,
-        listAmount: Number(product.list_amount),
-        description: product.description,
-        isActive: !product.is_active,
-        sortOrder: product.sort_order,
-      })
-      setToast(
-        product.is_active
-          ? '상품을 비활성화했습니다.'
-          : '상품을 활성화했습니다. (추후 판매 시 사용)',
-      )
-      await load()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '상품 저장 실패')
-    } finally {
-      setSaving(false)
-    }
-  }
 
   async function handleAssignPass() {
     if (!memberId) {
@@ -126,11 +98,7 @@ export function CenterPassManager() {
     <div className="space-y-4">
       <div className="rounded-xl border border-gold/30 bg-white p-4 text-sm text-muted">
         PT 횟수와 별개인 <strong className="text-charcoal">센터 기간 이용권</strong>
-        입니다. 상품 가격·활성화는{' '}
-        <Link to="/admin/payments" className="font-semibold text-charcoal underline">
-          결제 관리 → {PAYMENT_CATEGORY_LABELS.center_pass}
-        </Link>
-        에서 설정하고, 여기서는 회원 부여·이용권 목록을 관리합니다.
+        회원 부여·목록을 관리합니다. 결제 요청 완료 시에도 자동 등록됩니다.
       </div>
 
       {toast && (
@@ -147,8 +115,7 @@ export function CenterPassManager() {
       <nav className="chip-scroll -mx-1 px-1">
         {(
           [
-            { id: 'products' as const, label: '상품 관리' },
-            { id: 'passes' as const, label: '회원 이용권' },
+            { id: 'passes' as const, label: '회원 이용권 목록' },
             { id: 'assign' as const, label: '이용권 부여' },
           ] as const
         ).map((tab) => (
@@ -165,43 +132,8 @@ export function CenterPassManager() {
 
       {loading ? (
         <p className="text-sm text-muted">불러오는 중…</p>
-      ) : adminTab === 'products' ? (
-        <section className={`${cardClass} overflow-hidden`}>
-          <div className="card-header">
-            <h3 className="text-sm font-bold text-charcoal">이용권 상품</h3>
-          </div>
-          <ul className="divide-y divide-gold/15">
-            {products.map((product) => (
-              <li
-                key={product.id}
-                className="flex flex-wrap items-center justify-between gap-3 px-5 py-4"
-              >
-                <div>
-                  <p className="font-semibold text-charcoal">{product.label}</p>
-                  <p className="mt-1 text-xs text-muted">
-                    {product.duration_days}일 ·{' '}
-                    {Number(product.list_amount) > 0
-                      ? formatCurrency(Number(product.list_amount))
-                      : '가격 미정'}
-                  </p>
-                  {product.description && (
-                    <p className="mt-1 text-xs text-muted">{product.description}</p>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={() => void handleToggleProduct(product)}
-                  className={product.is_active ? btnOutline : btnGold}
-                >
-                  {product.is_active ? '비활성화' : '활성화'}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
       ) : adminTab === 'assign' ? (
-        <section className={`${cardClass} p-5 sm:p-6 space-y-4`}>
+        <section className={`${cardClass} space-y-4 p-5 sm:p-6`}>
           <h3 className="text-sm font-bold text-charcoal">회원에게 이용권 부여</h3>
           <label className="block text-sm">
             <span className="mb-1 block text-muted">회원</span>
