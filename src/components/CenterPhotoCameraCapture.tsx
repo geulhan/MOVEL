@@ -1,6 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+} from 'react'
 import { createPortal } from 'react-dom'
 import {
+  applyTimestampToImageFile,
   blobToCenterPhotoFile,
   capturePhotoWithTimestamp,
   formatCenterPhotoTimestamp,
@@ -18,6 +25,7 @@ type Step = 'camera' | 'preview'
 
 export function CenterPhotoCameraCapture({ onClose, onCapture }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const nativeInputRef = useRef<HTMLInputElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const [step, setStep] = useState<Step>('camera')
   const [loadingCamera, setLoadingCamera] = useState(true)
@@ -60,9 +68,16 @@ export function CenterPhotoCameraCapture({ onClose, onCapture }: Props) {
 
   useEffect(() => {
     document.body.style.overflow = 'hidden'
-    void startCamera()
+    let cancelled = false
+    const frameId = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        if (!cancelled) void startCamera()
+      })
+    })
 
     return () => {
+      cancelled = true
+      window.cancelAnimationFrame(frameId)
       document.body.style.overflow = ''
       stopCamera()
       if (previewUrlRef.current) {
@@ -115,6 +130,34 @@ export function CenterPhotoCameraCapture({ onClose, onCapture }: Props) {
     onCapture(capturedFile)
   }
 
+  async function handleNativeCameraFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file || capturing) return
+
+    setCapturing(true)
+    setError(null)
+    try {
+      const capturedAt = new Date()
+      const blob = await applyTimestampToImageFile(file, capturedAt)
+      const stampedFile = blobToCenterPhotoFile(blob, capturedAt)
+      const url = URL.createObjectURL(blob)
+
+      if (previewUrl) URL.revokeObjectURL(previewUrl)
+      stopCamera()
+
+      setPreviewUrl(url)
+      setCapturedFile(stampedFile)
+      setStep('preview')
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : '사진 처리에 실패했습니다.',
+      )
+    } finally {
+      setCapturing(false)
+    }
+  }
+
   const timestampLabel = formatCenterPhotoTimestamp(now)
 
   const content = (
@@ -150,13 +193,11 @@ export function CenterPhotoCameraCapture({ onClose, onCapture }: Props) {
                 autoPlay
                 muted
                 playsInline
-                className={`h-full w-full object-cover ${
-                  loadingCamera ? 'opacity-0' : 'opacity-100'
-                }`}
+                className="h-full w-full object-cover"
               />
 
               {loadingCamera && (
-                <div className="absolute inset-0 flex items-center justify-center text-sm text-cream/70">
+                <div className="absolute inset-0 flex items-center justify-center bg-black/70 text-sm text-cream/80">
                   카메라 준비 중…
                 </div>
               )}
@@ -219,15 +260,44 @@ export function CenterPhotoCameraCapture({ onClose, onCapture }: Props) {
       )}
 
       {error && (
-        <p
-          className="shrink-0 px-4 pb-3 text-center text-sm text-red-200"
+        <div
+          className="shrink-0 space-y-3 px-4 pb-3 text-center"
           style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
         >
-          <span className="inline-block rounded-lg border border-red-300/40 bg-red-950/40 px-3 py-2">
-            {error}
-          </span>
-        </p>
+          <p className="text-sm text-red-200">
+            <span className="inline-block rounded-lg border border-red-300/40 bg-red-950/40 px-3 py-2">
+              {error}
+            </span>
+          </p>
+          <div className="flex flex-wrap justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => void startCamera()}
+              className={`${btnOutline} border-cream/30 bg-transparent px-4 py-2 text-sm text-cream hover:bg-cream/10`}
+            >
+              다시 시도
+            </button>
+            <button
+              type="button"
+              onClick={() => nativeInputRef.current?.click()}
+              disabled={capturing}
+              className={`${btnGold} px-4 py-2 text-sm`}
+            >
+              기본 카메라 앱으로 촬영
+            </button>
+          </div>
+        </div>
       )}
+
+      <input
+        ref={nativeInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="sr-only"
+        aria-hidden
+        onChange={(event) => void handleNativeCameraFile(event)}
+      />
     </div>
   )
 
