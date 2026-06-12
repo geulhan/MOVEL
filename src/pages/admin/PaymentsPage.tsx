@@ -19,6 +19,7 @@ import {
 import { CompletePaymentModal } from '../../components/admin/CompletePaymentModal'
 import { ContractInstancesPanel } from '../../components/admin/ContractInstancesPanel'
 import { PaymentCategoryPricingPanel } from '../../components/admin/PaymentCategoryPricingPanel'
+import { PaymentRequestSenderPanel } from '../../components/admin/PaymentRequestSenderPanel'
 import { PageHeader } from '../../components/admin/PageHeader'
 import {
   PAYMENT_CATEGORIES,
@@ -151,7 +152,7 @@ export default function PaymentsPage() {
     <div className="space-y-6">
       <PageHeader
         title="결제 관리"
-        description="PT · 센터 이용권 · 라커·수건 상품 설정, 결제 요청(할인), 오프라인 완료 처리 및 MILE 사용을 관리합니다."
+        description="상품·가격 설정, 회원 선택 후 결제 요청, 계약서·오프라인 완료 처리 및 MILE 사용을 관리합니다."
       />
 
       <nav className="chip-scroll -mx-1 px-1">
@@ -189,11 +190,11 @@ export default function PaymentsPage() {
         />
       ) : (
         <div className="space-y-4">
-          <div className="rounded-xl border border-gold/30 bg-white p-4 text-sm text-muted">
-            회원 상세 → PT·결제 탭에서 카테고리별 「결제 요청 보내기」로
-            할인가를 포함한 요청을 보낼 수 있습니다. 회원 앱 결제 탭에서
-            확인합니다.
-          </div>
+          <PaymentRequestSenderPanel
+            onSent={() => void load()}
+            onError={setError}
+            onToast={setToast}
+          />
 
           <div className="flex flex-wrap items-center gap-3">
             <label className="flex items-center gap-2 text-sm">
