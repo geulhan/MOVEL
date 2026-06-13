@@ -10,9 +10,11 @@ import {
   getMemberSession,
   type AttendanceLog,
 } from '../api/memberPortal'
+import { ConfirmModal } from '../components/ConfirmModal'
 import { SiteUrlCopy } from '../components/SiteUrlCopy'
 import { MemberMyPageSection } from '../components/MemberMyPageSection'
 import { getMemberPortalUrl } from '../lib/siteUrl'
+import { getErrorMessage } from '../lib/errors'
 import { closeVerificationCodePiP } from '../lib/verificationCodePip'
 import {
   clearRememberedMemberLogin,
@@ -65,6 +67,7 @@ export default function MemberPortalPage() {
     [],
   )
   const [checkInLoading, setCheckInLoading] = useState(false)
+  const [checkInConfirmOpen, setCheckInConfirmOpen] = useState(false)
   const [portalError, setPortalError] = useState<string | null>(null)
   const [refreshToken, setRefreshToken] = useState(0)
 
@@ -183,22 +186,26 @@ export default function MemberPortalPage() {
     setTab('home')
   }
 
-  async function handleCheckIn() {
+  function requestCheckIn() {
     if (!member) return
-    if (
-      !window.confirm(
-        `출석 처리할까요?\nPT 1회가 차감됩니다. (잔여 ${member.remaining_sessions}회)`,
-      )
-    ) {
-      return
-    }
+    setPortalError(null)
+    setCheckInConfirmOpen(true)
+  }
+
+  async function executeCheckIn() {
+    if (!member) return
     setCheckInLoading(true)
     setPortalError(null)
     try {
       await checkIn(member.id)
-      await loadMemberData(member.id)
+      setCheckInConfirmOpen(false)
+      try {
+        await loadMemberData(member.id)
+      } catch (reloadErr) {
+        console.warn('출석 후 회원 정보 갱신 실패:', reloadErr)
+      }
     } catch (err) {
-      setPortalError(err instanceof Error ? err.message : '출석 실패')
+      setPortalError(getErrorMessage(err))
     } finally {
       setCheckInLoading(false)
     }
@@ -528,7 +535,7 @@ export default function MemberPortalPage() {
             todayAttendance,
             recentAttendance,
             checkInLoading,
-            onCheckIn: () => void handleCheckIn(),
+            onCheckIn: requestCheckIn,
             memberStatus: member.status,
             remainingSessions: member.remaining_sessions,
             memberExpired,
@@ -559,6 +566,22 @@ export default function MemberPortalPage() {
           <MemberInbodySection memberId={member.id} createdBy="member" />
         )}
       </PullToRefresh>
+
+      <ConfirmModal
+        open={checkInConfirmOpen}
+        title="출석 처리"
+        message={
+          member
+            ? `출석 처리할까요?\nPT 1회가 차감됩니다. (잔여 ${member.remaining_sessions}회)`
+            : ''
+        }
+        confirmLabel="출석하기"
+        loading={checkInLoading}
+        onConfirm={() => void executeCheckIn()}
+        onCancel={() => {
+          if (!checkInLoading) setCheckInConfirmOpen(false)
+        }}
+      />
     </MemberLayout>
   )
 }

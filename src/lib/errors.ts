@@ -35,3 +35,15 @@ export function formatSupabaseError(err: unknown): string {
 
   return msg || '요청 처리 중 오류가 발생했습니다.'
 }
+
+/** catch 블록에서 사용자에게 보여줄 메시지 (Supabase·Error·기타 객체 통합) */
+export function getErrorMessage(err: unknown): string {
+  if (err instanceof Error && err.message) return err.message
+  const formatted = formatSupabaseError(err)
+  if (formatted !== '알 수 없는 오류가 발생했습니다.') return formatted
+  if (err && typeof err === 'object' && 'message' in err) {
+    const msg = (err as { message?: unknown }).message
+    if (typeof msg === 'string' && msg.trim()) return msg
+  }
+  return '요청 처리 중 오류가 발생했습니다.'
+}

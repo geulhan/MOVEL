@@ -1,4 +1,4 @@
-import { getCurrentCenterId } from '../lib/center'
+import { getCurrentCenterId, resolveCenterIdForMember } from '../lib/center'
 import { supabase } from '../lib/supabase'
 import type { Member } from '../types/database'
 import { localDayEndIso, localDayStartIso } from '../utils/date'
@@ -12,7 +12,7 @@ import {
   type PtSchedule,
   type ScheduleStatus,
 } from './schedule'
-import { deductSession, fetchMembers, restoreOneSession } from './members'
+import { deductSession, fetchMembers, restoreOneSession, assertMemberCanCheckIn, normalizeMember } from './members'
 
 export type AttendanceMethod = 'self' | 'admin' | 'trainer'
 
@@ -33,8 +33,9 @@ type AttendanceRow = {
 
 export async function fetchTodayAttendanceForMember(
   memberId: string,
+  centerId?: string,
 ): Promise<AttendanceRow | null> {
-  const { data, error } = await supabase
+  let query = supabase
     .from('attendance_logs')
     .select('id, member_id, checked_in_at, method')
     .eq('member_id', memberId)
@@ -42,7 +43,12 @@ export async function fetchTodayAttendanceForMember(
     .lte('checked_in_at', localDayEndIso())
     .order('checked_in_at', { ascending: false })
     .limit(1)
-    .maybeSingle()
+
+  if (centerId) {
+    query = query.eq('center_id', centerId)
+  }
+
+  const { data, error } = await query.maybeSingle()
 
   if (error) throw error
   return data as AttendanceRow | null
@@ -72,44 +78,74 @@ export async function checkInMember(
   memberId: string,
   method: AttendanceMethod = 'admin',
 ): Promise<CheckInResult> {
-  const existing = await fetchTodayAttendanceForMember(memberId)
+  const centerId = await resolveCenterIdForMember(memberId)
+
+  const existing = await fetchTodayAttendanceForMember(memberId, centerId)
   if (existing) {
     throw new Error('오늘은 이미 출석 처리되었습니다.')
   }
 
-  const member = await deductSession(memberId)
-
-  const centerId = await getCurrentCenterId()
-  const { data, error } = await supabase
-    .from('attendance_logs')
-    .insert({ center_id: centerId, member_id: memberId, method })
-    .select('id, member_id, checked_in_at, method')
+  const { data: memberRow, error: memberError } = await supabase
+    .from('members')
+    .select('*')
+    .eq('id', memberId)
     .single()
 
-  if (error) throw error
+  if (memberError) throw memberError
+  const memberPreview = normalizeMember(memberRow)
+  assertMemberCanCheckIn(memberPreview)
 
-  const attendance = data as AttendanceRow
+  const memberCenterId = memberPreview.center_id ?? centerId
 
+  let deducted = false
   try {
-    const schedules = await fetchMemberSchedules(memberId, {
-      includePastDays: 0,
-      futureDays: 1,
-    })
-    const todaySchedules = getTodayScheduledPts(schedules)
-    await Promise.all(
-      todaySchedules.map((s) => updateScheduleStatus(s.id, 'completed')),
-    )
-  } catch (scheduleErr) {
-    console.warn('스케줄 완료 처리 실패:', scheduleErr)
-  }
+    const member = await deductSession(memberId)
+    deducted = true
 
-  try {
-    await awardPtAttendance(memberId, attendance.id)
-  } catch (rewardErr) {
-    console.warn('리워드 적립 실패:', rewardErr)
-  }
+    const { data, error } = await supabase
+      .from('attendance_logs')
+      .insert({
+        center_id: memberCenterId,
+        member_id: memberId,
+        method,
+      })
+      .select('id, member_id, checked_in_at, method')
+      .single()
 
-  return { member, attendance }
+    if (error) throw error
+
+    const attendance = data as AttendanceRow
+
+    try {
+      const schedules = await fetchMemberSchedules(memberId, {
+        includePastDays: 0,
+        futureDays: 1,
+      })
+      const todaySchedules = getTodayScheduledPts(schedules)
+      await Promise.all(
+        todaySchedules.map((s) => updateScheduleStatus(s.id, 'completed')),
+      )
+    } catch (scheduleErr) {
+      console.warn('스케줄 완료 처리 실패:', scheduleErr)
+    }
+
+    try {
+      await awardPtAttendance(memberId, attendance.id)
+    } catch (rewardErr) {
+      console.warn('리워드 적립 실패:', rewardErr)
+    }
+
+    return { member, attendance }
+  } catch (err) {
+    if (deducted) {
+      try {
+        await restoreOneSession(memberId)
+      } catch (rollbackErr) {
+        console.warn('출석 실패 후 PT 복구 실패:', rollbackErr)
+      }
+    }
+    throw err
+  }
 }
 
 

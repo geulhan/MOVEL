@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase'
-import { getCurrentCenterId } from '../lib/center'
+import { getCurrentCenterId, resolveCenterIdForMember } from '../lib/center'
 import { normalizeMember } from '../lib/memberNormalize'
 import type { Member, MemberInsert, MemberStatus } from '../types/database'
 import { notifyMemberWelcome, notifyPaymentDone } from './notifications'
@@ -185,16 +185,7 @@ export async function deductSession(memberId: string): Promise<Member> {
 
   if (fetchError) throw fetchError
   const member = normalizeMember(current)
-
-  if (member.status !== 'active') {
-    throw new Error('활성 상태 회원만 PT 차감할 수 있습니다.')
-  }
-  if (member.remaining_sessions <= 0) {
-    throw new Error('남은 PT 횟수가 없습니다.')
-  }
-  if (member.expires_at && isExpired(member.expires_at)) {
-    throw new Error('만료일이 지난 회원입니다.')
-  }
+  assertMemberCanCheckIn(member)
 
   const newRemaining = member.remaining_sessions - 1
 
@@ -207,8 +198,9 @@ export async function deductSession(memberId: string): Promise<Member> {
 
   if (error) throw error
 
+  const centerId = member.center_id ?? (await resolveCenterIdForMember(memberId))
   const { error: logError } = await supabase.from('session_logs').insert({
-    center_id: await getCurrentCenterId(),
+    center_id: centerId,
     member_id: memberId,
     quantity: 1,
     remaining_after: newRemaining,
@@ -287,4 +279,17 @@ export function todayDateString(): string {
 
 export function isExpired(expiresAt: string): boolean {
   return expiresAt < todayDateString()
+}
+
+/** 출석·PT 차감 가능 여부 (잔여 횟수 + 사용기간) */
+export function assertMemberCanCheckIn(member: Member): void {
+  if (member.status !== 'active') {
+    throw new Error('활성 상태 회원만 출석할 수 있습니다.')
+  }
+  if (member.remaining_sessions <= 0) {
+    throw new Error('남은 PT 횟수가 없습니다.')
+  }
+  if (member.expires_at && isExpired(member.expires_at)) {
+    throw new Error('만료일이 지난 회원입니다.')
+  }
 }

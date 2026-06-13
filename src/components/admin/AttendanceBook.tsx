@@ -9,7 +9,7 @@ import {
 } from '../../api/attendance'
 import { fetchMembers, formatPhone, isExpired } from '../../api/members'
 import { fetchTodayScheduledMemberIdsForTrainer } from '../../api/schedule'
-import { formatSupabaseError } from '../../lib/errors'
+import { formatSupabaseError, getErrorMessage } from '../../lib/errors'
 import { SearchBar } from '../SearchBar'
 import type { Member } from '../../types/database'
 import { btnGold, btnOutline, cardClass } from '../../styles/theme'
@@ -148,9 +148,7 @@ export function AttendanceBook({
       )
       await load()
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : '출석 처리에 실패했습니다.',
-      )
+      setError(getErrorMessage(err))
     } finally {
       setCheckingInId(null)
     }

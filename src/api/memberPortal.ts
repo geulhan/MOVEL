@@ -1,4 +1,9 @@
-import { getCurrentCenterId } from '../lib/center'
+import {
+  getPersistedItem,
+  removePersistedItem,
+  setPersistedItem,
+} from '../lib/browserStorage'
+import { resolveCenterIdForMember } from '../lib/center'
 import { normalizeMember } from '../lib/memberNormalize'
 import { supabase } from '../lib/supabase'
 import type { Member } from '../types/database'
@@ -23,7 +28,7 @@ export type AttendanceLog = {
 
 export async function findMemberByPhone(phone: string): Promise<Member | null> {
   const digits = normalizePhone(phone)
-  const centerId = await getCurrentCenterId()
+  const centerId = await resolveCenterIdForMember()
   const { data, error } = await supabase
     .from('members')
     .select('*')
@@ -42,7 +47,8 @@ export async function fetchJournals(memberId: string): Promise<ExerciseJournal[]
 export async function fetchTodayAttendance(
   memberId: string,
 ): Promise<AttendanceLog | null> {
-  return fetchTodayAttendanceForMember(memberId)
+  const centerId = await resolveCenterIdForMember(memberId)
+  return fetchTodayAttendanceForMember(memberId, centerId)
 }
 
 export async function checkIn(memberId: string): Promise<AttendanceLog> {
@@ -54,7 +60,7 @@ export async function fetchRecentAttendance(
   memberId: string,
   limit = 10,
 ): Promise<AttendanceLog[]> {
-  const centerId = await getCurrentCenterId()
+  const centerId = await resolveCenterIdForMember(memberId)
   const { data, error } = await supabase
     .from('attendance_logs')
     .select('*')
@@ -71,21 +77,21 @@ const SESSION_KEY = 'mobel_member_id'
 const TOKEN_KEY = 'mobel_member_token'
 
 export function saveMemberSession(memberId: string, token?: string): void {
-  sessionStorage.setItem(SESSION_KEY, memberId)
+  setPersistedItem(SESSION_KEY, memberId)
   if (token) {
-    sessionStorage.setItem(TOKEN_KEY, token)
+    setPersistedItem(TOKEN_KEY, token)
   }
 }
 
 export function getMemberSession(): string | null {
-  return sessionStorage.getItem(SESSION_KEY)
+  return getPersistedItem(SESSION_KEY)
 }
 
 export function getMemberAuthToken(): string | null {
-  return sessionStorage.getItem(TOKEN_KEY)
+  return getPersistedItem(TOKEN_KEY)
 }
 
 export function clearMemberSession(): void {
-  sessionStorage.removeItem(SESSION_KEY)
-  sessionStorage.removeItem(TOKEN_KEY)
+  removePersistedItem(SESSION_KEY)
+  removePersistedItem(TOKEN_KEY)
 }

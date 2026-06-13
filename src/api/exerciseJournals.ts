@@ -1,4 +1,4 @@
-import { getCurrentCenterId } from '../lib/center'
+import { resolveCenterIdForMember } from '../lib/center'
 import { supabase } from '../lib/supabase'
 
 export type ExerciseJournalCreatedBy = 'member' | 'trainer' | 'admin'
@@ -68,7 +68,7 @@ export async function uploadExerciseJournalPhotos(
 export async function fetchExerciseJournals(
   memberId: string,
 ): Promise<ExerciseJournal[]> {
-  const centerId = await getCurrentCenterId()
+  const centerId = await resolveCenterIdForMember(memberId)
   const { data, error } = await supabase
     .from('exercise_journals')
     .select('*')
@@ -98,7 +98,11 @@ export async function createExerciseJournal(
 
   const image_urls = await uploadExerciseJournalPhotos(memberId, photoFiles)
 
-  const centerId = await getCurrentCenterId()
+  const centerId = await resolveCenterIdForMember(memberId)
+  if (!centerId) {
+    throw new Error('센터 정보를 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.')
+  }
+
   const { data, error } = await supabase
     .from('exercise_journals')
     .insert({

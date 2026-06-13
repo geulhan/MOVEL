@@ -6,7 +6,7 @@ import {
   type ExerciseJournal,
 } from '../../api/exerciseJournals'
 import { formatDate } from '../../api/members'
-import { formatSupabaseError } from '../../lib/errors'
+import { getErrorMessage } from '../../lib/errors'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/theme'
 import { ExerciseJournalPhotoGallery } from './ExerciseJournalPhotoGallery'
 import { ExerciseJournalPhotoPicker } from './ExerciseJournalPhotoPicker'
@@ -36,7 +36,7 @@ export function MemberJournalPortalSection({ memberId }: Props) {
     try {
       setJournals(await fetchExerciseJournals(memberId))
     } catch (err) {
-      setError(formatSupabaseError(err))
+      setError(getErrorMessage(err))
       setJournals([])
     } finally {
       setLoading(false)
@@ -69,7 +69,7 @@ export function MemberJournalPortalSection({ memberId }: Props) {
       setPhotoFiles([])
       await load()
     } catch (err) {
-      setError(formatSupabaseError(err))
+      setError(getErrorMessage(err))
     } finally {
       setSaving(false)
     }
@@ -83,7 +83,7 @@ export function MemberJournalPortalSection({ memberId }: Props) {
       await deleteExerciseJournal(journalId)
       await load()
     } catch (err) {
-      setError(formatSupabaseError(err))
+      setError(getErrorMessage(err))
     } finally {
       setDeletingId(null)
     }

@@ -4,6 +4,7 @@ import type { Member, MemberStatus } from '../types/database'
 export function normalizeMember(row: Record<string, unknown>): Member {
   return {
     id: String(row.id),
+    center_id: row.center_id ? String(row.center_id) : undefined,
     name: String(row.name),
     phone: String(row.phone),
     total_sessions: Number(row.total_sessions),

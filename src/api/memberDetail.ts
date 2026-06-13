@@ -11,14 +11,30 @@ import type {
 
 export async function fetchMemberById(id: string): Promise<Member> {
   const centerId = await getCurrentCenterId()
-  const { data, error } = await supabase
+  const { data: scoped, error: scopedError } = await supabase
     .from('members')
     .select('*')
     .eq('id', id)
     .eq('center_id', centerId)
-    .single()
+    .maybeSingle()
+
+  if (scopedError) throw scopedError
+
+  if (scoped) {
+    return normalizeMember(scoped)
+  }
+
+  const { data, error } = await supabase
+    .from('members')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
 
   if (error) throw error
+  if (!data) {
+    throw new Error('회원을 찾을 수 없습니다.')
+  }
+
   return normalizeMember(data)
 }
 

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   fetchMemberSchedules,
   getTodayScheduledPts,
-  hasScheduledPtToday,
   scheduleStatusLabel,
   type PtSchedule,
 } from '../api/schedule'
@@ -133,10 +132,7 @@ function ScheduleCard({
   )
 }
 
-function resolveCheckInBlockReason(
-  checkIn: CheckInProps,
-  hasTodayPt: boolean,
-): string | null {
+function resolveCheckInBlockReason(checkIn: CheckInProps): string | null {
   if (checkIn.todayAttendance) return null
   if (checkIn.memberStatus !== 'active') {
     return '활성 회원만 출석할 수 있습니다.'
@@ -146,9 +142,6 @@ function resolveCheckInBlockReason(
   }
   if (checkIn.memberExpired) {
     return '회원권 만료일이 지나 출석할 수 없습니다.'
-  }
-  if (!hasTodayPt) {
-    return '오늘 PT 예약이 있어야 출석할 수 있습니다.'
   }
   return null
 }
@@ -189,7 +182,6 @@ export function MemberScheduleSection({ memberId, checkIn }: Props) {
 
   const todaySchedules = getTodayScheduledPts(schedules)
   const futureSchedules = getFutureScheduledPts(schedules)
-  const hasTodayPt = hasScheduledPtToday(schedules)
   const attendedToday = Boolean(checkIn?.todayAttendance)
   const checkedInAt = checkIn?.todayAttendance?.checked_in_at ?? null
 
@@ -198,13 +190,10 @@ export function MemberScheduleSection({ memberId, checkIn }: Props) {
       !checkIn.todayAttendance &&
       checkIn.memberStatus === 'active' &&
       checkIn.remainingSessions > 0 &&
-      !checkIn.memberExpired &&
-      hasTodayPt,
+      !checkIn.memberExpired,
   )
 
-  const checkInBlockReason = checkIn
-    ? resolveCheckInBlockReason(checkIn, hasTodayPt)
-    : null
+  const checkInBlockReason = checkIn ? resolveCheckInBlockReason(checkIn) : null
 
   const pastAttendance =
     checkIn?.recentAttendance.filter(
