@@ -11,6 +11,7 @@ import {
 import { fetchMembers } from '../../api/members'
 import { PageHeader } from '../../components/admin/PageHeader'
 import { CenterPhotoSubmissionsPanel } from '../../components/admin/CenterPhotoSubmissionsPanel'
+import { RewardRulesEditor } from '../../components/admin/RewardRulesEditor'
 import { StepVerificationsPanel } from '../../components/admin/StepVerificationsPanel'
 import {
   REWARD_EVENT_LABELS,
@@ -21,7 +22,7 @@ import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/them
 import type { Member } from '../../types/database'
 
 type HistoryTab = 'earn' | 'spend'
-type RewardsAdminTab = 'balances' | 'steps' | 'center_photo'
+type RewardsAdminTab = 'balances' | 'rules' | 'steps' | 'center_photo'
 
 export default function RewardsPage() {
   const [adminTab, setAdminTab] = useState<RewardsAdminTab>('balances')
@@ -135,7 +136,7 @@ export default function RewardsPage() {
     <div className="space-y-6">
       <PageHeader
         title="마일리지 관리"
-        description="회원별 MOVE MILE · SCORE 조회, 걸음·센터 인증 검수, 수동 적립·차감"
+        description="회원별 MOVE MILE · SCORE 조회, 적립 포인트 설정, 걸음·센터 인증 검수"
       />
 
       <nav className="chip-scroll -mx-1 px-1">
@@ -145,6 +146,13 @@ export default function RewardsPage() {
           className={`chip ${adminTab === 'balances' ? 'chip-active' : 'chip-inactive'}`}
         >
           잔액 · 수동 조정
+        </button>
+        <button
+          type="button"
+          onClick={() => setAdminTab('rules')}
+          className={`chip ${adminTab === 'rules' ? 'chip-active' : 'chip-inactive'}`}
+        >
+          적립 포인트
         </button>
         <button
           type="button"
@@ -161,6 +169,8 @@ export default function RewardsPage() {
           센터 인증
         </button>
       </nav>
+
+      {adminTab === 'rules' ? <RewardRulesEditor /> : null}
 
       {adminTab === 'steps' ? (
         <StepVerificationsPanel />

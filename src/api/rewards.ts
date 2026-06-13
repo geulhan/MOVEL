@@ -6,6 +6,7 @@ import {
   REWARD_EVENT_LABELS,
   STEP_REWARD_TIERS,
   STREAK_DAYS,
+  type RewardEarnRules,
   type RewardEventType,
   type RewardTier,
 } from '../constants/rewards'
@@ -40,7 +41,46 @@ export type RewardTransaction = {
 }
 
 type EarnRule = { score: number; mile: number }
-type EarnRules = typeof DEFAULT_REWARD_RULES
+
+export type { RewardEarnRules } from '../constants/rewards'
+
+function clampNonNegInt(value: unknown, fallback: number): number {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return fallback
+  return Math.max(0, Math.round(parsed))
+}
+
+function normalizeEarnRule(value: unknown, fallback: EarnRule): EarnRule {
+  if (!value || typeof value !== 'object') return fallback
+  const row = value as Record<string, unknown>
+  return {
+    score: clampNonNegInt(row.score, fallback.score),
+    mile: clampNonNegInt(row.mile, fallback.mile),
+  }
+}
+
+export function normalizeEarnRules(
+  value: Partial<RewardEarnRules> | null | undefined,
+): RewardEarnRules {
+  const defaults = DEFAULT_REWARD_RULES
+  return {
+    pt_attendance: normalizeEarnRule(value?.pt_attendance, defaults.pt_attendance),
+    steps_7000: normalizeEarnRule(value?.steps_7000, defaults.steps_7000),
+    steps_10000: normalizeEarnRule(value?.steps_10000, defaults.steps_10000),
+    steps_15000: normalizeEarnRule(value?.steps_15000, defaults.steps_15000),
+    exercise_journal: normalizeEarnRule(
+      value?.exercise_journal,
+      defaults.exercise_journal,
+    ),
+    streak_7day: normalizeEarnRule(value?.streak_7day, defaults.streak_7day),
+    naver_review: normalizeEarnRule(value?.naver_review, defaults.naver_review),
+    center_photo: normalizeEarnRule(value?.center_photo, defaults.center_photo),
+    referral_percent: clampNonNegInt(
+      value?.referral_percent,
+      defaults.referral_percent,
+    ),
+  }
+}
 
 export type StepRewardTierAward = {
   eventType: RewardEventType
@@ -59,7 +99,7 @@ export type StepRewardResult = {
 
 export function computeStepTierAwards(
   stepCount: number,
-  rules: EarnRules = DEFAULT_REWARD_RULES,
+  rules: RewardEarnRules = DEFAULT_REWARD_RULES,
 ): StepRewardTierAward[] {
   return STEP_REWARD_TIERS.filter((tier) => stepCount >= tier.min).map(
     (tier) => {
@@ -84,7 +124,7 @@ export function formatStepRewardSummary(result: StepRewardResult): string {
   return `${result.stepCount.toLocaleString()}보 인증 · 합계 SCORE +${result.totalScore} · MILE +${result.totalMile.toLocaleString()}M (${detail})`
 }
 
-export async function fetchRewardEarnRules(): Promise<EarnRules> {
+export async function fetchRewardEarnRules(): Promise<RewardEarnRules> {
   const { data, error } = await supabase
     .from('reward_settings')
     .select('setting_value')
@@ -96,7 +136,57 @@ export async function fetchRewardEarnRules(): Promise<EarnRules> {
   if (error) throw error
   const row = data?.[0]
   if (!row?.setting_value) return DEFAULT_REWARD_RULES
-  return { ...DEFAULT_REWARD_RULES, ...(row.setting_value as Partial<EarnRules>) }
+  return normalizeEarnRules(row.setting_value as Partial<RewardEarnRules>)
+}
+
+export async function saveRewardEarnRules(rules: RewardEarnRules): Promise<void> {
+  const normalized = normalizeEarnRules(rules)
+  if (normalized.referral_percent > 100) {
+    throw new Error('지인 소개 적립 비율은 100% 이하여야 합니다.')
+  }
+
+  const payload = {
+    setting_value: normalized,
+    description: 'MOVE SCORE · MILE 적립 규칙',
+    updated_at: new Date().toISOString(),
+  }
+
+  const { data: existingRows, error: fetchError } = await supabase
+    .from('reward_settings')
+    .select('id')
+    .eq('setting_key', 'earn_rules')
+    .is('branch_id', null)
+    .order('updated_at', { ascending: false })
+
+  if (fetchError) throw fetchError
+
+  const primary = existingRows?.[0]
+  if (primary) {
+    const { error } = await supabase
+      .from('reward_settings')
+      .update(payload)
+      .eq('id', primary.id)
+    if (error) throw error
+
+    const duplicateIds = (existingRows ?? []).slice(1).map((row) => row.id)
+    if (duplicateIds.length > 0) {
+      const { error: deleteError } = await supabase
+        .from('reward_settings')
+        .delete()
+        .in('id', duplicateIds)
+      if (deleteError) throw deleteError
+    }
+    return
+  }
+
+  const { error } = await supabase.from('reward_settings').insert({
+    branch_id: null,
+    setting_key: 'earn_rules',
+    setting_value: payload.setting_value,
+    description: payload.description,
+  })
+
+  if (error) throw error
 }
 
 async function ensureBalance(memberId: string): Promise<{

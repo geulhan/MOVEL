@@ -36,7 +36,21 @@ export function getNextTier(score: number): {
 export const MIN_STEPS_FOR_VERIFICATION = 7000
 
 /** 기본 적립 규칙 (reward_settings 미설정 시 폴백) */
-export const DEFAULT_REWARD_RULES = {
+export type RewardEarnRule = { score: number; mile: number }
+
+export type RewardEarnRules = {
+  pt_attendance: RewardEarnRule
+  steps_7000: RewardEarnRule
+  steps_10000: RewardEarnRule
+  steps_15000: RewardEarnRule
+  exercise_journal: RewardEarnRule
+  streak_7day: RewardEarnRule
+  naver_review: RewardEarnRule
+  center_photo: RewardEarnRule
+  referral_percent: number
+}
+
+export const DEFAULT_REWARD_RULES: RewardEarnRules = {
   pt_attendance: { score: 20, mile: 500 },
   steps_7000: { score: 10, mile: 300 },
   steps_10000: { score: 15, mile: 500 },
@@ -46,7 +60,7 @@ export const DEFAULT_REWARD_RULES = {
   naver_review: { score: 0, mile: 10000 },
   center_photo: { score: 20, mile: 500 },
   referral_percent: 10,
-} as const
+}
 
 export const MILE_EXPIRY_MONTHS = 12
 export const REDEMPTION_MAX_PERCENT = 20

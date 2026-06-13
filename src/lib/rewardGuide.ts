@@ -1,5 +1,6 @@
 import {
   DEFAULT_REWARD_RULES,
+  type RewardEarnRules,
   MILE_EXPIRY_MONTHS,
   REDEMPTION_MAX_PERCENT,
   REWARD_EVENT_LABELS,
@@ -9,7 +10,7 @@ import {
   TIER_THRESHOLDS,
 } from '../constants/rewards'
 
-type EarnRules = typeof DEFAULT_REWARD_RULES
+type EarnRules = RewardEarnRules
 
 export type MemberRewardGuideRow = {
   key: string
@@ -50,6 +51,13 @@ export function buildMemberRewardGuide(
       description: 'PT 수업 출석 시',
       score: formatRewardAmount(rules.pt_attendance.score, '점'),
       mile: formatRewardAmount(rules.pt_attendance.mile, 'M'),
+    },
+    {
+      key: 'exercise_journal',
+      title: REWARD_EVENT_LABELS.exercise_journal,
+      description: '운동일지 작성 시',
+      score: formatRewardAmount(rules.exercise_journal.score, '점'),
+      mile: formatRewardAmount(rules.exercise_journal.mile, 'M'),
     },
     {
       key: 'streak_7day',
