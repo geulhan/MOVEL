@@ -26,6 +26,28 @@ function todayKst(): string {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
 }
 
+async function resolveNotificationCenterId(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  memberCenterId?: string | null,
+): Promise<string | null> {
+  if (memberCenterId) return String(memberCenterId)
+
+  const { data: rpcId, error: rpcError } = await supabase.rpc(
+    'get_default_center_id',
+  )
+  if (!rpcError && rpcId) return String(rpcId)
+
+  const { data: center, error: centerError } = await supabase
+    .from('centers')
+    .select('id')
+    .eq('slug', 'movel')
+    .eq('status', 'active')
+    .maybeSingle()
+
+  if (!centerError && center?.id) return String(center.id)
+  return null
+}
+
 async function hasDuplicate(
   templateKey: TemplateKey,
   memberId: string,
@@ -128,9 +150,13 @@ export async function sendMemberNotification(
     return { ok: false, status: 'failed', error: 'Invalid phone number' }
   }
 
-  const centerId = (member as { center_id?: string | null }).center_id
+  const centerId = await resolveNotificationCenterId(supabase, member.center_id)
   if (!centerId) {
-    return { ok: false, status: 'failed', error: 'Member center_id missing' }
+    return {
+      ok: false,
+      status: 'failed',
+      error: '센터(center_id)를 확인할 수 없습니다. migration_032_centers.sql을 실행해 주세요.',
+    }
   }
 
   if (await hasDuplicate(input.templateKey, input.memberId, metadata)) {
