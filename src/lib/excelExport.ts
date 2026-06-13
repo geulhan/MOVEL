@@ -24,6 +24,36 @@ function downloadWorkbook(workbook: XLSX.WorkBook, filename: string) {
   XLSX.writeFile(workbook, filename)
 }
 
+function formatJournalBody(journal: ExerciseJournal): string {
+  const parts: string[] = []
+
+  if (journal.title?.trim()) {
+    parts.push(journal.title.trim())
+  }
+
+  const body =
+    journal.content === '(사진 첨부)' ? '' : journal.content.trim()
+  if (body) {
+    parts.push(body)
+  }
+
+  if (journal.image_urls.length > 0) {
+    parts.push(
+      `[첨부 사진 ${journal.image_urls.length}장]`,
+      ...journal.image_urls,
+    )
+  }
+
+  return parts.join('\n')
+}
+
+function applyColumnWidths(
+  sheet: XLSX.WorkSheet,
+  widths: number[],
+): void {
+  sheet['!cols'] = widths.map((wch) => ({ wch }))
+}
+
 export function exportMembersExcel(members: Member[]): void {
   const rows = members.map((member) => ({
     이름: member.name,
@@ -50,14 +80,13 @@ export function exportExerciseJournalsExcel(
   const rows = journals.map((journal) => ({
     회원명: memberName,
     운동일: formatDate(journal.trained_at),
-    제목: journal.title ?? '',
-    내용: journal.content,
+    일지내용: formatJournalBody(journal),
     작성자: CREATED_BY_LABELS[journal.created_by],
-    '사진 URL': journal.image_urls.join('\n'),
     등록일시: journal.created_at.slice(0, 16).replace('T', ' '),
   }))
 
   const sheet = XLSX.utils.json_to_sheet(rows)
+  applyColumnWidths(sheet, [12, 12, 60, 10, 16])
   const workbook = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(workbook, sheet, '운동일지')
   const namePart = safeFilenamePart(memberName)
