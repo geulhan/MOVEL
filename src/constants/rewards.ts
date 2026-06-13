@@ -1,4 +1,6 @@
 /** MOVE SCORE 등급 (누적 점수 기준, 현금 가치 없음) */
+import type { PaymentCategory } from './paymentCategories'
+
 export type RewardTier = 'BRONZE' | 'SILVER' | 'GOLD' | 'MOVEL ELITE'
 
 export const REWARD_TIER_LABELS: Record<RewardTier, string> = {
@@ -35,6 +37,53 @@ export function getNextTier(score: number): {
 /** 걸음 인증 최소 기준 (7,000보 미만은 반려) */
 export const MIN_STEPS_FOR_VERIFICATION = 7000
 
+/** 관리자가 추가하는 맞춤 적립 규칙 */
+export type CustomRewardTrigger = 'payment_completed'
+
+export type CustomRewardValueType = 'fixed' | 'payment_percent'
+
+export type CustomRewardRule = {
+  id: string
+  label: string
+  description: string
+  trigger: CustomRewardTrigger
+  value_type: CustomRewardValueType
+  score: number
+  mile: number
+  /** null이면 모든 결제 구분에 적용 */
+  payment_categories: PaymentCategory[] | null
+  is_active: boolean
+  /** true면 회원당 해당 규칙 1회만 적립 */
+  once_per_member: boolean
+}
+
+export const CUSTOM_REWARD_TRIGGER_LABELS: Record<CustomRewardTrigger, string> = {
+  payment_completed: '결제 완료 시',
+}
+
+export const CUSTOM_REWARD_VALUE_TYPE_LABELS: Record<
+  CustomRewardValueType,
+  string
+> = {
+  fixed: '고정 포인트',
+  payment_percent: '결제금액 비율 (%)',
+}
+
+export function createEmptyCustomRewardRule(): CustomRewardRule {
+  return {
+    id: `custom_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    label: '',
+    description: '',
+    trigger: 'payment_completed',
+    value_type: 'payment_percent',
+    score: 0,
+    mile: 5,
+    payment_categories: null,
+    is_active: true,
+    once_per_member: false,
+  }
+}
+
 /** 기본 적립 규칙 (reward_settings 미설정 시 폴백) */
 export type RewardEarnRule = { score: number; mile: number }
 
@@ -48,6 +97,7 @@ export type RewardEarnRules = {
   naver_review: RewardEarnRule
   center_photo: RewardEarnRule
   referral_percent: number
+  custom_rules: CustomRewardRule[]
 }
 
 export const DEFAULT_REWARD_RULES: RewardEarnRules = {
@@ -60,6 +110,7 @@ export const DEFAULT_REWARD_RULES: RewardEarnRules = {
   naver_review: { score: 0, mile: 10000 },
   center_photo: { score: 20, mile: 500 },
   referral_percent: 10,
+  custom_rules: [],
 }
 
 export const MILE_EXPIRY_MONTHS = 12
@@ -92,6 +143,7 @@ export type RewardEventType =
   | 'redemption'
   | 'mile_expiry'
   | 'manual_adjust'
+  | 'custom_reward'
 
 export const REWARD_EVENT_LABELS: Record<RewardEventType, string> = {
   pt_attendance: 'PT 출석',
@@ -107,4 +159,5 @@ export const REWARD_EVENT_LABELS: Record<RewardEventType, string> = {
   redemption: '재등록 결제 사용',
   mile_expiry: 'MILE 유효기간 만료',
   manual_adjust: '관리자 수동 조정',
+  custom_reward: '추가 적립',
 }

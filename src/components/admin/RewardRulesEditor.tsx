@@ -10,9 +10,10 @@ import {
   STREAK_DAYS,
   type RewardEventType,
 } from '../../constants/rewards'
+import { CustomRewardRulesSection } from './CustomRewardRulesSection'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/theme'
 
-type RuleKey = Exclude<keyof RewardEarnRules, 'referral_percent'>
+type RuleKey = Exclude<keyof RewardEarnRules, 'referral_percent' | 'custom_rules'>
 
 const RULE_ROWS: {
   key: RuleKey
@@ -118,7 +119,10 @@ export function RewardRulesEditor() {
     setMessage(null)
     setError(null)
     try {
-      await saveRewardEarnRules(rules)
+      await saveRewardEarnRules({
+        ...rules,
+        custom_rules: rules.custom_rules.filter((rule) => rule.label.trim()),
+      })
       setMessage('적립 포인트가 저장되었습니다. 이후 적립부터 새 규칙이 적용됩니다.')
     } catch (err) {
       setError(err instanceof Error ? err.message : '저장에 실패했습니다.')
@@ -229,6 +233,12 @@ export function RewardRulesEditor() {
           </button>
         </div>
       </div>
+
+      <CustomRewardRulesSection
+        rules={rules.custom_rules}
+        onChange={(custom_rules) => setRules((prev) => ({ ...prev, custom_rules }))}
+        disabled={saving}
+      />
 
       {message && (
         <div className="rounded-xl border border-gold/50 bg-white px-4 py-3 text-sm font-medium text-charcoal">

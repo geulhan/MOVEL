@@ -74,8 +74,11 @@ function formatTxnDate(iso: string): string {
   })
 }
 
-function eventLabel(eventType: string): string {
-  return REWARD_EVENT_LABELS[eventType as RewardEventType] ?? eventType
+function eventLabel(txn: { event_type: string; note?: string | null }): string {
+  if (txn.event_type === 'custom_reward' && txn.note) {
+    return txn.note.split(' (')[0] ?? txn.note
+  }
+  return REWARD_EVENT_LABELS[txn.event_type as RewardEventType] ?? txn.event_type
 }
 
 function verificationStatusLabel(v: StepVerification): string {
@@ -628,7 +631,7 @@ export function MemberRewardsSection({ memberId, refreshToken }: Props) {
               >
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-charcoal">
-                    {eventLabel(txn.event_type)}
+                    {eventLabel(txn)}
                   </p>
                   {txn.note && (
                     <p className="mt-0.5 truncate text-xs text-muted">

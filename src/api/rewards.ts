@@ -6,10 +6,12 @@ import {
   REWARD_EVENT_LABELS,
   STEP_REWARD_TIERS,
   STREAK_DAYS,
+  type CustomRewardRule,
   type RewardEarnRules,
   type RewardEventType,
   type RewardTier,
 } from '../constants/rewards'
+import type { PaymentCategory } from '../constants/paymentCategories'
 import { supabase } from '../lib/supabase'
 import type { Json } from '../types/database'
 import { todayDateString } from './members'
@@ -59,10 +61,58 @@ function normalizeEarnRule(value: unknown, fallback: EarnRule): EarnRule {
   }
 }
 
+function normalizeCustomRule(
+  value: unknown,
+  index: number,
+): CustomRewardRule | null {
+  if (!value || typeof value !== 'object') return null
+  const row = value as Record<string, unknown>
+  const label = String(row.label ?? '').trim()
+  if (!label) return null
+
+  let payment_categories: PaymentCategory[] | null = null
+  if (Array.isArray(row.payment_categories)) {
+    const categories = row.payment_categories.filter(
+      (item): item is PaymentCategory =>
+        item === 'pt' || item === 'center_pass' || item === 'locker_towel',
+    )
+    payment_categories = categories.length > 0 ? categories : null
+  }
+
+  return {
+    id: String(row.id ?? `custom_${index + 1}`).trim() || `custom_${index + 1}`,
+    label,
+    description: String(row.description ?? '').trim(),
+    trigger: 'payment_completed',
+    value_type: row.value_type === 'payment_percent' ? 'payment_percent' : 'fixed',
+    score: clampNonNegInt(row.score, 0),
+    mile: clampNonNegInt(row.mile, 0),
+    payment_categories,
+    is_active: row.is_active !== false,
+    once_per_member: row.once_per_member === true,
+  }
+}
+
+function normalizeCustomRules(value: unknown): CustomRewardRule[] {
+  if (!Array.isArray(value)) return []
+  const seen = new Set<string>()
+  const rules: CustomRewardRule[] = []
+
+  for (const [index, item] of value.entries()) {
+    const rule = normalizeCustomRule(item, index)
+    if (!rule || seen.has(rule.id)) continue
+    seen.add(rule.id)
+    rules.push(rule)
+  }
+
+  return rules
+}
+
 export function normalizeEarnRules(
   value: Partial<RewardEarnRules> | null | undefined,
 ): RewardEarnRules {
   const defaults = DEFAULT_REWARD_RULES
+  const raw = value as Record<string, unknown> | null | undefined
   return {
     pt_attendance: normalizeEarnRule(value?.pt_attendance, defaults.pt_attendance),
     steps_7000: normalizeEarnRule(value?.steps_7000, defaults.steps_7000),
@@ -79,6 +129,31 @@ export function normalizeEarnRules(
       value?.referral_percent,
       defaults.referral_percent,
     ),
+    custom_rules: normalizeCustomRules(raw?.custom_rules),
+  }
+}
+
+function validateCustomRules(rules: CustomRewardRule[]): void {
+  const ids = new Set<string>()
+
+  for (const rule of rules) {
+    if (!rule.label.trim()) {
+      throw new Error('추가 적립 항목 이름을 입력해 주세요.')
+    }
+    if (ids.has(rule.id)) {
+      throw new Error(`중복된 적립 항목 ID가 있습니다: ${rule.label}`)
+    }
+    ids.add(rule.id)
+
+    if (rule.value_type === 'fixed' && rule.score <= 0 && rule.mile <= 0) {
+      throw new Error(`"${rule.label}" SCORE 또는 MILE을 1 이상 입력해 주세요.`)
+    }
+    if (rule.value_type === 'payment_percent' && rule.mile <= 0 && rule.score <= 0) {
+      throw new Error(`"${rule.label}" 결제 비율 또는 SCORE를 입력해 주세요.`)
+    }
+    if (rule.value_type === 'payment_percent' && rule.mile > 100) {
+      throw new Error(`"${rule.label}" 결제 비율은 100% 이하여야 합니다.`)
+    }
   }
 }
 
@@ -144,6 +219,7 @@ export async function saveRewardEarnRules(rules: RewardEarnRules): Promise<void>
   if (normalized.referral_percent > 100) {
     throw new Error('지인 소개 적립 비율은 100% 이하여야 합니다.')
   }
+  validateCustomRules(normalized.custom_rules)
 
   const payload = {
     setting_value: normalized,
@@ -795,6 +871,68 @@ export async function awardReferralOnPayment(
     referrer_member_id: referrerId,
     payment_id: paymentId,
   })
+}
+
+function calcCustomRuleAward(
+  rule: CustomRewardRule,
+  paymentAmount: number,
+): { score: number; mile: number; note: string } {
+  if (rule.value_type === 'payment_percent') {
+    const mile =
+      rule.mile > 0 ? Math.floor((paymentAmount * rule.mile) / 100) : 0
+    const note =
+      rule.mile > 0
+        ? `${rule.label} (결제금액 ${rule.mile}%)`
+        : rule.label
+    return { score: rule.score, mile, note }
+  }
+
+  return {
+    score: rule.score,
+    mile: rule.mile,
+    note: rule.label,
+  }
+}
+
+/** 관리자 정의 추가 적립 규칙 (결제 완료 등) */
+export async function awardCustomRulesOnPayment(
+  memberId: string,
+  paymentId: string,
+  paymentAmount: number,
+  category: PaymentCategory = 'pt',
+): Promise<void> {
+  const rules = await fetchRewardEarnRules()
+
+  for (const rule of rules.custom_rules) {
+    if (!rule.is_active) continue
+    if (rule.trigger !== 'payment_completed') continue
+    if (
+      rule.payment_categories &&
+      rule.payment_categories.length > 0 &&
+      !rule.payment_categories.includes(category)
+    ) {
+      continue
+    }
+
+    const { score, mile, note } = calcCustomRuleAward(rule, paymentAmount)
+    if (score <= 0 && mile <= 0) continue
+
+    const eventKey = rule.once_per_member
+      ? `custom_once:${rule.id}:${memberId}`
+      : `custom:${rule.id}:${paymentId}`
+
+    try {
+      await awardPair(memberId, 'custom_reward', eventKey, score, mile, {
+        reference_type: 'payment_history',
+        reference_id: paymentId,
+        note,
+        created_by: 'system',
+      })
+    } catch (err) {
+      if (err instanceof Error && err.message === 'ALREADY_AWARDED') continue
+      throw err
+    }
+  }
 }
 
 /** 재등록 결제 시 MILE 사용 */

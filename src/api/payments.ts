@@ -1,6 +1,6 @@
 import { fetchMemberById } from './memberDetail'
 import { notifyPaymentDone } from './notifications'
-import { awardReferralOnPayment } from './rewards'
+import { awardCustomRulesOnPayment, awardReferralOnPayment } from './rewards'
 import { recalcMemberExpiry } from './period'
 import { supabase } from '../lib/supabase'
 import type { PaymentCategory, PaymentHistory } from '../types/database'
@@ -53,6 +53,17 @@ export async function createPaymentRecord(
     await awardReferralOnPayment(memberId, data.id, input.amount)
   } catch (rewardErr) {
     console.warn('소개 리워드 적립 실패:', rewardErr)
+  }
+
+  try {
+    await awardCustomRulesOnPayment(
+      memberId,
+      data.id,
+      input.amount,
+      category,
+    )
+  } catch (rewardErr) {
+    console.warn('추가 적립 규칙 처리 실패:', rewardErr)
   }
 
   notifyPaymentDone(memberId, data.id)

@@ -128,8 +128,11 @@ export default function RewardsPage() {
     }
   }
 
-  function eventLabel(eventType: string): string {
-    return REWARD_EVENT_LABELS[eventType as RewardEventType] ?? eventType
+  function eventLabel(txn: { event_type: string; note?: string | null }): string {
+    if (txn.event_type === 'custom_reward' && txn.note) {
+      return txn.note.split(' (')[0] ?? txn.note
+    }
+    return REWARD_EVENT_LABELS[txn.event_type as RewardEventType] ?? txn.event_type
   }
 
   return (
@@ -367,7 +370,7 @@ export default function RewardsPage() {
                         className="flex justify-between gap-2 px-4 py-2.5 text-sm"
                       >
                         <div className="min-w-0">
-                          <p className="font-bold">{eventLabel(txn.event_type)}</p>
+                          <p className="font-bold">{eventLabel(txn)}</p>
                           {txn.note && (
                             <p className="truncate text-xs text-muted">{txn.note}</p>
                           )}

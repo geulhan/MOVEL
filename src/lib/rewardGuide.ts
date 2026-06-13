@@ -1,4 +1,5 @@
 import {
+  CUSTOM_REWARD_TRIGGER_LABELS,
   DEFAULT_REWARD_RULES,
   type RewardEarnRules,
   MILE_EXPIRY_MONTHS,
@@ -9,6 +10,10 @@ import {
   STREAK_DAYS,
   TIER_THRESHOLDS,
 } from '../constants/rewards'
+import {
+  PAYMENT_CATEGORY_LABELS,
+  type PaymentCategory,
+} from '../constants/paymentCategories'
 
 type EarnRules = RewardEarnRules
 
@@ -28,6 +33,30 @@ export type MemberRewardGuide = {
 
 function formatRewardAmount(value: number, suffix: string): string {
   return `+${value.toLocaleString()}${suffix}`
+}
+
+function formatCustomRuleCategories(
+  categories: PaymentCategory[] | null,
+): string {
+  if (!categories || categories.length === 0) {
+    return '적용 결제 없음'
+  }
+  if (categories.length === 3) {
+    return '모든 결제'
+  }
+  return categories.map((item) => PAYMENT_CATEGORY_LABELS[item]).join(', ')
+}
+
+function formatCustomRuleMile(rule: RewardEarnRules['custom_rules'][number]): string {
+  if (rule.value_type === 'payment_percent') {
+    return `${rule.mile}%`
+  }
+  return formatRewardAmount(rule.mile, 'M')
+}
+
+function formatCustomRuleScore(rule: RewardEarnRules['custom_rules'][number]): string {
+  if (rule.score <= 0) return '-'
+  return formatRewardAmount(rule.score, '점')
 }
 
 export function buildMemberRewardGuide(
@@ -87,6 +116,17 @@ export function buildMemberRewardGuide(
       score: '-',
       mile: `${rules.referral_percent}%`,
     },
+    ...rules.custom_rules
+      .filter((rule) => rule.is_active)
+      .map((rule) => ({
+        key: rule.id,
+        title: rule.label,
+        description:
+          rule.description.trim() ||
+          `${CUSTOM_REWARD_TRIGGER_LABELS[rule.trigger]} · ${formatCustomRuleCategories(rule.payment_categories)}`,
+        score: formatCustomRuleScore(rule),
+        mile: formatCustomRuleMile(rule),
+      })),
   ]
 
   const tierRows = TIER_THRESHOLDS.map((row) => ({
