@@ -11,6 +11,8 @@ const filters: { id: RenewalFilter; label: string }[] = [
   { id: 'active', label: '활성' },
   { id: 'unregistered', label: '미등록' },
   { id: 'renewal', label: '재등록' },
+  { id: 'expiring14', label: 'D-14 이하' },
+  { id: 'renewal-priority', label: '우선관리' },
   { id: 'expiring', label: '만료 임박' },
   { id: 'terminated', label: '종료' },
 ]

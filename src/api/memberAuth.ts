@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase'
 import { formatSupabaseError } from '../lib/errors'
+import { logMemberLogin } from './memberLoginLogs'
 import { notifyMemberWelcome } from './notifications'
 import { saveMemberSession } from './memberPortal'
 import type { Json } from '../types/database'
@@ -127,6 +128,7 @@ export async function registerMember(
   }
 
   saveMemberSession(result.id, result.token)
+  logMemberLogin(result.id)
   notifyMemberWelcome(result.id)
 
   return {
@@ -168,6 +170,7 @@ export async function loginMember(
   }
 
   saveMemberSession(result.id, result.token)
+  logMemberLogin(result.id)
   return {
     memberId: result.id,
     memberName: result.name ?? '회원',

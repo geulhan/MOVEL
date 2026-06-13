@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   deductSession,
   fetchMembers,
@@ -24,6 +24,8 @@ import {
   computeRenewalStats,
   filterBySearch,
   isExpiringSoon,
+  isExpiringWithin14Days,
+  isRenewalPriorityMember,
   isRenewalTarget,
   isUnregisteredMember,
   type RenewalFilter,
@@ -31,6 +33,7 @@ import {
 
 export default function MembersPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const session = getAdminSession()
   const isTrainer = isTrainerStaff(session)
   const [allMembers, setAllMembers] = useState<
@@ -81,6 +84,26 @@ export default function MembersPage() {
   useEffect(() => {
     void loadMembers()
   }, [loadMembers])
+
+  const VALID_FILTERS: RenewalFilter[] = [
+    'all',
+    'active',
+    'unregistered',
+    'renewal',
+    'urgent',
+    'expiring',
+    'expiring14',
+    'renewal-priority',
+    'terminated',
+  ]
+
+  useEffect(() => {
+    const raw = searchParams.get('filter')
+    if (!raw) return
+    if (VALID_FILTERS.includes(raw as RenewalFilter)) {
+      setRenewalFilter(raw as RenewalFilter)
+    }
+  }, [searchParams])
 
   const scopedMembers = useMemo(() => {
     if (!isTrainer || !session?.trainerId) return allMembers
@@ -149,6 +172,8 @@ export default function MembersPage() {
       expiring: scopedMembers.filter((m) =>
         isExpiringSoon(m.expires_at, m.status),
       ).length,
+      expiring14: scopedMembers.filter(isExpiringWithin14Days).length,
+      'renewal-priority': scopedMembers.filter(isRenewalPriorityMember).length,
       terminated: renewalStats.terminatedCount,
     }),
     [scopedMembers, renewalStats.terminatedCount],

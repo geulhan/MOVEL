@@ -9,6 +9,8 @@ export type RenewalFilter =
   | 'renewal'
   | 'urgent'
   | 'expiring'
+  | 'expiring14'
+  | 'renewal-priority'
   | 'terminated'
 
 /** 자가가입 등 PT 미등록 회원 (결제·세션 0) */
@@ -26,6 +28,28 @@ export type RenewalStats = {
 }
 
 const EXPIRING_DAYS = 7
+const EXPIRING_KPI_DAYS = 14
+
+function daysUntilExpiry(expiresAt: string | null): number | null {
+  if (!expiresAt) return null
+  const today = todayDateString()
+  const exp = expiresAt.slice(0, 10)
+  return Math.round(
+    (new Date(`${exp}T12:00:00`).getTime() - new Date(`${today}T12:00:00`).getTime()) /
+      86_400_000,
+  )
+}
+
+export function isExpiringWithin14Days(member: Member): boolean {
+  if (member.status === 'terminated') return false
+  const left = daysUntilExpiry(member.expires_at)
+  if (left === null) return false
+  return left <= EXPIRING_KPI_DAYS
+}
+
+export function isRenewalPriorityMember(member: Member): boolean {
+  return isRenewalTarget(member) || isExpiringWithin14Days(member)
+}
 
 export function getPtAlertLevel(
   remaining: number,
@@ -123,6 +147,10 @@ export function applyRenewalFilter(
       )
     case 'expiring':
       return members.filter((m) => isExpiringSoon(m.expires_at, m.status))
+    case 'expiring14':
+      return members.filter(isExpiringWithin14Days)
+    case 'renewal-priority':
+      return members.filter(isRenewalPriorityMember)
     case 'terminated':
       return members.filter((m) => m.status === 'terminated')
     default:

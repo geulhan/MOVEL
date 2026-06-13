@@ -185,6 +185,15 @@ export type MessageLog = {
   sent_at: string | null
 }
 
+export type MemberLoginLog = {
+  id: string
+  center_id: string
+  member_id: string
+  login_at: string
+  device_type: string
+  created_at: string
+}
+
 export type SessionLog = {
   id: string
   center_id?: string
@@ -642,6 +651,16 @@ export type Database = {
           error_message?: string | null
           sent_at?: string | null
         }
+      >
+      member_login_logs: TableDef<
+        MemberLoginLog,
+        {
+          center_id: string
+          member_id: string
+          login_at?: string
+          device_type?: string
+        },
+        never
       >
       member_memos: TableDef<
         MemberMemo,

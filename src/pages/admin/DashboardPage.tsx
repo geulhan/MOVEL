@@ -1,4 +1,5 @@
 import { SalesDashboard } from '../../components/admin/SalesDashboard'
+import { OperationalKpiDashboard } from '../../components/admin/OperationalKpiDashboard'
 import { PageHeader } from '../../components/admin/PageHeader'
 import { RenewalDashboard } from '../../components/RenewalDashboard'
 import { fetchMembers } from '../../api/members'
@@ -40,6 +41,7 @@ export default function DashboardPage() {
         </div>
       )}
 
+      <OperationalKpiDashboard />
       <SalesDashboard />
       <RenewalDashboard
         stats={stats}
