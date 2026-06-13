@@ -35,7 +35,6 @@ export function exportMembersExcel(members: Member[]): void {
     등록일: formatDate(member.registered_at),
     만료일: formatDate(member.expires_at),
     상태: MEMBER_STATUS_LABELS[member.status],
-    회원ID: member.id,
   }))
 
   const sheet = XLSX.utils.json_to_sheet(rows)
@@ -56,7 +55,6 @@ export function exportExerciseJournalsExcel(
     작성자: CREATED_BY_LABELS[journal.created_by],
     '사진 URL': journal.image_urls.join('\n'),
     등록일시: journal.created_at.slice(0, 16).replace('T', ' '),
-    일지ID: journal.id,
   }))
 
   const sheet = XLSX.utils.json_to_sheet(rows)
