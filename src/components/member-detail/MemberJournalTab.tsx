@@ -2,7 +2,12 @@ import { MemberExerciseJournalSection } from '../MemberExerciseJournalSection'
 import { useMemberDetail } from './MemberDetailContext'
 
 export function MemberJournalTab() {
-  const { memberId } = useMemberDetail()
+  const { memberId, member } = useMemberDetail()
 
-  return <MemberExerciseJournalSection memberId={memberId} />
+  return (
+    <MemberExerciseJournalSection
+      memberId={memberId}
+      memberName={member?.name ?? '회원'}
+    />
+  )
 }

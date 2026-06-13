@@ -7,6 +7,7 @@ import {
   type ExerciseJournal,
 } from '../api/exerciseJournals'
 import { formatDate } from '../api/members'
+import { exportExerciseJournalsExcel } from '../lib/excelExport'
 import { formatSupabaseError } from '../lib/errors'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../styles/theme'
 import { ExerciseJournalPhotoGallery } from './member/ExerciseJournalPhotoGallery'
@@ -20,9 +21,13 @@ const PLACEHOLDER = `예) 하체 데이
 
 type Props = {
   memberId: string
+  memberName?: string
 }
 
-export function MemberExerciseJournalSection({ memberId }: Props) {
+export function MemberExerciseJournalSection({
+  memberId,
+  memberName = '회원',
+}: Props) {
   const [journals, setJournals] = useState<ExerciseJournal[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -141,11 +146,21 @@ export function MemberExerciseJournalSection({ memberId }: Props) {
 
   return (
     <section className={`${cardClass} overflow-hidden`}>
-      <div className="card-header">
-        <h3 className="text-base font-semibold text-charcoal">운동일지</h3>
-        <p className="mt-0.5 text-xs text-muted">
-          트레이너·관리자가 작성한 내용이 회원 페이지에 표시됩니다.
-        </p>
+      <div className="card-header flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="text-base font-semibold text-charcoal">운동일지</h3>
+          <p className="mt-0.5 text-xs text-muted">
+            트레이너·관리자가 작성한 내용이 회원 페이지에 표시됩니다.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => exportExerciseJournalsExcel(journals, memberName)}
+          disabled={loading || journals.length === 0}
+          className={`shrink-0 ${btnOutline}`}
+        >
+          엑셀 다운로드
+        </button>
       </div>
 
       <form

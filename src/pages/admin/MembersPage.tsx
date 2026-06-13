@@ -14,7 +14,9 @@ import { MemberFilterBar } from '../../components/MemberFilterBar'
 import { MemberForm } from '../../components/MemberForm'
 import { MemberSearchCombobox } from '../../components/admin/MemberSearchCombobox'
 import { MemberList } from '../../components/MemberList'
+import { exportMembersExcel } from '../../lib/excelExport'
 import { formatSupabaseError } from '../../lib/errors'
+import { btnOutline } from '../../styles/theme'
 import type { MemberStatus, Trainer } from '../../types/database'
 import { MEMBER_STATUS_LABELS } from '../../types/database'
 import {
@@ -246,14 +248,24 @@ export default function MembersPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="회원 관리"
-        description={
-          isTrainer
-            ? '담당 회원 조회 및 상세 관리'
-            : '등록·검색·PT 차감 및 상세 관리'
-        }
-      />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <PageHeader
+          title="회원 관리"
+          description={
+            isTrainer
+              ? '담당 회원 조회 및 상세 관리'
+              : '등록·검색·PT 차감 및 상세 관리'
+          }
+        />
+        <button
+          type="button"
+          onClick={() => exportMembersExcel(scopedMembers)}
+          disabled={loading || scopedMembers.length === 0}
+          className={`shrink-0 ${btnOutline}`}
+        >
+          엑셀 다운로드
+        </button>
+      </div>
 
       {toast && (
         <div className="rounded-xl border border-gold/50 bg-white px-4 py-3 text-sm font-medium text-charcoal">
