@@ -1,3 +1,4 @@
+import { getCurrentCenterId } from '../lib/center'
 import {
   DEFAULT_REWARD_RULES,
   getTierFromScore,
@@ -288,6 +289,7 @@ async function ensureBalance(memberId: string): Promise<{
     .upsert(
       {
         member_id: memberId,
+        center_id: await getCurrentCenterId(),
         move_score: 0,
         move_mile: 0,
         updated_at: new Date().toISOString(),
@@ -324,10 +326,12 @@ async function insertTransaction(input: {
   metadata?: Record<string, unknown>
   created_by?: string
 }): Promise<RewardTransaction> {
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('reward_transactions')
     .insert({
       member_id: input.member_id,
+      center_id: centerId,
       currency: input.currency,
       amount: input.amount,
       balance_after: input.balance_after,
@@ -446,10 +450,12 @@ export async function fetchRewardTransactions(
   memberId: string,
   options?: { currency?: RewardCurrency; limit?: number },
 ): Promise<RewardTransaction[]> {
+  const centerId = await getCurrentCenterId()
   let query = supabase
     .from('reward_transactions')
     .select('*')
     .eq('member_id', memberId)
+    .eq('center_id', centerId)
     .order('created_at', { ascending: false })
     .limit(options?.limit ?? 100)
 
@@ -676,10 +682,12 @@ export async function hasApprovedStepsToday(
   memberId: string,
   date: string = todayDateString(),
 ): Promise<boolean> {
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('step_verifications')
     .select('id')
     .eq('member_id', memberId)
+    .eq('center_id', centerId)
     .eq('verification_date', date)
     .eq('status', 'approved')
     .maybeSingle()
@@ -1096,16 +1104,23 @@ export type MemberRewardSummary = {
 }
 
 export async function fetchAllRewardBalances(): Promise<MemberRewardSummary[]> {
+  const centerId = await getCurrentCenterId()
   const { data: members, error: membersError } = await supabase
     .from('members')
     .select('id, name')
+    .eq('center_id', centerId)
     .order('name')
 
   if (membersError) throw membersError
 
+  const memberIds = ((members ?? []) as { id: string }[]).map((m) => m.id)
+  if (memberIds.length === 0) return []
+
   const { data: balances, error: balError } = await supabase
     .from('reward_balances')
     .select('member_id, move_score, move_mile')
+    .eq('center_id', centerId)
+    .in('member_id', memberIds)
 
   if (balError) throw balError
 

@@ -1,3 +1,4 @@
+import { getCurrentCenterId } from '../lib/center'
 import { normalizeMember } from '../lib/memberNormalize'
 import { supabase } from '../lib/supabase'
 import type {
@@ -9,10 +10,12 @@ import type {
 } from '../types/database'
 
 export async function fetchMemberById(id: string): Promise<Member> {
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('members')
     .select('*')
     .eq('id', id)
+    .eq('center_id', centerId)
     .single()
 
   if (error) throw error
@@ -22,10 +25,12 @@ export async function fetchMemberById(id: string): Promise<Member> {
 export async function fetchPaymentHistory(
   memberId: string,
 ): Promise<PaymentHistory[]> {
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('payment_history')
     .select('*')
     .eq('member_id', memberId)
+    .eq('center_id', centerId)
     .order('paid_at', { ascending: false })
 
   if (error) throw error
@@ -33,10 +38,12 @@ export async function fetchPaymentHistory(
 }
 
 export async function fetchSessionLogs(memberId: string): Promise<SessionLog[]> {
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('session_logs')
     .select('*')
     .eq('member_id', memberId)
+    .eq('center_id', centerId)
     .order('deducted_at', { ascending: false })
 
   if (error) throw error

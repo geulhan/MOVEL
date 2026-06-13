@@ -3,6 +3,7 @@ import {
   normalizeVerificationCode,
   verificationCodeMatchesCapture,
 } from '../lib/ocr/verificationCodeMatch'
+import { getCurrentCenterId } from '../lib/center'
 import { supabase } from '../lib/supabase'
 import { todayDateString } from './members'
 import { MIN_STEPS_FOR_VERIFICATION } from '../constants/rewards'
@@ -86,10 +87,12 @@ export async function fetchMemberStepVerifications(
   memberId: string,
   limit = 20,
 ): Promise<StepVerification[]> {
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('step_verifications')
     .select('*')
     .eq('member_id', memberId)
+    .eq('center_id', centerId)
     .order('created_at', { ascending: false })
     .limit(limit)
 
@@ -101,10 +104,12 @@ export async function fetchTodayVerificationStatus(
   memberId: string,
 ): Promise<StepVerification | null> {
   const today = todayDateString()
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('step_verifications')
     .select('*')
     .eq('member_id', memberId)
+    .eq('center_id', centerId)
     .eq('verification_date', today)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -252,6 +257,7 @@ export async function submitStepVerification(
   const { data, error } = await supabase
     .from('step_verifications')
     .insert({
+      center_id: await getCurrentCenterId(),
       member_id: memberId,
       verification_date: today,
       image_url: urlData.publicUrl,
@@ -330,9 +336,11 @@ export async function fetchStepVerifications(options?: {
   memberId?: string
   limit?: number
 }): Promise<StepVerification[]> {
+  const centerId = await getCurrentCenterId()
   let query = supabase
     .from('step_verifications')
     .select('*')
+    .eq('center_id', centerId)
     .order('created_at', { ascending: false })
     .limit(options?.limit ?? 50)
 
@@ -355,6 +363,7 @@ export async function fetchStepVerificationsWithMembers(options?: {
   const { data: members, error } = await supabase
     .from('members')
     .select('id, name')
+    .eq('center_id', await getCurrentCenterId())
     .in('id', memberIds)
 
   if (error) throw error

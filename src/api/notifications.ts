@@ -1,3 +1,4 @@
+import { getCurrentCenterId } from '../lib/center'
 import { supabase } from '../lib/supabase'
 import type { MessageLog, MessageTemplateKey } from '../types/database'
 
@@ -140,9 +141,11 @@ export function notifyStepVerificationResult(
 }
 
 export async function fetchMessageLogs(limit = 100): Promise<MessageLog[]> {
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('message_logs')
     .select('*')
+    .eq('center_id', centerId)
     .order('created_at', { ascending: false })
     .limit(limit)
 

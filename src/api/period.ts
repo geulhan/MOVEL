@@ -1,3 +1,4 @@
+import { getCurrentCenterId } from '../lib/center'
 import { normalizeMember } from '../lib/memberNormalize'
 import { supabase } from '../lib/supabase'
 import type { Member, PeriodExtension } from '../types/database'
@@ -9,10 +10,12 @@ import {
 async function fetchLatestPaymentAnchor(
   memberId: string,
 ): Promise<{ paid_at: string; sessions: number } | null> {
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('payment_history')
     .select('paid_at, sessions, created_at')
     .eq('member_id', memberId)
+    .eq('center_id', centerId)
     .order('paid_at', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(1)

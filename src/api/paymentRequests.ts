@@ -1,3 +1,4 @@
+import { getCurrentCenterId } from '../lib/center'
 import { PAYMENT_REQUEST_EXPIRY_DAYS } from '../constants/pricing'
 import type { PaymentCategory } from '../constants/paymentCategories'
 import { supabase } from '../lib/supabase'
@@ -39,9 +40,11 @@ export async function fetchPaymentRequests(options?: {
   memberId?: string
   limit?: number
 }): Promise<PaymentRequestWithMember[]> {
+  const centerId = await getCurrentCenterId()
   let query = supabase
     .from('payment_requests')
     .select('*')
+    .eq('center_id', centerId)
     .order('created_at', { ascending: false })
 
   if (options?.status) {
@@ -68,6 +71,7 @@ export async function fetchPaymentRequests(options?: {
   const { data: members, error: membersError } = await supabase
     .from('members')
     .select('id, name, phone')
+    .eq('center_id', centerId)
     .in('id', memberIds)
 
   if (membersError) throw membersError
@@ -97,10 +101,12 @@ export async function fetchMemberPendingPaymentRequests(
 
 async function expireStalePaymentRequests(memberId?: string): Promise<void> {
   const now = new Date().toISOString()
+  const centerId = await getCurrentCenterId()
   let query = supabase
     .from('payment_requests')
     .update({ status: 'expired', updated_at: now })
     .eq('status', 'pending')
+    .eq('center_id', centerId)
     .lt('expires_at', now)
 
   if (memberId) {
@@ -152,17 +158,20 @@ export async function createPaymentRequest(input: {
 
   const discountAmount = Math.max(0, Math.round(input.listAmount - input.amount))
   const now = new Date().toISOString()
+  const centerId = await getCurrentCenterId()
 
   await supabase
     .from('payment_requests')
     .update({ status: 'cancelled', updated_at: now })
     .eq('member_id', input.memberId)
+    .eq('center_id', centerId)
     .eq('category', input.category)
     .eq('status', 'pending')
 
   const { data, error } = await supabase
     .from('payment_requests')
     .insert({
+      center_id: centerId,
       member_id: input.memberId,
       category: input.category,
       status: 'pending',

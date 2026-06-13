@@ -1,3 +1,4 @@
+import { getCurrentCenterId } from '../lib/center'
 import { supabase } from '../lib/supabase'
 import type { Member } from '../types/database'
 import { localDayEndIso, localDayStartIso } from '../utils/date'
@@ -78,9 +79,10 @@ export async function checkInMember(
 
   const member = await deductSession(memberId)
 
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('attendance_logs')
-    .insert({ member_id: memberId, method })
+    .insert({ center_id: centerId, member_id: memberId, method })
     .select('id, member_id, checked_in_at, method')
     .single()
 
@@ -166,9 +168,11 @@ export async function fetchAttendanceRecords(
   fromDate?: string,
   toDate?: string,
 ): Promise<AttendanceRecord[]> {
+  const centerId = await getCurrentCenterId()
   let query = supabase
     .from('attendance_logs')
     .select('id, member_id, checked_in_at, method')
+    .eq('center_id', centerId)
     .order('checked_in_at', { ascending: false })
     .limit(200)
 
@@ -206,10 +210,12 @@ export async function fetchMemberAttendance(
   memberId: string,
   trainerName: string | null,
 ): Promise<MemberAttendanceRow[]> {
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('attendance_logs')
     .select('id, checked_in_at, method')
     .eq('member_id', memberId)
+    .eq('center_id', centerId)
     .order('checked_in_at', { ascending: false })
     .limit(50)
 
@@ -320,10 +326,12 @@ function deriveDisplayStatus(input: {
 export async function fetchMonthAttendanceTotal(
   monthRef: MonthRef,
 ): Promise<number> {
+  const centerId = await getCurrentCenterId()
   const { startIso, endIso } = monthRangeIso(monthRef)
   const { count, error } = await supabase
     .from('attendance_logs')
     .select('id', { count: 'exact', head: true })
+    .eq('center_id', centerId)
     .gte('checked_in_at', startIso)
     .lte('checked_in_at', endIso)
 

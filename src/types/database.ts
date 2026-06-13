@@ -18,6 +18,7 @@ export type Trainer = {
   id: string
   name: string
   is_active: boolean
+  center_id?: string
   created_at: string
 }
 
@@ -29,17 +30,31 @@ export type AdminUser = {
   password_hash: string
   role: AdminRole
   trainer_id: string | null
+  center_id?: string
   created_at: string
+}
+
+export type CenterStatus = 'active' | 'inactive' | 'suspended'
+
+export type Center = {
+  id: string
+  name: string
+  slug: string
+  status: CenterStatus
+  created_at: string
+  updated_at: string
 }
 
 export type MemberCredential = {
   member_id: string
   password_hash: string
+  center_id?: string
   updated_at: string
 }
 
 export type Member = {
   id: string
+  center_id?: string
   name: string
   phone: string
   total_sessions: number
@@ -69,6 +84,7 @@ export type PaymentCategory = 'pt' | 'center_pass' | 'locker_towel'
 
 export type PaymentHistory = {
   id: string
+  center_id?: string
   member_id: string
   amount: number
   sessions: number
@@ -84,6 +100,7 @@ export type PaymentRequestStatus = 'pending' | 'paid' | 'cancelled' | 'expired'
 
 export type PaymentRequest = {
   id: string
+  center_id?: string
   member_id: string
   status: PaymentRequestStatus
   category: PaymentCategory
@@ -154,6 +171,7 @@ export const MESSAGE_STATUS_LABELS: Record<MessageLogStatus, string> = {
 
 export type MessageLog = {
   id: string
+  center_id?: string
   member_id: string | null
   phone: string
   template_key: MessageTemplateKey
@@ -169,6 +187,7 @@ export type MessageLog = {
 
 export type SessionLog = {
   id: string
+  center_id?: string
   member_id: string
   deducted_at: string
   quantity: number
@@ -193,6 +212,7 @@ export type ConsultationRecord = {
 
 export type MemberNote = {
   id: string
+  center_id?: string
   member_id: string
   content: string
   created_at: string
@@ -200,6 +220,7 @@ export type MemberNote = {
 
 export type MemberConsultation = {
   id: string
+  center_id?: string
   member_id: string
   consulted_at: string
   trainer_id: string | null
@@ -214,6 +235,7 @@ export type MemberConsultation = {
 
 export type ExerciseJournal = {
   id: string
+  center_id?: string
   member_id: string
   trained_at: string
   title: string | null
@@ -238,6 +260,7 @@ export type InbodyRecord = {
 
 export type AttendanceLog = {
   id: string
+  center_id?: string
   member_id: string
   checked_in_at: string
   method: string
@@ -245,6 +268,7 @@ export type AttendanceLog = {
 
 export type PtSchedule = {
   id: string
+  center_id?: string
   member_id: string
   trainer_id: string | null
   scheduled_at: string
@@ -274,6 +298,7 @@ export type RewardSetting = {
 
 export type RewardBalance = {
   member_id: string
+  center_id?: string
   branch_id: string | null
   move_score: number
   move_mile: number
@@ -282,6 +307,7 @@ export type RewardBalance = {
 
 export type RewardTransaction = {
   id: string
+  center_id?: string
   member_id: string
   branch_id: string | null
   currency: 'move_score' | 'move_mile'
@@ -338,6 +364,7 @@ export type StepVerificationStatus = 'pending' | 'approved' | 'rejected'
 
 export type StepVerification = {
   id: string
+  center_id?: string
   member_id: string
   verification_date: string
   image_url: string
@@ -439,6 +466,7 @@ export type MemberFacilitySubscription = {
 }
 
 export type MemberInsert = {
+  center_id?: string
   name: string
   phone: string
   total_sessions: number
@@ -478,10 +506,24 @@ export type Database = {
   public: {
     Tables: {
       members: TableDef<Member, MemberInsert, MemberUpdate>
+      centers: TableDef<
+        Center,
+        {
+          name: string
+          slug: string
+          status?: CenterStatus
+        },
+        {
+          name?: string
+          slug?: string
+          status?: CenterStatus
+          updated_at?: string
+        }
+      >
       trainers: TableDef<
         Trainer,
-        { name: string; is_active?: boolean },
-        { name?: string; is_active?: boolean }
+        { name: string; is_active?: boolean; center_id?: string },
+        { name?: string; is_active?: boolean; center_id?: string }
       >
       period_extensions: TableDef<
         PeriodExtension,
@@ -491,6 +533,7 @@ export type Database = {
       session_logs: TableDef<
         SessionLog,
         {
+          center_id?: string
           member_id: string
           quantity?: number
           remaining_after?: number | null
@@ -500,6 +543,7 @@ export type Database = {
       payment_history: TableDef<
         PaymentHistory,
         {
+          center_id?: string
           member_id: string
           amount: number
           sessions: number
@@ -522,6 +566,7 @@ export type Database = {
       payment_requests: TableDef<
         PaymentRequest,
         {
+          center_id?: string
           member_id: string
           status?: PaymentRequestStatus
           category?: PaymentCategory
@@ -578,6 +623,7 @@ export type Database = {
       message_logs: TableDef<
         MessageLog,
         {
+          center_id?: string
           member_id?: string | null
           phone: string
           template_key: MessageTemplateKey
@@ -609,12 +655,13 @@ export type Database = {
       >
       member_notes: TableDef<
         MemberNote,
-        { member_id: string; content: string },
+        { center_id?: string; member_id: string; content: string },
         { content?: string }
       >
       member_consultations: TableDef<
         MemberConsultation,
         {
+          center_id?: string
           member_id: string
           consulted_at: string
           trainer_id?: string | null
@@ -638,6 +685,7 @@ export type Database = {
       exercise_journals: TableDef<
         ExerciseJournal,
         {
+          center_id?: string
           member_id: string
           trained_at: string
           title?: string | null
@@ -672,12 +720,18 @@ export type Database = {
       >
       attendance_logs: TableDef<
         AttendanceLog,
-        { member_id: string; method?: string; checked_in_at?: string },
+        {
+          center_id?: string
+          member_id: string
+          method?: string
+          checked_in_at?: string
+        },
         never
       >
       pt_schedules: TableDef<
         PtSchedule,
         {
+          center_id?: string
           member_id: string
           trainer_id?: string | null
           scheduled_at: string
@@ -716,6 +770,7 @@ export type Database = {
       reward_balances: TableDef<
         RewardBalance,
         {
+          center_id?: string
           member_id: string
           branch_id?: string | null
           move_score?: number
@@ -732,6 +787,7 @@ export type Database = {
       reward_transactions: TableDef<
         RewardTransaction,
         {
+          center_id?: string
           member_id: string
           branch_id?: string | null
           currency: 'move_score' | 'move_mile'
@@ -797,6 +853,7 @@ export type Database = {
       step_verifications: TableDef<
         StepVerification,
         {
+          center_id?: string
           member_id: string
           verification_date?: string
           image_url: string

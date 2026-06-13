@@ -1,3 +1,4 @@
+import { getCurrentCenterId } from '../lib/center'
 import { fetchMembers, formatDate, todayDateString } from './members'
 import { sendNotification, type SendNotificationResult } from './notifications'
 import { supabase } from '../lib/supabase'
@@ -52,9 +53,11 @@ function daysBetween(from: string, to: string): number {
 async function fetchNotifiedMemberIds(
   templateKey: MessageTemplateKey,
 ): Promise<Set<string>> {
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('message_logs')
     .select('member_id')
+    .eq('center_id', centerId)
     .eq('template_key', templateKey)
     .in('status', ['sent', 'skipped'])
 
@@ -67,9 +70,11 @@ async function fetchNotifiedMemberIds(
 }
 
 async function fetchNotifiedRenewalTiers(): Promise<Set<string>> {
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('message_logs')
     .select('member_id, metadata')
+    .eq('center_id', centerId)
     .eq('template_key', 'renewal')
     .in('status', ['sent', 'skipped'])
 
@@ -86,9 +91,11 @@ async function fetchNotifiedRenewalTiers(): Promise<Set<string>> {
 }
 
 async function fetchNotifiedPaymentIds(): Promise<Set<string>> {
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('message_logs')
     .select('metadata')
+    .eq('center_id', centerId)
     .eq('template_key', 'payment_done')
     .in('status', ['sent', 'skipped'])
 
@@ -114,9 +121,10 @@ export async function fetchWelcomeTargets(): Promise<WelcomeTarget[]> {
 }
 
 export async function fetchPaymentTargets(): Promise<PaymentTarget[]> {
+  const centerId = await getCurrentCenterId()
   const [members, paymentsResult, notifiedPaymentIds] = await Promise.all([
     fetchMembers(),
-    supabase.from('payment_history').select('*'),
+    supabase.from('payment_history').select('*').eq('center_id', centerId),
     fetchNotifiedPaymentIds(),
   ])
 
@@ -178,9 +186,11 @@ export async function fetchRenewalTargets(): Promise<RenewalTarget[]> {
 }
 
 async function fetchNotifiedPtScheduleIds(): Promise<Set<string>> {
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('message_logs')
     .select('metadata')
+    .eq('center_id', centerId)
     .eq('template_key', 'pt_reminder')
     .in('status', ['sent', 'skipped'])
 
@@ -207,6 +217,7 @@ export function formatScheduledAtKst(iso: string): string {
 }
 
 export async function fetchPtReminderPendingTargets(): Promise<PtReminderTarget[]> {
+  const centerId = await getCurrentCenterId()
   const now = Date.now()
   const hourMs = 60 * 60 * 1000
   const maxAhead =
@@ -220,10 +231,11 @@ export async function fetchPtReminderPendingTargets(): Promise<PtReminderTarget[
       supabase
         .from('pt_schedules')
         .select('id, member_id, scheduled_at, trainer_id')
+        .eq('center_id', centerId)
         .eq('status', 'scheduled')
         .gte('scheduled_at', windowStart)
         .lte('scheduled_at', windowEnd),
-      supabase.from('trainers').select('id, name'),
+      supabase.from('trainers').select('id, name').eq('center_id', centerId),
       fetchNotifiedPtScheduleIds(),
     ])
 

@@ -1,3 +1,4 @@
+import { getCurrentCenterId } from '../lib/center'
 import { supabase } from '../lib/supabase'
 import { isSameLocalDay } from '../utils/date'
 
@@ -23,9 +24,11 @@ export async function fetchSchedulesInRange(
   startIso: string,
   endIso: string,
 ): Promise<PtSchedule[]> {
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('pt_schedules')
     .select('*')
+    .eq('center_id', centerId)
     .gte('scheduled_at', startIso)
     .lte('scheduled_at', endIso)
     .order('scheduled_at')
@@ -41,7 +44,9 @@ export async function createSchedule(input: {
   duration_minutes?: number
   note?: string
 }): Promise<PtSchedule> {
+  const centerId = await getCurrentCenterId()
   const payload = {
+    center_id: centerId,
     member_id: input.member_id,
     trainer_id: input.trainer_id || null,
     scheduled_at: input.scheduled_at,
@@ -114,9 +119,11 @@ export async function fetchTodayScheduledMemberIdsForTrainer(
   const end = new Date()
   end.setHours(23, 59, 59, 999)
 
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('pt_schedules')
     .select('member_id')
+    .eq('center_id', centerId)
     .eq('trainer_id', trainerId)
     .eq('status', 'scheduled')
     .gte('scheduled_at', start.toISOString())
@@ -143,10 +150,12 @@ export async function fetchMemberSchedules(
   end.setDate(end.getDate() + future)
   end.setHours(23, 59, 59, 999)
 
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('pt_schedules')
     .select('*')
     .eq('member_id', memberId)
+    .eq('center_id', centerId)
     .gte('scheduled_at', start.toISOString())
     .lte('scheduled_at', end.toISOString())
     .order('scheduled_at')

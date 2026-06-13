@@ -1,11 +1,14 @@
+import { getCurrentCenterId } from '../lib/center'
 import { formatSupabaseError } from '../lib/errors'
 import { supabase } from '../lib/supabase'
 import type { Trainer } from '../types/database'
 
 export async function fetchTrainers(): Promise<Trainer[]> {
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('trainers')
     .select('*')
+    .eq('center_id', centerId)
     .eq('is_active', true)
     .order('name')
 
@@ -17,9 +20,10 @@ export async function createTrainer(name: string): Promise<Trainer> {
   const trimmed = name.trim()
   if (!trimmed) throw new Error('트레이너 이름을 입력해 주세요.')
 
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('trainers')
-    .insert({ name: trimmed })
+    .insert({ name: trimmed, center_id: centerId })
     .select()
     .single()
 

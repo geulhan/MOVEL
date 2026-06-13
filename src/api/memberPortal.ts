@@ -1,3 +1,4 @@
+import { getCurrentCenterId } from '../lib/center'
 import { normalizeMember } from '../lib/memberNormalize'
 import { supabase } from '../lib/supabase'
 import type { Member } from '../types/database'
@@ -22,9 +23,11 @@ export type AttendanceLog = {
 
 export async function findMemberByPhone(phone: string): Promise<Member | null> {
   const digits = normalizePhone(phone)
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('members')
     .select('*')
+    .eq('center_id', centerId)
     .eq('phone', digits)
     .maybeSingle()
 
@@ -51,10 +54,12 @@ export async function fetchRecentAttendance(
   memberId: string,
   limit = 10,
 ): Promise<AttendanceLog[]> {
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('attendance_logs')
     .select('*')
     .eq('member_id', memberId)
+    .eq('center_id', centerId)
     .order('checked_in_at', { ascending: false })
     .limit(limit)
 

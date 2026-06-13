@@ -1,3 +1,4 @@
+import { getCurrentCenterId } from '../lib/center'
 import { supabase } from '../lib/supabase'
 
 export type ExerciseJournalCreatedBy = 'member' | 'trainer' | 'admin'
@@ -67,10 +68,12 @@ export async function uploadExerciseJournalPhotos(
 export async function fetchExerciseJournals(
   memberId: string,
 ): Promise<ExerciseJournal[]> {
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('exercise_journals')
     .select('*')
     .eq('member_id', memberId)
+    .eq('center_id', centerId)
     .order('trained_at', { ascending: false })
 
   if (error) throw error
@@ -95,9 +98,11 @@ export async function createExerciseJournal(
 
   const image_urls = await uploadExerciseJournalPhotos(memberId, photoFiles)
 
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('exercise_journals')
     .insert({
+      center_id: centerId,
       member_id: memberId,
       trained_at: input.trained_at,
       title: input.title?.trim() || null,

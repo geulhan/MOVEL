@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { getCurrentCenterId } from '../lib/center'
 import { normalizeMember } from '../lib/memberNormalize'
 import type { Member, MemberInsert, MemberStatus } from '../types/database'
 import { notifyMemberWelcome, notifyPaymentDone } from './notifications'
@@ -12,9 +13,11 @@ function escapeIlikePattern(term: string): string {
 }
 
 export async function fetchMembers(search?: string): Promise<Member[]> {
+  const centerId = await getCurrentCenterId()
   let query = supabase
     .from('members')
     .select('*')
+    .eq('center_id', centerId)
     .order('registered_at', { ascending: false })
     .limit(5000)
 
@@ -42,9 +45,11 @@ export async function createMember(input: {
   referred_by_member_id?: string | null
   status?: MemberStatus
 }): Promise<Member> {
+  const centerId = await getCurrentCenterId()
   const expires_at = calcSessionExpiry(input.registered_at, input.total_sessions)
 
   const payload: MemberInsert = {
+    center_id: centerId,
     name: input.name.trim(),
     phone: normalizePhone(input.phone),
     total_sessions: input.total_sessions,
@@ -69,6 +74,7 @@ export async function createMember(input: {
   const { data: paymentRow, error: paymentError } = await supabase
     .from('payment_history')
     .insert({
+      center_id: centerId,
       member_id: data.id,
       amount: input.payment_amount,
       sessions: input.total_sessions,
@@ -202,6 +208,7 @@ export async function deductSession(memberId: string): Promise<Member> {
   if (error) throw error
 
   const { error: logError } = await supabase.from('session_logs').insert({
+    center_id: await getCurrentCenterId(),
     member_id: memberId,
     quantity: 1,
     remaining_after: newRemaining,

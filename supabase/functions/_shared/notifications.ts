@@ -105,7 +105,7 @@ export async function sendMemberNotification(
 
   const { data: member, error: memberError } = await supabase
     .from('members')
-    .select('id, name, phone, expires_at, remaining_sessions, status')
+    .select('id, name, phone, expires_at, remaining_sessions, status, center_id')
     .eq('id', input.memberId)
     .maybeSingle()
 
@@ -126,6 +126,11 @@ export async function sendMemberNotification(
   const phone = String(member.phone).replace(/\D/g, '')
   if (phone.length < 10) {
     return { ok: false, status: 'failed', error: 'Invalid phone number' }
+  }
+
+  const centerId = (member as { center_id?: string | null }).center_id
+  if (!centerId) {
+    return { ok: false, status: 'failed', error: 'Member center_id missing' }
   }
 
   if (await hasDuplicate(input.templateKey, input.memberId, metadata)) {
@@ -174,6 +179,7 @@ export async function sendMemberNotification(
     const { data: logRow, error: logError } = await supabase
       .from('message_logs')
       .insert({
+        center_id: centerId,
         member_id: input.memberId,
         phone,
         template_key: input.templateKey,
@@ -202,6 +208,7 @@ export async function sendMemberNotification(
   const { data: pendingLog, error: pendingError } = await supabase
     .from('message_logs')
     .insert({
+      center_id: centerId,
       member_id: input.memberId,
       phone,
       template_key: input.templateKey,

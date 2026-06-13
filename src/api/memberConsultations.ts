@@ -1,3 +1,4 @@
+import { getCurrentCenterId } from '../lib/center'
 import { supabase } from '../lib/supabase'
 
 export type MemberConsultation = {
@@ -27,10 +28,12 @@ export type ConsultationInput = {
 export async function fetchMemberConsultations(
   memberId: string,
 ): Promise<MemberConsultation[]> {
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('member_consultations')
     .select('*')
     .eq('member_id', memberId)
+    .eq('center_id', centerId)
     .order('consulted_at', { ascending: false })
     .order('created_at', { ascending: false })
 
@@ -42,7 +45,9 @@ export async function createMemberConsultation(
   memberId: string,
   input: ConsultationInput,
 ): Promise<MemberConsultation> {
+  const centerId = await getCurrentCenterId()
   const payload = {
+    center_id: centerId,
     member_id: memberId,
     consulted_at: input.consulted_at,
     trainer_id: input.trainer_id || null,

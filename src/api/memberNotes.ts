@@ -1,11 +1,14 @@
+import { getCurrentCenterId } from '../lib/center'
 import { supabase } from '../lib/supabase'
 import type { MemberNote } from '../types/database'
 
 export async function fetchMemberNotes(memberId: string): Promise<MemberNote[]> {
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('member_notes')
     .select('*')
     .eq('member_id', memberId)
+    .eq('center_id', centerId)
     .order('created_at', { ascending: false })
 
   if (error) throw error
@@ -16,9 +19,14 @@ export async function createMemberNote(
   memberId: string,
   content: string,
 ): Promise<MemberNote> {
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('member_notes')
-    .insert({ member_id: memberId, content: content.trim() })
+    .insert({
+      center_id: centerId,
+      member_id: memberId,
+      content: content.trim(),
+    })
     .select('*')
     .single()
 

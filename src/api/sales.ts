@@ -1,3 +1,4 @@
+import { getCurrentCenterId } from '../lib/center'
 import { supabase } from '../lib/supabase'
 
 export type YearRevenue = {
@@ -52,15 +53,18 @@ function aggregateYearlyRevenue(
 }
 
 export async function fetchSalesStats(): Promise<SalesStats> {
+  const centerId = await getCurrentCenterId()
   const { data: payments, error: payError } = await supabase
     .from('payment_history')
     .select('amount, paid_at')
+    .eq('center_id', centerId)
 
   if (payError) throw payError
 
   const { data: members, error: memError } = await supabase
     .from('members')
     .select('status')
+    .eq('center_id', centerId)
     .eq('status', 'active')
 
   if (memError) throw memError
@@ -94,9 +98,11 @@ export function getYearRevenue(
 }
 
 export async function fetchRecentPayments(limit = 8): Promise<RecentPayment[]> {
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('payment_history')
     .select('id, amount, sessions, paid_at, note, member_id')
+    .eq('center_id', centerId)
     .order('paid_at', { ascending: false })
     .limit(limit)
 
@@ -110,6 +116,7 @@ export async function fetchRecentPayments(limit = 8): Promise<RecentPayment[]> {
     const { data: members } = await supabase
       .from('members')
       .select('id, name')
+      .eq('center_id', centerId)
       .in('id', memberIds)
 
     for (const member of members ?? []) {

@@ -1,3 +1,4 @@
+import { getCurrentCenterId } from '../lib/center'
 import { fetchMemberById } from './memberDetail'
 import { notifyPaymentDone } from './notifications'
 import { awardCustomRulesOnPayment, awardReferralOnPayment } from './rewards'
@@ -28,9 +29,11 @@ export async function createPaymentRecord(
     throw new Error('등록 횟수는 1 이상의 정수여야 합니다.')
   }
 
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('payment_history')
     .insert({
+      center_id: centerId,
       member_id: memberId,
       amount: input.amount,
       sessions,
@@ -100,11 +103,13 @@ export async function updatePayment(
     throw new Error('등록 횟수는 0 이상의 정수여야 합니다.')
   }
 
+  const centerId = await getCurrentCenterId()
   const { data: current, error: fetchError } = await supabase
     .from('payment_history')
     .select('sessions')
     .eq('id', paymentId)
     .eq('member_id', memberId)
+    .eq('center_id', centerId)
     .single()
 
   if (fetchError) throw fetchError
@@ -170,10 +175,12 @@ async function applySessionsDeltaToMember(
 }
 
 export async function syncMemberPaymentTotal(memberId: string): Promise<void> {
+  const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('payment_history')
     .select('amount')
     .eq('member_id', memberId)
+    .eq('center_id', centerId)
 
   if (error) throw error
 
