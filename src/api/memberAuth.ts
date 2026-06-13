@@ -1,6 +1,6 @@
+import { detectDeviceType } from '../lib/deviceType'
 import { supabase } from '../lib/supabase'
 import { formatSupabaseError } from '../lib/errors'
-import { logMemberLogin } from './memberLoginLogs'
 import { notifyMemberWelcome } from './notifications'
 import { saveMemberSession } from './memberPortal'
 import type { Json } from '../types/database'
@@ -110,6 +110,7 @@ export async function registerMember(
     p_name: name.trim(),
     p_phone: digits,
     p_password: password,
+    p_device_type: detectDeviceType(),
   })
 
   if (error) {
@@ -128,7 +129,6 @@ export async function registerMember(
   }
 
   saveMemberSession(result.id, result.token)
-  logMemberLogin(result.id)
   notifyMemberWelcome(result.id)
 
   return {
@@ -152,6 +152,7 @@ export async function loginMember(
   const { data, error } = await supabase.rpc('verify_member_login', {
     p_phone: digits,
     p_password: password,
+    p_device_type: detectDeviceType(),
   })
 
   if (error) {
@@ -170,7 +171,6 @@ export async function loginMember(
   }
 
   saveMemberSession(result.id, result.token)
-  logMemberLogin(result.id)
   return {
     memberId: result.id,
     memberName: result.name ?? '회원',

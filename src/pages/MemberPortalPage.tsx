@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { fetchMemberById } from '../api/memberDetail'
 import { formatDate, formatPhone, isExpired } from '../api/members'
 import { loginMember, registerMember } from '../api/memberAuth'
+import { logMemberSessionVisit } from '../api/memberLoginLogs'
 import {
   checkIn,
   clearMemberSession,
@@ -107,6 +108,9 @@ export default function MemberPortalPage() {
       return
     }
     void loadMemberData(id)
+      .then(() => {
+        logMemberSessionVisit(id)
+      })
       .catch((err) => {
         clearMemberSession()
         setMember(null)

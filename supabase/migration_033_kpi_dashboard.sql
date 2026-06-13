@@ -27,3 +27,5 @@ alter table public.member_login_logs enable row level security;
 drop policy if exists member_login_logs_all on public.member_login_logs;
 create policy member_login_logs_all on public.member_login_logs
   for all using (true) with check (true);
+
+grant select, insert on public.member_login_logs to anon, authenticated;

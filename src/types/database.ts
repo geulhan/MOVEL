@@ -1058,10 +1058,18 @@ export type Database = {
         }
         Returns: Json
       }
+      log_member_session_visit: {
+        Args: {
+          p_member_id: string
+          p_device_type?: string
+        }
+        Returns: undefined
+      }
       verify_member_login: {
         Args: {
           p_phone: string
           p_password: string
+          p_device_type?: string
         }
         Returns: Json
       }
@@ -1078,6 +1086,7 @@ export type Database = {
           p_name: string
           p_phone: string
           p_password: string
+          p_device_type?: string
         }
         Returns: Json
       }
