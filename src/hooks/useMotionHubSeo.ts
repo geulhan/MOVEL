@@ -34,11 +34,11 @@ export function useMotionHubSeo() {
     upsertMeta('meta[name="description"]', { name: 'description' }, MOTIONHUB_SEO.description)
     upsertMeta('meta[property="og:site_name"]', { property: 'og:site_name' }, MOTIONHUB_SEO.siteName)
     upsertMeta('meta[property="og:locale"]', { property: 'og:locale' }, MOTIONHUB_SEO.locale)
-    upsertMeta('meta[property="og:title"]', { property: 'og:title' }, MOTIONHUB_SEO.title)
+    upsertMeta('meta[property="og:title"]', { property: 'og:title' }, MOTIONHUB_SEO.ogTitle)
     upsertMeta(
       'meta[property="og:description"]',
       { property: 'og:description' },
-      MOTIONHUB_SEO.description,
+      MOTIONHUB_SEO.ogDescription,
     )
     upsertMeta('meta[property="og:url"]', { property: 'og:url' }, MOTIONHUB_SITE_URL)
     upsertMeta('meta[property="og:type"]', { property: 'og:type' }, MOTIONHUB_SEO.ogType)
@@ -58,11 +58,11 @@ export function useMotionHubSeo() {
       String(MOTIONHUB_SEO.ogImageHeight),
     )
     upsertMeta('meta[name="twitter:card"]', { name: 'twitter:card' }, MOTIONHUB_SEO.twitterCard)
-    upsertMeta('meta[name="twitter:title"]', { name: 'twitter:title' }, MOTIONHUB_SEO.title)
+    upsertMeta('meta[name="twitter:title"]', { name: 'twitter:title' }, MOTIONHUB_SEO.ogTitle)
     upsertMeta(
       'meta[name="twitter:description"]',
       { name: 'twitter:description' },
-      MOTIONHUB_SEO.description,
+      MOTIONHUB_SEO.ogDescription,
     )
     upsertMeta(
       'meta[name="twitter:image"]',

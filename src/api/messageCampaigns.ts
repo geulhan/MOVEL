@@ -303,30 +303,82 @@ export async function sendPtReminderMessage(
   })
 }
 
-/** PT 리마인더 목록에서 선택 건 제외 (발송 없이 skipped 로그 기록) */
-export async function dismissPtReminderTargets(
-  targets: Pick<PtReminderTarget, 'member' | 'scheduleId'>[],
+/** 목록에서 제외 (발송 없이 skipped 로그 기록) */
+async function insertSkippedMessageLogs(
+  rows: Array<{
+    member: Member
+    templateKey: MessageTemplateKey
+    metadata?: Record<string, string | number>
+  }>,
 ): Promise<void> {
-  if (targets.length === 0) return
+  if (rows.length === 0) return
 
   const centerId = await getCurrentCenterId()
   const { error } = await supabase.from('message_logs').insert(
-    targets.map((target) => ({
+    rows.map((row) => ({
       center_id: centerId,
-      member_id: target.member.id,
-      phone: target.member.phone,
-      template_key: 'pt_reminder' as const,
+      member_id: row.member.id,
+      phone: row.member.phone,
+      template_key: row.templateKey,
       channel: 'skipped' as const,
       status: 'skipped' as const,
       metadata: {
-        schedule_id: target.scheduleId,
         skipped_reason: 'manual_dismiss',
+        ...row.metadata,
       },
       error_message: '관리자가 목록에서 제외',
     })),
   )
 
   if (error) throw error
+}
+
+export async function dismissWelcomeTargets(
+  targets: Pick<WelcomeTarget, 'member'>[],
+): Promise<void> {
+  await insertSkippedMessageLogs(
+    targets.map((target) => ({
+      member: target.member,
+      templateKey: 'welcome' as const,
+    })),
+  )
+}
+
+export async function dismissPaymentTargets(
+  targets: Pick<PaymentTarget, 'member' | 'payment'>[],
+): Promise<void> {
+  await insertSkippedMessageLogs(
+    targets.map((target) => ({
+      member: target.member,
+      templateKey: 'payment_done' as const,
+      metadata: { payment_id: target.payment.id },
+    })),
+  )
+}
+
+export async function dismissRenewalTargets(
+  targets: Pick<RenewalTarget, 'member' | 'notifyTier'>[],
+): Promise<void> {
+  await insertSkippedMessageLogs(
+    targets.map((target) => ({
+      member: target.member,
+      templateKey: 'renewal' as const,
+      metadata: { days_left: target.notifyTier },
+    })),
+  )
+}
+
+/** PT 리마인더 목록에서 선택 건 제외 (발송 없이 skipped 로그 기록) */
+export async function dismissPtReminderTargets(
+  targets: Pick<PtReminderTarget, 'member' | 'scheduleId'>[],
+): Promise<void> {
+  await insertSkippedMessageLogs(
+    targets.map((target) => ({
+      member: target.member,
+      templateKey: 'pt_reminder' as const,
+      metadata: { schedule_id: target.scheduleId },
+    })),
+  )
 }
 
 export function formatPtReminderSummary(target: PtReminderTarget): string {

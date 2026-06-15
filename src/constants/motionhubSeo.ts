@@ -11,17 +11,32 @@ export const MOTIONHUB_BRAND_EN = 'MotionHub'
 /** UI 병기 표기 */
 export const MOTIONHUB_BRAND_DISPLAY = `${MOTIONHUB_BRAND_KO} (${MOTIONHUB_BRAND_EN})`
 
+export const MOTIONHUB_MAIN_MESSAGE =
+  '회원이 운동을 지속하게 만드는 운동센터 운영 플랫폼'
+
+export const MOTIONHUB_SUB_MESSAGE_LINES = [
+  '회원관리',
+  '재등록 관리',
+  '운동일지',
+  '출석관리',
+  '마일리지',
+  '알림톡',
+] as const
+
 export const MOTIONHUB_SEO = {
-  title: `${MOTIONHUB_BRAND_KO} | 운동센터 운영 플랫폼`,
+  title: MOTIONHUB_BRAND_KO,
   description:
-    '회원관리, 운동일지, 출석관리, 마일리지, 알림톡, 재등록 관리를 하나로 연결하는 운동센터 운영 플랫폼',
+    '회원이 운동을 지속하게 만드는 운동센터 운영 플랫폼. 회원관리, 재등록 관리, 운동일지, 출석관리, 마일리지, 알림톡을 하나로 연결합니다.',
+  ogTitle: MOTIONHUB_BRAND_KO,
+  ogDescription:
+    '회원이 운동을 지속하게 만드는 운동센터 운영 플랫폼. 회원관리부터 재등록 관리까지 한 번에 관리할 수 있습니다.',
   siteName: MOTIONHUB_BRAND_KO,
   applicationName: MOTIONHUB_BRAND_KO,
   ogType: 'website',
   ogImagePath: '/motionhub-og.png',
   ogImageWidth: 1200,
   ogImageHeight: 630,
-  ogImageAlt: `${MOTIONHUB_BRAND_KO} — 운동센터 운영을 하나의 허브로`,
+  ogImageAlt: `${MOTIONHUB_BRAND_KO} — ${MOTIONHUB_MAIN_MESSAGE}`,
   twitterCard: 'summary_large_image',
   locale: 'ko_KR',
 } as const

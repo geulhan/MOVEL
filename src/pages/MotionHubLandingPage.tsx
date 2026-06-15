@@ -6,6 +6,7 @@ import {
   MOTIONHUB_CONTACT,
   MOTIONHUB_TRUST_FEATURES,
 } from '../constants/motionhub'
+import { MOTIONHUB_SUB_MESSAGE_LINES } from '../constants/motionhubSeo'
 import { useMotionHubSeo } from '../hooks/useMotionHubSeo'
 import { getErrorMessage } from '../lib/errors'
 
@@ -136,9 +137,9 @@ function HeroSection() {
             운동센터 운영 플랫폼
           </p>
           <p className="mt-4 max-w-xl text-base leading-relaxed text-cream/65 sm:text-lg">
-            회원관리, 재등록 관리, 운동일지,
-            <br className="hidden sm:block" />
-            마일리지, 알림톡을 하나로 연결하세요.
+            {MOTIONHUB_SUB_MESSAGE_LINES.join(' · ')}
+            <br />
+            하나로 연결하세요.
           </p>
           <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
             <button
@@ -283,14 +284,19 @@ function CaseStudySection() {
         </div>
         <article className="mt-12 overflow-hidden rounded-3xl border border-gold/25 bg-charcoal-light p-8 sm:p-10">
           <h3 className="text-2xl font-bold text-cream sm:text-3xl">
-            MOVEL Performance Training
+            모벨 퍼포먼스 트레이닝
           </h3>
           <p className="mt-5 max-w-2xl text-base leading-relaxed text-cream/75">
-            모션허브는 현재 MOVEL Performance Training에서 실제 운영 중입니다.
+            모션허브는 현재 모벨 퍼포먼스 트레이닝에서
+            <br />
+            실제 운영 중인 플랫폼입니다.
           </p>
           <p className="mt-4 max-w-2xl text-base leading-relaxed text-cream/65">
-            회원관리부터 운동일지, 출석, 알림톡, 마일리지까지
-            하나의 플랫폼으로 관리하고 있습니다.
+            회원관리, 운동일지, 출석관리,
+            <br />
+            알림톡, 재등록 관리까지
+            <br />
+            하나의 플랫폼으로 운영하고 있습니다.
           </p>
         </article>
       </div>
@@ -542,6 +548,35 @@ function ContactSection() {
   )
 }
 
+function BottomCtaSection() {
+  return (
+    <section className="border-t border-charcoal/10 bg-charcoal py-16 sm:py-20">
+      <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
+        <p className="text-lg font-bold text-cream sm:text-xl">현재 베타 센터 모집 중</p>
+        <p className="mt-3 text-base text-cream/75">14일 무료 사용 가능</p>
+        <p className="mt-2 text-sm text-cream/55">
+          이용 시작일은 승인 시 설정할 수 있습니다.
+        </p>
+        <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row sm:items-center">
+          <button
+            type="button"
+            onClick={() => scrollToId('beta')}
+            className="rounded-xl bg-teal-500 px-6 py-3.5 text-sm font-bold text-charcoal transition hover:bg-teal-400"
+          >
+            베타 신청하기
+          </button>
+          <a
+            href="/signup"
+            className="rounded-xl border border-cream/25 bg-cream/5 px-6 py-3.5 text-sm font-bold text-cream transition hover:border-cream/40 hover:bg-cream/10"
+          >
+            센터 등록
+          </a>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 function LandingFooter() {
   return (
     <footer className="border-t border-charcoal/10 bg-charcoal py-12">
@@ -552,7 +587,7 @@ function LandingFooter() {
           Powered by 모션허브
         </p>
         <p className="mt-8 text-xs text-cream/35">
-          © {new Date().getFullYear()} 모션허브 (MotionHub). All rights reserved.
+          © {new Date().getFullYear()} 모션허브. All rights reserved.
         </p>
       </div>
     </footer>
@@ -573,6 +608,7 @@ export default function MotionHubLandingPage() {
         <CaseStudySection />
         <BetaSection />
         <ContactSection />
+        <BottomCtaSection />
       </main>
       <LandingFooter />
     </div>
