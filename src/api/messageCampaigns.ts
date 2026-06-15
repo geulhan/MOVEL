@@ -69,25 +69,40 @@ async function fetchNotifiedMemberIds(
   )
 }
 
-async function fetchNotifiedRenewalTiers(): Promise<Set<string>> {
+async function fetchRenewalTierState(): Promise<{
+  sentKeys: Set<string>
+  dismissedKeys: Set<string>
+}> {
   const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('message_logs')
-    .select('member_id, metadata')
+    .select('member_id, metadata, status')
     .eq('center_id', centerId)
     .eq('template_key', 'renewal')
     .in('status', ['sent', 'skipped'])
 
   if (error) throw error
 
-  const keys = new Set<string>()
+  const sentKeys = new Set<string>()
+  const dismissedKeys = new Set<string>()
   for (const row of data ?? []) {
     if (!row.member_id) continue
-    const daysLeft = (row.metadata as { days_left?: number } | null)?.days_left
+    const metadata = row.metadata as {
+      days_left?: number
+      skipped_reason?: string
+    } | null
+    const daysLeft = metadata?.days_left
     if (daysLeft == null) continue
-    keys.add(`${row.member_id}:${daysLeft}`)
+    const key = `${row.member_id}:${daysLeft}`
+    if (row.status === 'sent') {
+      sentKeys.add(key)
+      continue
+    }
+    if (metadata?.skipped_reason === 'manual_dismiss') {
+      dismissedKeys.add(key)
+    }
   }
-  return keys
+  return { sentKeys, dismissedKeys }
 }
 
 async function fetchNotifiedPaymentIds(): Promise<Set<string>> {
@@ -154,9 +169,9 @@ export async function fetchPaymentTargets(): Promise<PaymentTarget[]> {
 }
 
 async function buildRenewalTargets(): Promise<RenewalTarget[]> {
-  const [members, notifiedTiers] = await Promise.all([
+  const [members, { sentKeys, dismissedKeys }] = await Promise.all([
     fetchMembers(),
-    fetchNotifiedRenewalTiers(),
+    fetchRenewalTierState(),
   ])
   const today = todayDateString()
 
@@ -171,13 +186,17 @@ async function buildRenewalTargets(): Promise<RenewalTarget[]> {
       const expiresAt = member.expires_at?.split('T')[0]
       const daysLeft = expiresAt ? Math.max(0, daysBetween(today, expiresAt)) : 0
       const notifyTier = suggestRenewalDaysLeft(daysLeft)
+      const tierKey = `${member.id}:${notifyTier}`
       return {
         member,
         daysLeft,
         notifyTier,
-        alreadySent: notifiedTiers.has(`${member.id}:${notifyTier}`),
+        alreadySent: sentKeys.has(tierKey),
+        tierKey,
       }
     })
+    .filter((row) => !dismissedKeys.has(row.tierKey))
+    .map(({ tierKey: _ignored, ...row }) => row)
     .sort((a, b) => a.daysLeft - b.daysLeft)
 }
 
