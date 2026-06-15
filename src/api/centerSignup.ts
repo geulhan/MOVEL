@@ -37,7 +37,9 @@ export async function selfRegisterCenter(
     p_agree_marketing: input.agreeMarketing,
   })
 
-  if (error) throw error
+  if (error) {
+    throw new Error(error.message || '센터 등록에 실패했습니다.')
+  }
 
   if (!data || typeof data !== 'object' || Array.isArray(data)) {
     throw new Error('센터 등록에 실패했습니다.')
@@ -70,8 +72,30 @@ export async function selfRegisterCenter(
             ? String(row.message)
             : '필수 약관에 모두 동의해 주세요.',
         )
+      case 'invalid_name':
+        throw new Error('센터명을 입력해 주세요.')
+      case 'invalid_admin_username':
+        throw new Error('관리자 아이디를 입력해 주세요.')
+      case 'schema_outdated':
+        throw new Error(
+          row.message != null
+            ? String(row.message)
+            : '서버 설정이 완료되지 않았습니다. 관리자에게 문의해 주세요.',
+        )
+      case 'server_error':
+        throw new Error(
+          row.message != null
+            ? String(row.message)
+            : '센터 등록 중 오류가 발생했습니다.',
+        )
       default:
-        throw new Error('센터 등록에 실패했습니다.')
+        throw new Error(
+          row.message != null
+            ? String(row.message)
+            : row.error != null
+              ? `센터 등록에 실패했습니다. (${String(row.error)})`
+              : '센터 등록에 실패했습니다.',
+        )
     }
   }
 

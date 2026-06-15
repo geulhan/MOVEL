@@ -565,10 +565,10 @@ export function PtScheduleCalendar({
                       >
                         노쇼
                       </button>
-                      {isAdmin && (
+                      {canManage && !lockedTrainerId && (
                         <button
                           type="button"
-                          className="btn-ghost text-green-700"
+                          className="rounded-lg border border-emerald-600/40 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800"
                           onClick={() => void handleComplete(s)}
                         >
                           완료

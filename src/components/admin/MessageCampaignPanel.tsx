@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
+  dismissPtReminderTargets,
   fetchPaymentTargets,
   fetchPtReminderPendingTargets,
   fetchRenewalTargets,
@@ -87,6 +88,7 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [rowStatus, setRowStatus] = useState<Record<string, RowStatus>>({})
   const [bulkSending, setBulkSending] = useState(false)
+  const [bulkDismissing, setBulkDismissing] = useState(false)
   const [sendingId, setSendingId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
@@ -295,6 +297,38 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
     )
   }
 
+  async function handleBulkDismiss() {
+    if (kind !== 'pt_reminder') return
+
+    const ids = rowKeys.filter((id) => selected.has(id))
+    if (ids.length === 0) {
+      setError('제외할 예약을 선택해 주세요.')
+      return
+    }
+    if (
+      !window.confirm(
+        `선택한 ${ids.length}건을 PT 리마인더 목록에서 제외할까요?\n(알림톡은 발송되지 않습니다.)`,
+      )
+    ) {
+      return
+    }
+
+    const targets = ptReminderRows.filter((row) => ids.includes(row.scheduleId))
+    setBulkDismissing(true)
+    setError(null)
+    try {
+      await dismissPtReminderTargets(targets)
+      onSent()
+      await load()
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : '목록에서 제외하지 못했습니다.',
+      )
+    } finally {
+      setBulkDismissing(false)
+    }
+  }
+
   const count =
     kind === 'welcome'
       ? filteredWelcome.length
@@ -322,15 +356,31 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
           <button
             type="button"
             onClick={() => void load()}
-            disabled={loading || bulkSending}
+            disabled={loading || bulkSending || bulkDismissing}
             className={btnOutline}
           >
             새로고침
           </button>
+          {kind === 'pt_reminder' && (
+            <button
+              type="button"
+              onClick={() => void handleBulkDismiss()}
+              disabled={
+                loading || bulkSending || bulkDismissing || selected.size === 0
+              }
+              className={btnOutline}
+            >
+              {bulkDismissing
+                ? '제외 중…'
+                : `회원 선택 삭제 (${selected.size})`}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => void handleBulkSend()}
-            disabled={loading || bulkSending || selected.size === 0}
+            disabled={
+              loading || bulkSending || bulkDismissing || selected.size === 0
+            }
             className={btnPrimary}
           >
             {bulkSending ? '발송 중…' : `선택 발송 (${selected.size})`}

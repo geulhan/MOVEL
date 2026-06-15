@@ -2,11 +2,18 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   fetchPlatformCenterUsers,
   resetPlatformCenterUserPassword,
+  updatePlatformCenterUserPhone,
   type PlatformCenterUser,
 } from '../../api/platformAccounts'
 import { formatPhone } from '../../api/members'
 import type { PlatformCenter } from '../../api/platformCenters'
+import { PhoneInput } from '../PhoneInput'
 import { btnOutline } from '../../styles/theme'
+import {
+  extractPhoneBody,
+  isPhoneBodyComplete,
+  phoneBodyToFull,
+} from '../../utils/phone'
 
 type Props = {
   center: PlatformCenter
@@ -24,6 +31,8 @@ export function PlatformCenterAccountsModal({ center, onClose }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [resetResult, setResetResult] = useState<string | null>(null)
   const [actingId, setActingId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editPhoneBody, setEditPhoneBody] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -41,6 +50,40 @@ export function PlatformCenterAccountsModal({ center, onClose }: Props) {
   useEffect(() => {
     void load()
   }, [load])
+
+  function startEditPhone(user: PlatformCenterUser) {
+    setEditingId(user.id)
+    setEditPhoneBody(user.phone ? extractPhoneBody(user.phone) : '')
+    setError(null)
+    setResetResult(null)
+  }
+
+  function cancelEditPhone() {
+    setEditingId(null)
+    setEditPhoneBody('')
+  }
+
+  async function savePhone(userId: string) {
+    if (!isPhoneBodyComplete(editPhoneBody)) {
+      setError('올바른 휴대전화번호를 입력해 주세요.')
+      return
+    }
+
+    setActingId(userId)
+    setError(null)
+    setResetResult(null)
+    try {
+      await updatePlatformCenterUserPhone(userId, phoneBodyToFull(editPhoneBody))
+      setEditingId(null)
+      setEditPhoneBody('')
+      setResetResult('연락처가 저장되었습니다.')
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '연락처 저장에 실패했습니다.')
+    } finally {
+      setActingId(null)
+    }
+  }
 
   async function handleReset(user: PlatformCenterUser) {
     if (
@@ -75,7 +118,7 @@ export function PlatformCenterAccountsModal({ center, onClose }: Props) {
           <div>
             <h2 className="text-lg font-bold text-white">{center.name} 계정</h2>
             <p className="mt-1 text-sm text-cream/60">
-              관리자·트레이너 로그인 계정 확인 및 비밀번호 초기화 (휴대폰 뒤 4자리)
+              관리자·트레이너 로그인 계정 확인, 연락처 입력 및 비밀번호 초기화 (휴대폰 뒤 4자리)
             </p>
           </div>
           <button
@@ -127,7 +170,47 @@ export function PlatformCenterAccountsModal({ center, onClose }: Props) {
                       )}
                     </td>
                     <td className="px-3 py-3 text-xs">
-                      {user.phone ? formatPhone(user.phone) : '—'}
+                      {editingId === user.id ? (
+                        <div className="flex min-w-[12rem] flex-col gap-2">
+                          <PhoneInput
+                            value={editPhoneBody}
+                            onChange={setEditPhoneBody}
+                            className="w-full rounded border border-white/20 bg-white/5 px-2 py-1.5 text-xs text-white"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              disabled={actingId === user.id}
+                              onClick={() => void savePhone(user.id)}
+                              className="rounded bg-amber-500/90 px-2 py-1 text-[11px] font-semibold text-charcoal disabled:opacity-50"
+                            >
+                              저장
+                            </button>
+                            <button
+                              type="button"
+                              disabled={actingId === user.id}
+                              onClick={cancelEditPhone}
+                              className="rounded border border-white/20 px-2 py-1 text-[11px] text-cream/70"
+                            >
+                              취소
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <span>
+                            {user.phone ? formatPhone(user.phone) : '—'}
+                          </span>
+                          <button
+                            type="button"
+                            disabled={actingId === user.id}
+                            onClick={() => startEditPhone(user)}
+                            className="text-[11px] text-amber-300 hover:underline disabled:opacity-50"
+                          >
+                            {user.phone ? '수정' : '입력'}
+                          </button>
+                        </div>
+                      )}
                     </td>
                     <td className="px-3 py-3 text-xs">{user.status}</td>
                     <td className="px-3 py-3">

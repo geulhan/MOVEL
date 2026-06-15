@@ -303,6 +303,32 @@ export async function sendPtReminderMessage(
   })
 }
 
+/** PT 리마인더 목록에서 선택 건 제외 (발송 없이 skipped 로그 기록) */
+export async function dismissPtReminderTargets(
+  targets: Pick<PtReminderTarget, 'member' | 'scheduleId'>[],
+): Promise<void> {
+  if (targets.length === 0) return
+
+  const centerId = await getCurrentCenterId()
+  const { error } = await supabase.from('message_logs').insert(
+    targets.map((target) => ({
+      center_id: centerId,
+      member_id: target.member.id,
+      phone: target.member.phone,
+      template_key: 'pt_reminder' as const,
+      channel: 'skipped' as const,
+      status: 'skipped' as const,
+      metadata: {
+        schedule_id: target.scheduleId,
+        skipped_reason: 'manual_dismiss',
+      },
+      error_message: '관리자가 목록에서 제외',
+    })),
+  )
+
+  if (error) throw error
+}
+
 export function formatPtReminderSummary(target: PtReminderTarget): string {
   const trainer = target.trainerName.trim() || '담당 트레이너'
   return `${formatScheduledAtKst(target.scheduledAt)} · ${trainer}`

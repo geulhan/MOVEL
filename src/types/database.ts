@@ -1238,6 +1238,14 @@ export type Database = {
         }
         Returns: Json
       }
+      update_center_user_phone_platform: {
+        Args: {
+          p_session_token: string
+          p_center_user_id: string
+          p_phone: string
+        }
+        Returns: Json
+      }
       list_signup_consents_for_platform: {
         Args: {
           p_session_token: string

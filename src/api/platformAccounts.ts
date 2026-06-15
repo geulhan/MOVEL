@@ -78,6 +78,43 @@ export async function fetchPlatformCenterUsers(
     .filter((u): u is PlatformCenterUser => u !== null)
 }
 
+export async function updatePlatformCenterUserPhone(
+  centerUserId: string,
+  phone: string,
+): Promise<string> {
+  const { data, error } = await supabase.rpc('update_center_user_phone_platform', {
+    p_session_token: requirePlatformToken(),
+    p_center_user_id: centerUserId,
+    p_phone: phone,
+  })
+
+  if (error) throw error
+
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error('연락처 저장에 실패했습니다.')
+  }
+
+  const row = data as Record<string, Json | undefined>
+  if (row.ok !== true) {
+    switch (row.error) {
+      case 'invalid_phone':
+        throw new Error(
+          row.message != null
+            ? String(row.message)
+            : '올바른 휴대전화번호를 입력해 주세요.',
+        )
+      case 'unauthorized':
+        throw new Error('플랫폼 권한이 없습니다.')
+      case 'not_found':
+        throw new Error('계정을 찾을 수 없습니다.')
+      default:
+        throw new Error('연락처 저장에 실패했습니다.')
+    }
+  }
+
+  return row.phone != null ? String(row.phone) : phone
+}
+
 export async function resetPlatformCenterUserPassword(
   centerUserId: string,
 ): Promise<{ username: string; tempPassword: string }> {
