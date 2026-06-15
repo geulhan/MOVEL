@@ -10,6 +10,7 @@ type Props = {
   contractType: ContractType
   fields: ContractFieldData
   centerName?: string
+  draft?: boolean
   signedAt?: string | null
   signatureUrl?: string | null
   compact?: boolean
@@ -24,6 +25,7 @@ export function ContractDocument({
   contractType,
   fields,
   centerName,
+  draft = false,
   signedAt,
   signatureUrl,
   compact = false,
@@ -35,6 +37,12 @@ export function ContractDocument({
 
   return (
     <article className={`${sectionClass} text-charcoal`}>
+      {draft && (
+        <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-900">
+          계약서 초안 — 결제 요청 시 회원 정보와 상품 내역이 자동으로 채워집니다.
+        </p>
+      )}
+
       <header className="border-b border-gold/30 pb-4">
         <p className="text-xs font-semibold uppercase tracking-wide text-gold-dark">
           {displayCenterName}

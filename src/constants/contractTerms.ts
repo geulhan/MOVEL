@@ -58,6 +58,79 @@ export const CONTRACT_TYPE_LABELS = {
 
 export type ContractType = keyof typeof CONTRACT_TYPE_LABELS
 
+/** 결제 연동 계약서 + 양도·양수 등 별도 양식 초안 */
+export const CONTRACT_TEMPLATE_LABELS = {
+  ...CONTRACT_TYPE_LABELS,
+  pt_membership_transfer: 'PT 회원권 양도·양수 계약서',
+} as const
+
+export type ContractTemplateKey = keyof typeof CONTRACT_TEMPLATE_LABELS
+
+export type ContractTemplateMeta = {
+  key: ContractTemplateKey
+  label: string
+  description: string
+  usage: string
+  category: 'purchase' | 'transfer'
+  linkedToPayment: boolean
+}
+
+export const CONTRACT_TEMPLATES: ContractTemplateMeta[] = [
+  {
+    key: 'pt_purchase',
+    label: CONTRACT_TEMPLATE_LABELS.pt_purchase,
+    description: 'PT 회차 구매 시 회원 앱에서 서명하는 구매 계약서입니다.',
+    usage: '결제 요청(PT) 생성 시 자동 발급 · 결제 전 서명 필수',
+    category: 'purchase',
+    linkedToPayment: true,
+  },
+  {
+    key: 'center_pass_purchase',
+    label: CONTRACT_TEMPLATE_LABELS.center_pass_purchase,
+    description:
+      '센터 이용권·라커·수건 등 기간형 상품 구매 시 사용하는 계약서입니다.',
+    usage: '결제 요청(센터이용권·부가서비스) 생성 시 자동 발급 · 결제 전 서명 필수',
+    category: 'purchase',
+    linkedToPayment: true,
+  },
+  {
+    key: 'pt_membership_transfer',
+    label: CONTRACT_TEMPLATE_LABELS.pt_membership_transfer,
+    description:
+      'PT 잔여 회차를 타 회원에게 양도·양수할 때 센터 승인 하에 체결하는 계약서 초안입니다.',
+    usage: '대면 작성 · 양도인·양수인·센터 확인 후 보관 (앱 연동 예정)',
+    category: 'transfer',
+    linkedToPayment: false,
+  },
+]
+
+export const PT_MEMBERSHIP_TRANSFER_SECTIONS: ContractTermSection[] = [
+  {
+    id: 'transfer_terms',
+    title: '양도·양수 약관',
+    required: true,
+    paragraphs: [
+      '양도인은 본인 명의의 PT 회원권에 대한 잔여 이용 권리를 양수인에게 양도하고, 양수인은 이를 양수함에 동의합니다.',
+      '본 양도·양수는 {{centerName}}(이하 "센터")의 사전 승인 및 본 계약서 서명이 완료된 경우에만 유효합니다. 센터는 양도인·양수인의 본인 확인, 잔여 회차, 미납·환불·분쟁 여부 등을 확인한 뒤 처리합니다.',
+      '양도 대상은 미사용 잔여 PT 회차에 한하며, 이미 사용·예약·소멸된 회차는 양도할 수 없습니다. 양도 후 담당 트레이너·수업 일정은 센터 운영 정책과 협의 가능 일정에 따라 재배정될 수 있습니다.',
+      '양도 수수료 및 양도 대금(양수인이 양도인에게 지급하는 금액)은 당사자 간 자유롭게 정할 수 있으며, 센터에 납부하는 양도 수수료는 별도 안내에 따릅니다. 센터는 당사자 간 대금 분쟁에 개입하지 않습니다.',
+      '양도·양수 완료 후 회원 정보·잔여 회차·담당 트레이너 등은 센터 시스템에 반영되며, 양도인은 잔여 PT 이용 권리를 상실하고 양수인에게 귀속됩니다.',
+      '허위·대리·명의 대여 등 부정 양도가 확인되거나 센터 이용 약관을 위반하는 경우 센터는 양도를 취소하거나 이용을 제한할 수 있습니다.',
+      '양도·양수와 관련하여 환불·위약금 등은 최초 PT 구매 계약서 및 센터 환불 약관을 우선 적용하며, 별도 합의가 없는 한 양도만으로 환불 의무가 새로 발생하지 않습니다.',
+    ],
+  },
+  {
+    id: 'privacy',
+    title: '개인정보 수집·이용 동의',
+    required: true,
+    paragraphs: [
+      '센터는 양도·양수 계약 이행, 회원 관리, PT 이용 안내 및 고객 상담 목적으로 양도인·양수인의 이름, 연락처, 결제·이용 내역을 수집·이용합니다.',
+      '수집된 개인정보는 관련 법령이 정한 기간 또는 이용 목적 달성 시까지 보관하며, 목적 외 이용·제3자 제공은 당사자 동의 또는 법령에 따른 경우를 제외하고 하지 않습니다.',
+      '당사자는 개인정보 열람·정정·삭제·처리 정지를 요청할 수 있으며, 센터는 지체 없이 조치합니다.',
+    ],
+  },
+]
+
 export const CONTRACT_STATUS_LABELS = {
   pending_signature: '서명 대기',
   signed: '서명 완료',
@@ -77,4 +150,13 @@ export function applyCenterNameToContractTerms(
       paragraph.replaceAll('{{centerName}}', name),
     ),
   }))
+}
+
+export function applyCenterNameToTransferTerms(
+  centerName: string,
+): ContractTermSection[] {
+  return applyCenterNameToContractTerms(
+    centerName,
+    PT_MEMBERSHIP_TRANSFER_SECTIONS,
+  )
 }

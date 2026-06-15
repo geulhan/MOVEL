@@ -17,7 +17,7 @@ import {
   type PaymentRequestWithMember,
 } from '../../api/paymentRequests'
 import { CompletePaymentModal } from '../../components/admin/CompletePaymentModal'
-import { ContractInstancesPanel } from '../../components/admin/ContractInstancesPanel'
+import { ContractManagementPanel } from '../../components/admin/ContractManagementPanel'
 import { PaymentCategoryPricingPanel } from '../../components/admin/PaymentCategoryPricingPanel'
 import { PageHeader } from '../../components/admin/PageHeader'
 import {
@@ -174,7 +174,7 @@ export default function PaymentsPage() {
           onClick={() => setAdminTab('contracts')}
           className={`chip ${adminTab === 'contracts' ? 'chip-active' : 'chip-inactive'}`}
         >
-          계약서
+          계약서 관리
         </button>
       </nav>
 
@@ -190,7 +190,7 @@ export default function PaymentsPage() {
       )}
 
       {adminTab === 'contracts' ? (
-        <ContractInstancesPanel />
+        <ContractManagementPanel />
       ) : adminTab === 'pricing' ? (
         <PaymentCategoryPricingPanel
           initialCategory={pricingCategory}
