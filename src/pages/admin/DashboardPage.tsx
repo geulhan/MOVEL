@@ -1,5 +1,5 @@
 import { SalesDashboard } from '../../components/admin/SalesDashboard'
-import { OperationalKpiDashboard } from '../../components/admin/OperationalKpiDashboard'
+import { OperationalKpiSidebar } from '../../components/admin/OperationalKpiSidebar'
 import { PageHeader } from '../../components/admin/PageHeader'
 import { RenewalDashboard } from '../../components/RenewalDashboard'
 import { fetchMembers } from '../../api/members'
@@ -41,13 +41,17 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <OperationalKpiDashboard />
-      <SalesDashboard />
-      <RenewalDashboard
-        stats={stats}
-        activeFilter={renewalFilter}
-        onFilterChange={setRenewalFilter}
-      />
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_15.5rem]">
+        <div className="min-w-0 space-y-6">
+          <SalesDashboard />
+          <RenewalDashboard
+            stats={stats}
+            activeFilter={renewalFilter}
+            onFilterChange={setRenewalFilter}
+          />
+        </div>
+        <OperationalKpiSidebar />
+      </div>
     </div>
   )
 }

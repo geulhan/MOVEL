@@ -1,13 +1,10 @@
 import { useEffect, useState } from 'react'
 import { PageHeader } from '../../components/admin/PageHeader'
-import { FixedSchedulePanel } from '../../components/admin/FixedSchedulePanel'
 import { PtScheduleCalendar } from '../../components/admin/PtScheduleCalendar'
 import { fetchTrainers } from '../../api/trainers'
 import { getAdminSession } from '../../lib/adminSession'
 import { inputClass } from '../../styles/theme'
 import type { Trainer } from '../../types/database'
-
-type Tab = 'calendar' | 'fixed'
 
 export default function SchedulePage() {
   const session = getAdminSession()
@@ -15,11 +12,9 @@ export default function SchedulePage() {
   const lockedTrainerId =
     session?.role === 'trainer' ? session.trainerId ?? undefined : undefined
 
-  const [tab, setTab] = useState<Tab>('calendar')
   const [toast, setToast] = useState<string | null>(null)
   const [trainers, setTrainers] = useState<Trainer[]>([])
   const [filterTrainerId, setFilterTrainerId] = useState('')
-  const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
     if (!toast) return
@@ -34,15 +29,11 @@ export default function SchedulePage() {
       .catch(() => setTrainers([]))
   }, [isAdmin])
 
-  function bumpRefresh() {
-    setRefreshKey((k) => k + 1)
-  }
-
   return (
     <div className="space-y-6">
       <PageHeader
         title="PT 스케줄"
-        description="고정·개별 PT 예약을 관리합니다. 세션 차감은 출석 처리 시에만 됩니다."
+        description="개별·고정 PT 예약을 등록합니다. 세션 차감은 출석 처리 시에만 됩니다."
       />
 
       {isAdmin && (
@@ -71,45 +62,18 @@ export default function SchedulePage() {
         </div>
       )}
 
-      <nav className="chip-scroll">
-        <button
-          type="button"
-          onClick={() => setTab('calendar')}
-          className={`chip ${tab === 'calendar' ? 'chip-active' : 'chip-inactive'}`}
-        >
-          캘린더
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab('fixed')}
-          className={`chip ${tab === 'fixed' ? 'chip-active' : 'chip-inactive'}`}
-        >
-          고정 수업
-        </button>
-      </nav>
-
       {toast && (
         <div className="rounded-xl border border-gold/50 bg-white px-4 py-3 text-sm font-medium text-charcoal">
           {toast}
         </div>
       )}
 
-      {tab === 'calendar' ? (
-        <PtScheduleCalendar
-          onToast={setToast}
-          lockedTrainerId={lockedTrainerId}
-          filterTrainerId={filterTrainerId || undefined}
-          isAdmin={isAdmin}
-          refreshKey={refreshKey}
-        />
-      ) : (
-        <FixedSchedulePanel
-          onToast={setToast}
-          lockedTrainerId={lockedTrainerId}
-          filterTrainerId={filterTrainerId || undefined}
-          onChanged={bumpRefresh}
-        />
-      )}
+      <PtScheduleCalendar
+        onToast={setToast}
+        lockedTrainerId={lockedTrainerId}
+        filterTrainerId={filterTrainerId || undefined}
+        isAdmin={isAdmin}
+      />
     </div>
   )
 }

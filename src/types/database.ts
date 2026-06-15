@@ -296,6 +296,7 @@ export type PtFixedSchedule = {
   member_id: string
   trainer_id: string | null
   day_of_week: number
+  days_of_week?: number[] | null
   time_of_day: string
   duration_minutes: number
   note: string | null
@@ -794,6 +795,7 @@ export type Database = {
           member_id: string
           trainer_id?: string | null
           day_of_week: number
+          days_of_week?: number[] | null
           time_of_day: string
           duration_minutes?: number
           note?: string | null
@@ -802,6 +804,7 @@ export type Database = {
         {
           trainer_id?: string | null
           day_of_week?: number
+          days_of_week?: number[] | null
           time_of_day?: string
           duration_minutes?: number
           note?: string | null

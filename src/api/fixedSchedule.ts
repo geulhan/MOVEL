@@ -8,7 +8,10 @@ import {
   type PtSchedule,
   updateScheduleStatus,
 } from './schedule'
-import { buildFixedScheduleDates } from '../utils/fixedScheduleDates'
+import {
+  buildMultiDayScheduleDates,
+  normalizeDaysOfWeek,
+} from '../utils/fixedScheduleDates'
 import { isSameLocalDay, localDayEndIso, localDayStartIso } from '../utils/date'
 
 export type PtFixedSchedule = {
@@ -17,12 +20,20 @@ export type PtFixedSchedule = {
   member_id: string
   trainer_id: string | null
   day_of_week: number
+  days_of_week?: number[] | null
   time_of_day: string
   duration_minutes: number
   note: string | null
   is_active: boolean
   created_at: string
   updated_at: string
+}
+
+export function getFixedDaysOfWeek(fixed: PtFixedSchedule): number[] {
+  if (fixed.days_of_week && fixed.days_of_week.length > 0) {
+    return [...fixed.days_of_week].sort((a, b) => a - b)
+  }
+  return [fixed.day_of_week]
 }
 
 export async function fetchFixedSchedules(options?: {
@@ -78,11 +89,16 @@ async function insertScheduleRows(
 export async function createFixedSchedule(input: {
   member_id: string
   trainer_id?: string | null
-  day_of_week: number
+  days_of_week: number[]
   time_of_day: string
   duration_minutes?: number
   note?: string
 }): Promise<{ fixed: PtFixedSchedule; createdCount: number }> {
+  const days = normalizeDaysOfWeek(input.days_of_week)
+  if (days.length === 0) {
+    throw new Error('최소 1개 요일을 선택해 주세요.')
+  }
+
   const member = await fetchMemberById(input.member_id)
   if (member.remaining_sessions <= 0) {
     throw new Error('잔여 세션이 없습니다. 고정 수업을 등록할 수 없습니다.')
@@ -99,7 +115,8 @@ export async function createFixedSchedule(input: {
       center_id: centerId,
       member_id: input.member_id,
       trainer_id: trainerId,
-      day_of_week: input.day_of_week,
+      day_of_week: days[0],
+      days_of_week: days,
       time_of_day: input.time_of_day,
       duration_minutes: duration,
       note,
@@ -111,8 +128,8 @@ export async function createFixedSchedule(input: {
   if (fixedError) throw fixedError
   const fixed = fixedRow as PtFixedSchedule
 
-  const dates = buildFixedScheduleDates(
-    input.day_of_week,
+  const dates = buildMultiDayScheduleDates(
+    days,
     input.time_of_day,
     member.remaining_sessions,
   )
@@ -253,18 +270,24 @@ export async function updateDetachedSchedule(
 export async function updateFixedScheduleSeries(
   fixedScheduleId: string,
   input: {
-    day_of_week: number
+    days_of_week: number[]
     time_of_day: string
     trainer_id?: string | null
     note?: string | null
   },
 ): Promise<number> {
+  const days = normalizeDaysOfWeek(input.days_of_week)
+  if (days.length === 0) {
+    throw new Error('최소 1개 요일을 선택해 주세요.')
+  }
+
   const now = new Date().toISOString()
 
   const { error: fixedError } = await supabase
     .from('pt_fixed_schedules')
     .update({
-      day_of_week: input.day_of_week,
+      day_of_week: days[0],
+      days_of_week: days,
       time_of_day: input.time_of_day,
       trainer_id: input.trainer_id ?? null,
       note: input.note?.trim() || null,
@@ -298,8 +321,8 @@ export async function updateFixedScheduleSeries(
     note: string | null
   }
 
-  const newDates = buildFixedScheduleDates(
-    input.day_of_week,
+  const newDates = buildMultiDayScheduleDates(
+    days,
     input.time_of_day,
     ids.length,
   )
@@ -359,8 +382,8 @@ export async function syncFixedScheduleToRemaining(
 
   if (needed <= 0) return 0
 
-  const dates = buildFixedScheduleDates(
-    fixed.day_of_week,
+  const dates = buildMultiDayScheduleDates(
+    getFixedDaysOfWeek(fixed),
     fixed.time_of_day,
     needed,
   )

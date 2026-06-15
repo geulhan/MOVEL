@@ -1,5 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { createMember, formatDate, todayDateString } from '../api/members'
+import { getErrorMessage } from '../lib/errors'
 import { SESSION_DAYS_PER_SESSION } from '../constants/session'
 import { btnPrimary, cardClass, inputClass } from '../styles/theme'
 import {
@@ -95,8 +96,7 @@ export function MemberForm({ trainers, members = [], onCreated }: Props) {
       setMessage('회원이 등록되었습니다.')
       onCreated()
     } catch (err) {
-      const msg =
-        err instanceof Error ? err.message : '등록 중 오류가 발생했습니다.'
+      const msg = getErrorMessage(err)
       const code =
         err && typeof err === 'object' && 'code' in err
           ? String((err as { code: string }).code)

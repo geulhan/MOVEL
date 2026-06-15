@@ -4,8 +4,18 @@ export function buildFixedScheduleDates(
   timeHHMM: string,
   count: number,
 ): Date[] {
-  if (count <= 0) return []
+  return buildMultiDayScheduleDates([dayOfWeek], timeHHMM, count)
+}
 
+/** 복수 요일 — 잔여 세션 수만큼 가장 가까운 날짜부터 순서대로 배치 */
+export function buildMultiDayScheduleDates(
+  daysOfWeek: number[],
+  timeHHMM: string,
+  count: number,
+): Date[] {
+  if (count <= 0 || daysOfWeek.length === 0) return []
+
+  const daySet = new Set(daysOfWeek)
   const [hours, minutes] = timeHHMM.split(':').map((v) => parseInt(v, 10))
   const dates: Date[] = []
   const cursor = new Date()
@@ -15,7 +25,7 @@ export function buildFixedScheduleDates(
   const maxDays = Math.max(count * 14, 365)
 
   while (dates.length < count && guard < maxDays) {
-    if (cursor.getDay() === dayOfWeek) {
+    if (daySet.has(cursor.getDay())) {
       const slot = new Date(cursor)
       slot.setHours(hours, minutes, 0, 0)
       if (slot.getTime() > Date.now()) {
@@ -27,6 +37,10 @@ export function buildFixedScheduleDates(
   }
 
   return dates
+}
+
+export function normalizeDaysOfWeek(days: number[]): number[] {
+  return [...new Set(days.filter((d) => d >= 0 && d <= 6))].sort((a, b) => a - b)
 }
 
 export function toLocalScheduleIso(dateStr: string, timeHHMM: string): string {
