@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { submitBetaApplication, type CenterType } from '../api/betaApplication'
 import { MotionHubLogo } from '../components/brand/MotionHubLogo'
 import {
@@ -6,6 +6,7 @@ import {
   MOTIONHUB_CONTACT,
   MOTIONHUB_TRUST_FEATURES,
 } from '../constants/motionhub'
+import { useMotionHubSeo } from '../hooks/useMotionHubSeo'
 import { getErrorMessage } from '../lib/errors'
 
 const PROBLEMS = [
@@ -548,24 +549,7 @@ function LandingFooter() {
 }
 
 export default function MotionHubLandingPage() {
-  useEffect(() => {
-    const prevTitle = document.title
-    const prevDesc = document.querySelector('meta[name="description"]')?.getAttribute('content')
-
-    document.title = 'MotionHub — 회원이 운동을 지속하게 만드는 운동센터 운영 플랫폼'
-    const meta = document.querySelector('meta[name="description"]')
-    if (meta) {
-      meta.setAttribute(
-        'content',
-        '회원 유지·재등록 관리·운영 효율을 돕는 MotionHub. PT샵, 필라테스, 프리랜서 트레이너를 위한 회원관리, 마일리지, 알림톡 통합 플랫폼',
-      )
-    }
-
-    return () => {
-      document.title = prevTitle
-      if (meta && prevDesc) meta.setAttribute('content', prevDesc)
-    }
-  }, [])
+  useMotionHubSeo()
 
   return (
     <div className="min-h-screen bg-cream">
