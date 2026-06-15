@@ -1,8 +1,10 @@
 import { getPlatformSession } from '../lib/platformSession'
 import { supabase } from '../lib/supabase'
 import type { Json } from '../types/database'
-import type { CenterFeatures } from '../types/centerFeatures'
-import { parseCenterFeatures } from '../types/centerFeatures'
+import {
+  parseServicePeriod,
+  type CenterServicePeriod,
+} from '../types/centerServicePeriod'
 
 export type PlatformCenter = {
   id: string
@@ -12,7 +14,7 @@ export type PlatformCenter = {
   plan_code: string | null
   member_count: number
   trainer_count: number
-  features: CenterFeatures
+  servicePeriod: CenterServicePeriod
   created_at: string
 }
 
@@ -63,7 +65,11 @@ function parseCenterList(data: Json): PlatformCenter[] {
         member_count: typeof c.member_count === 'number' ? c.member_count : 0,
         trainer_count:
           typeof c.trainer_count === 'number' ? c.trainer_count : 0,
-        features: parseCenterFeatures(c.features),
+        servicePeriod: parseServicePeriod({
+          service_starts_at: c.service_starts_at,
+          service_ends_at: c.service_ends_at,
+          service_period_ok: c.service_period_ok,
+        }),
         created_at: c.created_at != null ? String(c.created_at) : '',
       }
     })
@@ -186,20 +192,26 @@ export async function suspendPlatformCenter(centerId: string): Promise<void> {
   }
 }
 
-export async function updatePlatformCenterFeatures(
+export async function updatePlatformCenterServicePeriod(
   centerId: string,
-  features: CenterFeatures,
-): Promise<CenterFeatures> {
-  const { data, error } = await supabase.rpc('update_center_features', {
+  input: {
+    startsAt: string | null
+    endsAt: string | null
+    reactivate?: boolean
+  },
+): Promise<CenterServicePeriod> {
+  const { data, error } = await supabase.rpc('update_center_service_period', {
     p_session_token: requirePlatformToken(),
     p_center_id: centerId,
-    p_features: features as unknown as Json,
+    p_service_starts_at: input.startsAt,
+    p_service_ends_at: input.endsAt,
+    p_reactivate: input.reactivate ?? true,
   })
 
   if (error) throw error
 
   if (!data || typeof data !== 'object' || Array.isArray(data)) {
-    throw new Error('이용 권한 저장에 실패했습니다.')
+    throw new Error('이용 기간 저장에 실패했습니다.')
   }
 
   const row = data as Record<string, Json | undefined>
@@ -209,10 +221,20 @@ export async function updatePlatformCenterFeatures(
         throw new Error('플랫폼 권한이 없습니다.')
       case 'not_found':
         throw new Error('센터를 찾을 수 없습니다.')
+      case 'invalid_range':
+        throw new Error(
+          row.message != null
+            ? String(row.message)
+            : '이용 기간이 올바르지 않습니다.',
+        )
       default:
-        throw new Error('이용 권한 저장에 실패했습니다.')
+        throw new Error('이용 기간 저장에 실패했습니다.')
     }
   }
 
-  return parseCenterFeatures(row.features)
+  return parseServicePeriod({
+    service_starts_at: row.service_starts_at,
+    service_ends_at: row.service_ends_at,
+    service_period_ok: row.service_period_ok,
+  })
 }

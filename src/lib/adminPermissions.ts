@@ -1,5 +1,4 @@
 import { getAdminSession, type AdminRole, type AdminSession } from './adminSession'
-import type { CenterFeatureKey, CenterFeatures } from '../types/centerFeatures'
 
 export type { AdminRole }
 
@@ -9,7 +8,6 @@ export type AdminNavItem = {
   label: string
   icon: string
   roles: AdminRole[]
-  feature?: CenterFeatureKey
 }
 
 export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
@@ -18,9 +16,9 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { to: '/admin/schedule', end: false, label: 'PT 스케줄', icon: '▦', roles: ['admin', 'trainer'] },
   { to: '/admin/attendance', end: false, label: '출석부', icon: '✓', roles: ['admin'] },
   { to: '/admin/trainers', end: false, label: '트레이너', icon: '★', roles: ['admin'] },
-  { to: '/admin/rewards', end: false, label: '마일리지 관리', icon: '◆', roles: ['admin'], feature: 'mileage' },
+  { to: '/admin/rewards', end: false, label: '마일리지 관리', icon: '◆', roles: ['admin'] },
   { to: '/admin/payments', end: false, label: '결제 관리', icon: '₩', roles: ['admin'] },
-  { to: '/admin/messages', end: false, label: '메시지 발송', icon: '✉', roles: ['admin'], feature: 'notifications' },
+  { to: '/admin/messages', end: false, label: '메시지 발송', icon: '✉', roles: ['admin'] },
   { to: '/admin/settings', end: false, label: '센터 설정', icon: '⚙', roles: ['admin'] },
 ]
 
@@ -43,27 +41,12 @@ export function getDefaultAdminPath(session: AdminSession | null = getAdminSessi
   return '/admin'
 }
 
-const FEATURE_GATED_PATHS: Record<string, CenterFeatureKey> = {
-  '/admin/rewards': 'mileage',
-  '/admin/messages': 'notifications',
-}
-
 export function canAccessAdminPath(
   pathname: string,
   session: AdminSession | null = getAdminSession(),
-  features?: CenterFeatures,
 ): boolean {
   if (!session) return false
-  if (session.role === 'admin') {
-    if (features) {
-      for (const [prefix, key] of Object.entries(FEATURE_GATED_PATHS)) {
-        if (pathname === prefix || pathname.startsWith(`${prefix}/`)) {
-          if (!features[key]) return false
-        }
-      }
-    }
-    return true
-  }
+  if (session.role === 'admin') return true
 
   if (pathname === '/admin' || pathname === '/admin/') return false
 
@@ -101,14 +84,7 @@ export function getMemberDetailTabs(session: AdminSession | null = getAdminSessi
   return tabs
 }
 
-export function navItemsForSession(
-  session: AdminSession | null = getAdminSession(),
-  features?: CenterFeatures,
-) {
+export function navItemsForSession(session: AdminSession | null = getAdminSession()) {
   if (!session) return []
-  return ADMIN_NAV_ITEMS.filter((item) => {
-    if (!item.roles.includes(session.role)) return false
-    if (item.feature && features && !features[item.feature]) return false
-    return true
-  })
+  return ADMIN_NAV_ITEMS.filter((item) => item.roles.includes(session.role))
 }

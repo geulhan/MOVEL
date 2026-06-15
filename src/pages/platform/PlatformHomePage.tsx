@@ -6,8 +6,12 @@ import {
   suspendPlatformCenter,
   type PlatformCenter,
 } from '../../api/platformCenters'
-import { PlatformCenterFeaturesModal } from '../../components/platform/PlatformCenterFeaturesModal'
-import { CENTER_FEATURE_KEYS, CENTER_FEATURE_LABELS } from '../../types/centerFeatures'
+import { PlatformCenterServicePeriodModal } from '../../components/platform/PlatformCenterServicePeriodModal'
+import {
+  formatServicePeriod,
+  getServicePeriodStatus,
+  SERVICE_PERIOD_STATUS_LABELS,
+} from '../../types/centerServicePeriod'
 import { btnOutline, btnPrimary, cardClass } from '../../styles/theme'
 
 const STATUS_LABELS: Record<string, string> = {
@@ -16,12 +20,28 @@ const STATUS_LABELS: Record<string, string> = {
   suspended: '정지',
 }
 
+function periodBadgeClass(status: ReturnType<typeof getServicePeriodStatus>): string {
+  switch (status) {
+    case 'active':
+    case 'unlimited':
+      return 'bg-emerald-500/15 text-emerald-300'
+    case 'suspended':
+      return 'bg-red-500/15 text-red-300'
+    case 'expired':
+      return 'bg-amber-500/15 text-amber-300'
+    case 'not_started':
+      return 'bg-sky-500/15 text-sky-300'
+    default:
+      return 'bg-white/10 text-cream/70'
+  }
+}
+
 export default function PlatformHomePage() {
   const [centers, setCenters] = useState<PlatformCenter[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actionId, setActionId] = useState<string | null>(null)
-  const [featuresCenter, setFeaturesCenter] = useState<PlatformCenter | null>(null)
+  const [periodCenter, setPeriodCenter] = useState<PlatformCenter | null>(null)
 
   const loadCenters = useCallback(async () => {
     setLoading(true)
@@ -125,7 +145,7 @@ export default function PlatformHomePage() {
                   <th className="px-4 py-3 font-medium">센터</th>
                   <th className="px-4 py-3 font-medium">코드</th>
                   <th className="px-4 py-3 font-medium">요금제</th>
-                  <th className="px-4 py-3 font-medium">이용 권한</th>
+                  <th className="px-4 py-3 font-medium">이용 기간</th>
                   <th className="px-4 py-3 font-medium">회원</th>
                   <th className="px-4 py-3 font-medium">트레이너</th>
                   <th className="px-4 py-3 font-medium">상태</th>
@@ -133,93 +153,92 @@ export default function PlatformHomePage() {
                 </tr>
               </thead>
               <tbody>
-                {centers.map((center) => (
-                  <tr key={center.id} className="border-b border-white/5 text-cream/90">
-                    <td className="px-4 py-3 font-medium text-white">{center.name}</td>
-                    <td className="px-4 py-3 font-mono text-xs">{center.slug}</td>
-                    <td className="px-4 py-3">{center.plan_code ?? '—'}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1">
-                        {CENTER_FEATURE_KEYS.map((key) => (
+                {centers.map((center) => {
+                  const periodStatus = getServicePeriodStatus(
+                    center.status,
+                    center.servicePeriod,
+                  )
+                  return (
+                    <tr key={center.id} className="border-b border-white/5 text-cream/90">
+                      <td className="px-4 py-3 font-medium text-white">{center.name}</td>
+                      <td className="px-4 py-3 font-mono text-xs">{center.slug}</td>
+                      <td className="px-4 py-3">{center.plan_code ?? '—'}</td>
+                      <td className="px-4 py-3">
+                        <div className="space-y-1">
+                          <p className="text-xs">{formatServicePeriod(center.servicePeriod)}</p>
                           <span
-                            key={key}
-                            className={`rounded-full px-2 py-0.5 text-[10px] ${
-                              center.features[key]
-                                ? 'bg-emerald-500/15 text-emerald-300'
-                                : 'bg-white/5 text-cream/35 line-through'
-                            }`}
-                            title={CENTER_FEATURE_LABELS[key].description}
+                            className={`inline-block rounded-full px-2 py-0.5 text-[10px] ${periodBadgeClass(periodStatus)}`}
                           >
-                            {CENTER_FEATURE_LABELS[key].label}
+                            {SERVICE_PERIOD_STATUS_LABELS[periodStatus]}
                           </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">{center.member_count}</td>
-                    <td className="px-4 py-3">{center.trainer_count}</td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs ${
-                          center.status === 'active'
-                            ? 'bg-emerald-500/15 text-emerald-300'
-                            : center.status === 'suspended'
-                              ? 'bg-red-500/15 text-red-300'
-                              : 'bg-white/10 text-cream/70'
-                        }`}
-                      >
-                        {STATUS_LABELS[center.status] ?? center.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-2">
-                        <Link
-                          to={`/login?center=${encodeURIComponent(center.slug)}`}
-                          className="text-xs text-sky-300 hover:underline"
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">{center.member_count}</td>
+                      <td className="px-4 py-3">{center.trainer_count}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-xs ${
+                            center.status === 'active'
+                              ? 'bg-emerald-500/15 text-emerald-300'
+                              : center.status === 'suspended'
+                                ? 'bg-red-500/15 text-red-300'
+                                : 'bg-white/10 text-cream/70'
+                          }`}
                         >
-                          관리자 로그인
-                        </Link>
-                        <button
-                          type="button"
-                          disabled={actionId === center.id}
-                          onClick={() => setFeaturesCenter(center)}
-                          className="text-xs text-violet-300 hover:underline disabled:opacity-50"
-                        >
-                          이용 권한
-                        </button>
-                        {center.status !== 'suspended' && center.slug !== 'movel' && (
+                          {STATUS_LABELS[center.status] ?? center.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-2">
+                          <Link
+                            to={`/login?center=${encodeURIComponent(center.slug)}`}
+                            className="text-xs text-sky-300 hover:underline"
+                          >
+                            관리자 로그인
+                          </Link>
                           <button
                             type="button"
                             disabled={actionId === center.id}
-                            onClick={() => void handleSuspend(center)}
-                            className="text-xs text-amber-300 hover:underline disabled:opacity-50"
+                            onClick={() => setPeriodCenter(center)}
+                            className="text-xs text-violet-300 hover:underline disabled:opacity-50"
                           >
-                            정지
+                            이용 기간
                           </button>
-                        )}
-                        {center.slug !== 'movel' && (
-                          <button
-                            type="button"
-                            disabled={actionId === center.id}
-                            onClick={() => void handleDelete(center)}
-                            className="text-xs text-red-300 hover:underline disabled:opacity-50"
-                          >
-                            삭제
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          {center.status !== 'suspended' && center.slug !== 'movel' && (
+                            <button
+                              type="button"
+                              disabled={actionId === center.id}
+                              onClick={() => void handleSuspend(center)}
+                              className="text-xs text-amber-300 hover:underline disabled:opacity-50"
+                            >
+                              정지
+                            </button>
+                          )}
+                          {center.slug !== 'movel' && (
+                            <button
+                              type="button"
+                              disabled={actionId === center.id}
+                              onClick={() => void handleDelete(center)}
+                              className="text-xs text-red-300 hover:underline disabled:opacity-50"
+                            >
+                              삭제
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
         )}
       </section>
 
-      {featuresCenter && (
-        <PlatformCenterFeaturesModal
-          center={featuresCenter}
-          onClose={() => setFeaturesCenter(null)}
+      {periodCenter && (
+        <PlatformCenterServicePeriodModal
+          center={periodCenter}
+          onClose={() => setPeriodCenter(null)}
           onSaved={() => void loadCenters()}
         />
       )}

@@ -56,6 +56,8 @@ export type Center = {
   status: CenterStatus
   logo_url?: string | null
   settings?: Json | null
+  service_starts_at?: string | null
+  service_ends_at?: string | null
   created_at: string
   updated_at: string
 }
@@ -1190,6 +1192,16 @@ export type Database = {
           p_session_token: string
           p_center_id: string
           p_features: Json
+        }
+        Returns: Json
+      }
+      update_center_service_period: {
+        Args: {
+          p_session_token: string
+          p_center_id: string
+          p_service_starts_at?: string | null
+          p_service_ends_at?: string | null
+          p_reactivate?: boolean
         }
         Returns: Json
       }

@@ -10,7 +10,6 @@ import {
   useCenterBranding,
   useCenterThemeVars,
 } from '../../hooks/useCenterBranding'
-import { useCenterFeatures } from '../../hooks/useCenterFeatures'
 
 function MemberPortalLink({
   className = '',
@@ -40,9 +39,8 @@ function AdminLayoutInner() {
   const navigate = useNavigate()
   const session = getAdminSession()
   const { branding } = useCenterBranding()
-  const { features } = useCenterFeatures()
   const themeVars = useCenterThemeVars(branding.theme)
-  const navItems = navItemsForSession(session, features)
+  const navItems = navItemsForSession(session)
   const roleLabel = session?.role === 'trainer' ? '트레이너' : '관리자'
 
   function handleLogout() {

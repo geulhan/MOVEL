@@ -70,6 +70,10 @@ function loginErrorMessage(code?: string): string {
       return '센터 코드를 찾을 수 없습니다.'
     case 'center_suspended':
       return '정지된 센터입니다. MotionHub에 문의해 주세요.'
+    case 'center_service_expired':
+      return '서비스 이용 기간이 만료된 센터입니다. MotionHub에 문의해 주세요.'
+    case 'center_service_not_started':
+      return '아직 서비스 이용이 시작되지 않은 센터입니다.'
     case 'center_inactive':
       return '비활성 센터입니다.'
     default:
