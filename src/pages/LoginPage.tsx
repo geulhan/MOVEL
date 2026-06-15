@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { loginAdmin } from '../api/adminAuth'
 import { MotionHubAuthShell } from '../components/layouts/MotionHubAuthShell'
-import { formatSupabaseError } from '../lib/errors'
+import { getErrorMessage } from '../lib/errors'
 import { isSupabaseConfigured } from '../lib/supabase'
 import {
   clearAdminAuth,
@@ -10,7 +10,7 @@ import {
   isAdminAuthenticated,
 } from '../lib/adminSession'
 import { resetCenterIdCache } from '../lib/center'
-import { saveRememberedAdminCenterSlug } from '../lib/centerSlug'
+import { loadRememberedAdminCenterSlug, saveRememberedAdminCenterSlug } from '../lib/centerSlug'
 import {
   clearRememberedAdminLogin,
   loadRememberedAdminLogin,
@@ -78,11 +78,20 @@ export default function LoginPage() {
       return
     }
 
-    const slug = needCenterSlug ? centerSlug.trim().toLowerCase() : undefined
+    const slug = needCenterSlug
+      ? centerSlug.trim().toLowerCase()
+      : urlCenter || loadRememberedAdminCenterSlug() || undefined
     if (needCenterSlug && !slug) {
       setError('센터 주소를 입력해 주세요.')
       return
     }
+
+    console.error('[LoginPage] submit', {
+      username: username.trim(),
+      center_slug: slug ?? null,
+      needCenterSlug,
+      urlCenter,
+    })
 
     setLoading(true)
     try {
@@ -103,10 +112,8 @@ export default function LoginPage() {
             : '/admin'
       navigate(target, { replace: true })
     } catch (err) {
-      const message =
-        err instanceof Error && err.message
-          ? err.message
-          : formatSupabaseError(err)
+      console.error('[LoginPage] login failed', err)
+      const message = getErrorMessage(err)
       if (message.includes('여러 센터')) {
         setNeedCenterSlug(true)
       }

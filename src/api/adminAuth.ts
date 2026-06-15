@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase'
 import { resetCenterIdCache } from '../lib/center'
+import { getErrorMessage } from '../lib/errors'
 import { saveAdminAuth, type AdminRole } from '../lib/adminSession'
 import type { Json } from '../types/database'
 
@@ -36,7 +37,7 @@ function parseLoginResponse(data: Json): AdminLoginResponse {
   const center_id = row.center_id != null ? String(row.center_id) : undefined
   const center_slug = row.center_slug != null ? String(row.center_slug) : undefined
   if (!id || !username || !token || !center_id || !center_slug) {
-    return { ok: false }
+    return { ok: false, error: 'invalid_response_shape' }
   }
 
   const roleRaw = row.role != null ? String(row.role) : 'admin'
@@ -79,6 +80,11 @@ function loginErrorMessage(row?: { error?: string; message?: string }): string {
       return '센터 승인 대기 중입니다. MotionHub에서 이용 기간 설정 후 이용 가능합니다.'
     case 'multiple_centers':
       return '동일한 아이디가 여러 센터에 있습니다. 센터 주소를 입력해 주세요.'
+    case 'invalid_response_shape':
+      return (
+        '로그인 응답 형식이 맞지 않습니다. Supabase에 migration_043 이상이 적용됐는지, ' +
+        '구버전 verify_admin_login(text,text) 함수가 남아 있지 않은지 확인해 주세요.'
+      )
     default:
       return '아이디 또는 비밀번호가 올바르지 않습니다.'
   }
@@ -90,21 +96,24 @@ export async function loginAdmin(
   centerSlug?: string,
 ): Promise<AdminSessionInfo> {
   const slug = centerSlug?.trim().toLowerCase() || undefined
-  const { data, error } = await supabase.rpc(
-    'verify_admin_login',
-    slug
-      ? {
-          p_username: username.trim(),
-          p_password: password,
-          p_center_slug: slug,
-        }
-      : {
-          p_username: username.trim(),
-          p_password: password,
-        },
-  )
+  const rpcArgs = {
+    p_username: username.trim(),
+    p_password: password,
+    p_center_slug: slug,
+  }
 
-  if (error) throw error
+  console.error('[loginAdmin] verify_admin_login request', {
+    username: rpcArgs.p_username,
+    center_slug: rpcArgs.p_center_slug,
+  })
+
+  const { data, error } = await supabase.rpc('verify_admin_login', rpcArgs)
+
+  console.error('[loginAdmin] verify_admin_login response', { data, error })
+
+  if (error) {
+    throw new Error(getErrorMessage(error))
+  }
 
   const result = parseLoginResponse(data)
   if (!result.ok || !result.id || !result.username || !result.token) {
@@ -133,6 +142,12 @@ export async function loginAdmin(
     result.center_slug!,
     result.center_name ?? result.center_slug!,
   )
+
+  console.error('[loginAdmin] session saved', {
+    adminId: result.id,
+    centerSlug: result.center_slug,
+    role,
+  })
 
   return {
     adminId: result.id,

@@ -1,6 +1,6 @@
 import { detectDeviceType } from '../lib/deviceType'
 import { supabase } from '../lib/supabase'
-import { formatSupabaseError } from '../lib/errors'
+import { formatSupabaseError, getErrorMessage } from '../lib/errors'
 import { notifyMemberWelcome } from './notifications'
 import { getMemberCenterSlug, saveMemberSession } from './memberPortal'
 import type { Json } from '../types/database'
@@ -193,24 +193,24 @@ export async function loginMember(
   }
 
   const slug = centerSlug?.trim().toLowerCase() || undefined
-  const { data, error } = await supabase.rpc(
-    'verify_member_login',
-    slug
-      ? {
-          p_phone: digits,
-          p_password: password,
-          p_device_type: detectDeviceType(),
-          p_center_slug: slug,
-        }
-      : {
-          p_phone: digits,
-          p_password: password,
-          p_device_type: detectDeviceType(),
-        },
-  )
+  const rpcArgs = {
+    p_phone: digits,
+    p_password: password,
+    p_device_type: detectDeviceType(),
+    p_center_slug: slug,
+  }
+
+  console.error('[loginMember] verify_member_login request', {
+    phone: rpcArgs.p_phone,
+    center_slug: rpcArgs.p_center_slug,
+  })
+
+  const { data, error } = await supabase.rpc('verify_member_login', rpcArgs)
+
+  console.error('[loginMember] verify_member_login response', { data, error })
 
   if (error) {
-    throw error
+    throw new Error(getErrorMessage(error))
   }
 
   const result = parseLoginResponse(data)
