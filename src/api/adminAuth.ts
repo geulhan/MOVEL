@@ -64,10 +64,11 @@ function parseLoginResponse(data: Json): AdminLoginResponse {
   }
 }
 
-function loginErrorMessage(code?: string): string {
-  switch (code) {
+function loginErrorMessage(row?: { error?: string; message?: string }): string {
+  if (row?.message) return row.message
+  switch (row?.error) {
     case 'center_not_found':
-      return '센터 코드를 찾을 수 없습니다.'
+      return '센터를 찾을 수 없습니다.'
     case 'center_suspended':
       return '정지된 센터입니다. MotionHub에 문의해 주세요.'
     case 'center_service_expired':
@@ -75,7 +76,9 @@ function loginErrorMessage(code?: string): string {
     case 'center_service_not_started':
       return '아직 서비스 이용이 시작되지 않은 센터입니다.'
     case 'center_inactive':
-      return '비활성 센터입니다.'
+      return '센터 승인 대기 중입니다. MotionHub에서 이용 기간 설정 후 이용 가능합니다.'
+    case 'multiple_centers':
+      return '동일한 아이디가 여러 센터에 있습니다. 센터 주소를 입력해 주세요.'
     default:
       return '아이디 또는 비밀번호가 올바르지 않습니다.'
   }
@@ -84,19 +87,29 @@ function loginErrorMessage(code?: string): string {
 export async function loginAdmin(
   username: string,
   password: string,
-  centerSlug: string,
+  centerSlug?: string,
 ): Promise<AdminSessionInfo> {
+  const slug = centerSlug?.trim().toLowerCase() || undefined
   const { data, error } = await supabase.rpc('verify_admin_login', {
     p_username: username.trim(),
     p_password: password,
-    p_center_slug: centerSlug.trim().toLowerCase() || 'movel',
+    p_center_slug: slug,
   })
 
   if (error) throw error
 
   const result = parseLoginResponse(data)
   if (!result.ok || !result.id || !result.username || !result.token) {
-    throw new Error(loginErrorMessage(result.error))
+    const row =
+      data && typeof data === 'object' && !Array.isArray(data)
+        ? (data as Record<string, Json | undefined>)
+        : undefined
+    throw new Error(
+      loginErrorMessage({
+        error: result.error ?? (row?.error != null ? String(row.error) : undefined),
+        message: row?.message != null ? String(row.message) : undefined,
+      }),
+    )
   }
 
   const role = result.role ?? 'admin'

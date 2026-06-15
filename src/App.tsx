@@ -23,6 +23,7 @@ import MemberPortalPage from './pages/MemberPortalPage'
 import TrainerPortalPage from './pages/TrainerPortalPage'
 import { RootPage } from './pages/RootPage'
 import LoginPage from './pages/LoginPage'
+import CenterSignupPage from './pages/CenterSignupPage'
 import MotionHubLandingPage from './pages/MotionHubLandingPage'
 import PlatformLoginPage from './pages/platform/PlatformLoginPage'
 import PlatformHomePage from './pages/platform/PlatformHomePage'
@@ -38,6 +39,7 @@ export default function App() {
         <Route path="/" element={<RootPage />} />
         <Route path="/motionhub" element={<MotionHubLandingPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<CenterSignupPage />} />
         <Route path="/platform/login" element={<PlatformLoginPage />} />
         <Route path="/platform" element={<PlatformAccessGuard />}>
           <Route element={<PlatformLayout />}>

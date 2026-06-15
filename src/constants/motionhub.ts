@@ -21,5 +21,5 @@ export function getMotionHubDemoUrl(): string {
   if (typeof window !== 'undefined' && window.location.origin) {
     return `${window.location.origin}/member`
   }
-  return 'https://movel.vercel.app/member'
+  return 'https://motionhub.kr/member'
 }

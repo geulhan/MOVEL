@@ -1,5 +1,5 @@
 /** 배포 도메인 (Vercel 환경 변수로 덮어쓸 수 있음) */
-const DEFAULT_SITE_ORIGIN = 'https://movel.vercel.app'
+const DEFAULT_SITE_ORIGIN = 'https://motionhub.kr'
 
 export function getSiteOrigin(): string {
   if (typeof window !== 'undefined' && window.location.origin) {

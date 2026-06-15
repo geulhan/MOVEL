@@ -1205,6 +1205,17 @@ export type Database = {
         }
         Returns: Json
       }
+      self_register_center: {
+        Args: {
+          p_name: string
+          p_slug: string
+          p_admin_username: string
+          p_admin_password: string
+          p_contact_email?: string | null
+          p_contact_phone?: string | null
+        }
+        Returns: Json
+      }
       list_trainer_admin_accounts: {
         Args: {
           p_center_id?: string | null

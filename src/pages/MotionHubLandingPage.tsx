@@ -86,13 +86,27 @@ function LandingNav() {
             도입 문의
           </button>
         </nav>
-        <button
-          type="button"
-          onClick={() => scrollToId('beta')}
-          className="shrink-0 rounded-lg bg-teal-500 px-4 py-2 text-sm font-bold text-charcoal transition hover:bg-teal-400"
-        >
-          베타 신청
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <a
+            href="/signup"
+            className="hidden rounded-lg border border-cream/20 px-3 py-2 text-xs font-semibold text-cream/85 hover:bg-white/5 sm:inline-block"
+          >
+            센터 등록
+          </a>
+          <a
+            href="/login"
+            className="rounded-lg border border-cream/20 px-3 py-2 text-xs font-semibold text-cream/85 hover:bg-white/5"
+          >
+            로그인
+          </a>
+          <button
+            type="button"
+            onClick={() => scrollToId('beta')}
+            className="rounded-lg bg-teal-500 px-4 py-2 text-sm font-bold text-charcoal transition hover:bg-teal-400"
+          >
+            베타 신청
+          </button>
+        </div>
       </div>
     </header>
   )
