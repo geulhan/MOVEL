@@ -9,16 +9,13 @@ import {
   isAdminAuthenticated,
 } from '../lib/adminSession'
 import { resetCenterIdCache } from '../lib/center'
-import {
-  isMovelDedicatedHost,
-  resolveAdminCenterSlugFromUrl,
-  saveRememberedAdminCenterSlug,
-} from '../lib/centerSlug'
+import { saveRememberedAdminCenterSlug } from '../lib/centerSlug'
 import {
   clearRememberedAdminLogin,
   loadRememberedAdminLogin,
   saveRememberedAdminLogin,
 } from '../lib/rememberLogin'
+import { getMemberPortalUrl } from '../lib/siteUrl'
 import { btnPrimary, cardClass, inputClass } from '../styles/theme'
 
 type LoginLocationState = {
@@ -29,10 +26,8 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams] = useSearchParams()
-  const [centerSlug, setCenterSlug] = useState(() =>
-    resolveAdminCenterSlugFromUrl(searchParams.get('center')),
-  )
-  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [centerSlug, setCenterSlug] = useState('')
+  const [needCenterSlug, setNeedCenterSlug] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [rememberLogin, setRememberLogin] = useState(false)
@@ -41,7 +36,6 @@ export default function LoginPage() {
 
   const urlCenter = searchParams.get('center')?.trim().toLowerCase() || null
   const session = getAdminSession()
-  const useMovelLegacy = isMovelDedicatedHost()
 
   useEffect(() => {
     if (urlCenter && session && urlCenter !== session.centerSlug) {
@@ -57,11 +51,6 @@ export default function LoginPage() {
     setPassword(saved.password)
     setRememberLogin(true)
   }, [])
-
-  useEffect(() => {
-    const fromUrl = resolveAdminCenterSlugFromUrl(searchParams.get('center'))
-    if (fromUrl) setCenterSlug(fromUrl)
-  }, [searchParams])
 
   if (isAdminAuthenticated()) {
     const active = getAdminSession()
@@ -88,18 +77,17 @@ export default function LoginPage() {
       return
     }
 
-    const slug = centerSlug.trim().toLowerCase()
-    const slugForLogin = showAdvanced || useMovelLegacy ? slug : ''
-
-    if ((showAdvanced || useMovelLegacy) && !slug) {
+    const slug = needCenterSlug ? centerSlug.trim().toLowerCase() : undefined
+    if (needCenterSlug && !slug) {
       setError('센터 주소를 입력해 주세요.')
       return
     }
 
     setLoading(true)
     try {
-      const info = await loginAdmin(username, password, slugForLogin || undefined)
+      const info = await loginAdmin(username, password, slug)
       if (info.centerSlug) saveRememberedAdminCenterSlug(info.centerSlug)
+      setNeedCenterSlug(false)
       if (rememberLogin) {
         saveRememberedAdminLogin(username, password)
       } else {
@@ -114,11 +102,14 @@ export default function LoginPage() {
             : '/admin'
       navigate(target, { replace: true })
     } catch (err) {
-      setError(
+      const message =
         err instanceof Error && err.message
           ? err.message
-          : formatSupabaseError(err),
-      )
+          : formatSupabaseError(err)
+      if (message.includes('여러 센터')) {
+        setNeedCenterSlug(true)
+      }
+      setError(message)
     } finally {
       setLoading(false)
     }
@@ -127,7 +118,7 @@ export default function LoginPage() {
   return (
     <MotionHubAuthShell
       title="관리자 · 트레이너 로그인"
-      subtitle="MotionHub에 등록한 아이디로 로그인하세요. 승인된 센터만 이용할 수 있습니다."
+      subtitle="MotionHub에 등록한 아이디와 비밀번호만 입력하세요."
     >
       <section className={`${cardClass} card-pad`}>
         <form className="space-y-3" onSubmit={handleSubmit}>
@@ -155,7 +146,7 @@ export default function LoginPage() {
             />
           </label>
 
-          {(showAdvanced || useMovelLegacy) && (
+          {needCenterSlug && (
             <label className="block text-sm">
               <span className="mb-1.5 block font-medium text-charcoal">센터 주소</span>
               <input
@@ -168,19 +159,9 @@ export default function LoginPage() {
                 disabled={loading}
               />
               <p className="mt-1 text-xs text-muted">
-                동일 아이디가 여러 센터에 있거나 MOVEL 전용 주소로 접속할 때만 필요합니다.
+                동일한 아이디가 여러 센터에 등록되어 있을 때만 필요합니다.
               </p>
             </label>
-          )}
-
-          {!showAdvanced && !useMovelLegacy && (
-            <button
-              type="button"
-              className="text-xs text-teal-700 hover:underline"
-              onClick={() => setShowAdvanced(true)}
-            >
-              다른 센터 주소로 로그인
-            </button>
           )}
 
           <label className="flex cursor-pointer items-center gap-2 text-sm text-charcoal/80">
@@ -214,16 +195,9 @@ export default function LoginPage() {
       </p>
 
       <p className="text-center text-xs text-muted">
-        <Link
-          to={
-            centerSlug.trim()
-              ? `/member?center=${encodeURIComponent(centerSlug.trim().toLowerCase())}`
-              : '/member'
-          }
-          className="text-teal-700 hover:underline"
-        >
+        <a href={getMemberPortalUrl()} className="text-teal-700 hover:underline">
           회원 페이지 →
-        </Link>
+        </a>
         <span className="mx-2">·</span>
         <Link to="/platform/login" className="text-teal-700 hover:underline">
           Super Admin

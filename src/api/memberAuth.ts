@@ -70,7 +70,7 @@ function loginErrorMessage(row?: { error?: string; message?: string }): string {
     case 'multiple_centers':
       return '여러 센터에 등록된 번호입니다. 센터에서 안내한 링크로 접속해 주세요.'
     case 'center_required':
-      return '센터에서 안내한 회원 페이지 링크로 접속해 주세요.'
+      return '가입할 센터를 선택해 주세요.'
     default:
       return '아이디 또는 비밀번호가 올바르지 않습니다.'
   }
@@ -115,7 +115,7 @@ function registerErrorMessage(row?: { error?: string; message?: string }): strin
     case 'invalid_password':
       return '비밀번호는 4자리 이상이어야 합니다.'
     case 'center_required':
-      return '센터에서 안내한 회원 페이지 링크로 접속해 주세요.'
+      return '가입할 센터를 선택해 주세요.'
     default:
       return '회원가입에 실패했습니다. 잠시 후 다시 시도해 주세요.'
   }

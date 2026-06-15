@@ -1150,6 +1150,10 @@ export type Database = {
         }
         Returns: Json
       }
+      list_signup_centers: {
+        Args: Record<string, never>
+        Returns: Json
+      }
       create_center: {
         Args: {
           p_session_token: string

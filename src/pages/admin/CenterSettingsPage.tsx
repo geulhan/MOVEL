@@ -4,7 +4,9 @@ import { getAdminSession } from '../../lib/adminSession'
 import { useCenterBranding } from '../../hooks/useCenterBranding'
 import { CenterBrandMark } from '../../components/brand/CenterBrandMark'
 import { PageHeader } from '../../components/admin/PageHeader'
+import { SiteUrlCopy } from '../../components/SiteUrlCopy'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/theme'
+import { getMemberPortalUrl } from '../../lib/siteUrl'
 import { THEME_PRESETS, type CenterTheme, type ThemePreset } from '../../types/centerBranding'
 
 type ThemeField = {
@@ -115,7 +117,7 @@ function ThemePreview({
 }
 
 export default function CenterSettingsPage() {
-  const { branding, refresh, applyLocal } = useCenterBranding()
+  const { branding, applyLocal } = useCenterBranding()
   const [theme, setTheme] = useState<CenterTheme>(branding.theme)
   const [logoPreview, setLogoPreview] = useState<string | null>(branding.logoUrl)
   const [clearLogo, setClearLogo] = useState(false)
@@ -171,7 +173,6 @@ export default function CenterSettingsPage() {
       })
 
       applyLocal(saved)
-      await refresh()
       pendingLogoFile.current = null
       setClearLogo(false)
       setMessage('센터 설정이 저장되었습니다.')
@@ -213,10 +214,14 @@ export default function CenterSettingsPage() {
         <div>
           <h2 className="text-lg font-semibold text-charcoal">센터 정보</h2>
           <p className="mt-1 text-sm text-muted">
-            센터명: <strong>{branding.centerName}</strong> · 코드:{' '}
+            센터명: <strong>{branding.centerName}</strong> · 주소:{' '}
             <code>{branding.centerSlug}</code>
           </p>
         </div>
+        <SiteUrlCopy
+          url={getMemberPortalUrl(branding.centerSlug)}
+          label="회원 페이지 공유 링크 (카톡·QR용 — motionhub.kr)"
+        />
       </section>
 
       <section className={`${cardClass} card-pad space-y-4`}>

@@ -4,7 +4,7 @@ import { SiteUrlCopy } from '../components/SiteUrlCopy'
 import {
   getAdminLoginUrl,
   getMemberPortalUrl,
-  getSiteOrigin,
+  getShareableSiteOrigin,
 } from '../lib/siteUrl'
 import { btnGold, btnPrimary, cardClass } from '../styles/theme'
 
@@ -56,7 +56,7 @@ export default function HomePage() {
         </section>
 
         <p className="text-center text-xs text-muted">
-          공식 사이트: <strong className="text-charcoal">{getSiteOrigin()}</strong>
+          공식 사이트: <strong className="text-charcoal">{getShareableSiteOrigin()}</strong>
         </p>
       </div>
     </div>

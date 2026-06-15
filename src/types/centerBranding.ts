@@ -111,10 +111,18 @@ export const THEME_PRESETS: ThemePreset[] = [
 ]
 
 export function parseCenterTheme(raw: unknown): CenterTheme {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+  let value: unknown = raw
+  if (typeof value === 'string') {
+    try {
+      value = JSON.parse(value)
+    } catch {
+      return DEFAULT_CENTER_THEME
+    }
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return DEFAULT_CENTER_THEME
   }
-  const row = raw as Record<string, unknown>
+  const row = value as Record<string, unknown>
   const pick = (key: keyof CenterTheme) => {
     const value = row[key]
     return typeof value === 'string' && value.trim() ? value : DEFAULT_CENTER_THEME[key]

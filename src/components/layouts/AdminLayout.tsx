@@ -3,12 +3,14 @@ import { navItemsForSession } from '../../lib/adminPermissions'
 import { clearAdminAuth, getAdminSession } from '../../lib/adminSession'
 import { resetCenterIdCache } from '../../lib/center'
 import { buildAdminLoginPath } from '../../lib/centerSlug'
+import { getMemberPortalUrl } from '../../lib/siteUrl'
 import { CenterBrandMark } from '../brand/CenterBrandMark'
 import { SetupBanner } from '../SetupBanner'
 import {
   CenterBrandingProvider,
   useCenterBranding,
   useCenterThemeVars,
+  useApplyCenterTheme,
 } from '../../hooks/useCenterBranding'
 
 function MemberPortalLink({
@@ -18,11 +20,11 @@ function MemberPortalLink({
   className?: string
   centerSlug?: string
 }) {
-  const to = centerSlug ? `/member?center=${encodeURIComponent(centerSlug)}` : '/member'
+  const href = getMemberPortalUrl(centerSlug)
 
   return (
-    <Link
-      to={to}
+    <a
+      href={href}
       className={`inline-flex shrink-0 items-center justify-center rounded-lg border px-4 py-2 text-sm font-semibold whitespace-nowrap transition ${className}`}
       style={{
         borderColor: 'color-mix(in srgb, var(--center-accent) 60%, transparent)',
@@ -31,7 +33,7 @@ function MemberPortalLink({
       }}
     >
       회원 페이지 →
-    </Link>
+    </a>
   )
 }
 
@@ -40,6 +42,7 @@ function AdminLayoutInner() {
   const session = getAdminSession()
   const { branding } = useCenterBranding()
   const themeVars = useCenterThemeVars(branding.theme)
+  useApplyCenterTheme(branding.theme, branding.centerName)
   const navItems = navItemsForSession(session)
   const roleLabel = session?.role === 'trainer' ? '트레이너' : '관리자'
 

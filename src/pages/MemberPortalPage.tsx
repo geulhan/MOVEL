@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { fetchCenterPublicInfo, type CenterPublicInfo } from '../api/centerPublic'
+import {
+  fetchCenterPublicInfo,
+  fetchSignupCenters,
+  type CenterPublicInfo,
+  type SignupCenterOption,
+} from '../api/centerPublic'
 import { fetchMemberById } from '../api/memberDetail'
 import { formatDate, formatPhone, isExpired } from '../api/members'
 import { loginMember, registerMember } from '../api/memberAuth'
@@ -15,7 +20,6 @@ import {
   type AttendanceLog,
 } from '../api/memberPortal'
 import {
-  isMovelDedicatedHost,
   resolveMemberCenterSlugFromUrl,
   saveRememberedMemberCenterSlug,
 } from '../lib/centerSlug'
@@ -60,8 +64,8 @@ export default function MemberPortalPage() {
     resolveMemberCenterSlugFromUrl(searchParams.get('center')),
   )
   const [centerInfo, setCenterInfo] = useState<CenterPublicInfo | null>(null)
-  const [showAdvanced, setShowAdvanced] = useState(false)
-  const useMovelLegacy = isMovelDedicatedHost()
+  const [signupCenters, setSignupCenters] = useState<SignupCenterOption[]>([])
+  const [signupCentersLoading, setSignupCentersLoading] = useState(false)
   const resolvedCenterSlug = centerSlug.trim().toLowerCase()
   const [member, setMember] = useState<Member | null>(null)
   const [loading, setLoading] = useState(true)
@@ -123,6 +127,14 @@ export default function MemberPortalPage() {
   }, [searchParams])
 
   useEffect(() => {
+    setSignupCentersLoading(true)
+    void fetchSignupCenters()
+      .then(setSignupCenters)
+      .catch(() => setSignupCenters([]))
+      .finally(() => setSignupCentersLoading(false))
+  }, [])
+
+  useEffect(() => {
     const slug = resolvedCenterSlug || getMemberCenterSlug()
     if (!slug) {
       setCenterInfo(null)
@@ -166,7 +178,7 @@ export default function MemberPortalPage() {
 
     const slug = resolvedCenterSlug
     if (!slug) {
-      setLoginError('센터에서 안내한 회원 페이지 링크로 접속해 주세요.')
+      setLoginError('가입할 센터를 선택해 주세요.')
       return
     }
 
@@ -199,19 +211,8 @@ export default function MemberPortalPage() {
   async function handleLogin(e: FormEvent) {
     e.preventDefault()
     setLoginError(null)
-    const slug = resolvedCenterSlug
-    if (!slug) {
-      setLoginError('센터에서 안내한 회원 페이지 링크로 접속해 주세요.')
-      return
-    }
 
-    const slugForLogin =
-      showAdvanced || useMovelLegacy ? resolvedCenterSlug : resolvedCenterSlug || undefined
-
-    if ((showAdvanced || useMovelLegacy) && !resolvedCenterSlug) {
-      setLoginError('센터 주소를 입력해 주세요.')
-      return
-    }
+    const slugForLogin = resolvedCenterSlug || undefined
 
     setLoginLoading(true)
     try {
@@ -313,8 +314,8 @@ export default function MemberPortalPage() {
             />
           ) : (
             <div className="mt-3 rounded-xl border border-teal-200/80 bg-teal-50/70 px-4 py-3 text-sm text-teal-900">
-              센터에서 공유한 <strong>회원 페이지 링크</strong>로 접속하면 별도 코드 입력 없이
-              로그인·가입할 수 있습니다.
+              회원가입 시 센터를 선택할 수 있습니다. 센터 링크로 접속하면 해당 센터가
+              자동으로 선택됩니다.
             </div>
           )}
 
@@ -356,28 +357,6 @@ export default function MemberPortalPage() {
                 뒤 4자리입니다.
               </p>
               <form onSubmit={(e) => void handleLogin(e)} className="mt-5 space-y-4">
-                {(showAdvanced || useMovelLegacy) && (
-                  <label className="block">
-                    <span className="mb-1.5 block text-sm font-medium">센터 주소</span>
-                    <input
-                      type="text"
-                      value={centerSlug}
-                      onChange={(e) => setCenterSlug(e.target.value.toLowerCase())}
-                      placeholder="abc-pt"
-                      className={inputClass}
-                      disabled={loginLoading}
-                    />
-                  </label>
-                )}
-                {!showAdvanced && !useMovelLegacy && (
-                  <button
-                    type="button"
-                    className="text-xs text-teal-700 hover:underline"
-                    onClick={() => setShowAdvanced(true)}
-                  >
-                    다른 센터 주소로 로그인
-                  </button>
-                )}
                 <label className="block">
                   <span className="mb-1.5 block text-sm font-medium">
                     아이디 (휴대전화번호)
@@ -429,21 +408,37 @@ export default function MemberPortalPage() {
             </>
           ) : (
             <>
-              {!resolvedCenterSlug ? (
-                <p className="mt-4 text-sm text-amber-800">
-                  회원가입은 센터에서 공유한 링크로 접속해야 합니다. 링크에 센터 정보가
-                  포함되어 있습니다.
-                </p>
-              ) : (
-                <p className="mt-4 text-sm text-muted">
-                  이름·휴대전화번호·비밀번호로 가입할 수 있습니다. PT 이용은 센터 결제 후
-                  시작됩니다.
-                </p>
-              )}
+              <p className="mt-4 text-sm text-muted">
+                가입할 센터를 선택한 뒤 이름·휴대전화번호·비밀번호를 입력하세요. PT 이용은 센터
+                결제 후 시작됩니다.
+              </p>
               <form
                 onSubmit={(e) => void handleSignup(e)}
                 className="mt-5 space-y-4"
               >
+                <label className="block">
+                  <span className="mb-1.5 block text-sm font-medium">센터 선택</span>
+                  <select
+                    value={resolvedCenterSlug}
+                    onChange={(e) => setCenterSlug(e.target.value)}
+                    className={inputClass}
+                    disabled={loginLoading || signupCentersLoading}
+                  >
+                    <option value="">
+                      {signupCentersLoading ? '센터 목록 불러오는 중…' : '센터를 선택하세요'}
+                    </option>
+                    {signupCenters.map((center) => (
+                      <option key={center.centerId} value={center.centerSlug}>
+                        {center.centerName}
+                      </option>
+                    ))}
+                  </select>
+                  {!signupCentersLoading && signupCenters.length === 0 && (
+                    <p className="mt-1 text-xs text-amber-800">
+                      현재 가입 가능한 센터가 없습니다. 센터에 문의해 주세요.
+                    </p>
+                  )}
+                </label>
                 <label className="block">
                   <span className="mb-1.5 block text-sm font-medium">이름</span>
                   <input

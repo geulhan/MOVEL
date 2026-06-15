@@ -34,11 +34,14 @@ const fallbackBranding = (session: ReturnType<typeof getAdminSession>): CenterBr
 const CenterBrandingContext = createContext<CenterBrandingContextValue | null>(null)
 
 export function CenterBrandingProvider({ children }: { children: ReactNode }) {
-  const session = getAdminSession()
-  const [branding, setBranding] = useState<CenterBranding>(() => fallbackBranding(session))
+  const centerId = getAdminSession()?.centerId ?? null
+  const [branding, setBranding] = useState<CenterBranding>(() =>
+    fallbackBranding(getAdminSession()),
+  )
   const [loading, setLoading] = useState(true)
 
   const refresh = useCallback(async () => {
+    const session = getAdminSession()
     if (!session?.centerId) {
       setBranding(fallbackBranding(session))
       setLoading(false)
@@ -49,11 +52,11 @@ export function CenterBrandingProvider({ children }: { children: ReactNode }) {
       const next = await fetchCenterBranding(session.centerId)
       setBranding(next)
     } catch {
-      setBranding(fallbackBranding(session))
+      // 저장 직후 일시 오류 등 — 기존 브랜딩 유지
     } finally {
       setLoading(false)
     }
-  }, [session])
+  }, [centerId])
 
   useEffect(() => {
     void refresh()
@@ -85,4 +88,23 @@ export function useCenterBranding() {
 
 export function useCenterThemeVars(theme: CenterTheme = DEFAULT_CENTER_THEME) {
   return useMemo(() => themeToCssVars(theme), [theme])
+}
+
+export function useApplyCenterTheme(theme: CenterTheme, centerName?: string) {
+  useEffect(() => {
+    const vars = themeToCssVars(theme)
+    const root = document.documentElement
+    for (const [key, value] of Object.entries(vars)) {
+      root.style.setProperty(key, value)
+    }
+    return () => {
+      for (const key of Object.keys(vars)) {
+        root.style.removeProperty(key)
+      }
+    }
+  }, [theme])
+
+  useEffect(() => {
+    document.title = centerName ? `${centerName} | MotionHub` : 'MotionHub'
+  }, [centerName])
 }
