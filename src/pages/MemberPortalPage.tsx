@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
+import { fetchCenterPublicInfo, type CenterPublicInfo } from '../api/centerPublic'
 import { fetchMemberById } from '../api/memberDetail'
 import { formatDate, formatPhone, isExpired } from '../api/members'
 import { loginMember, registerMember } from '../api/memberAuth'
@@ -9,10 +10,12 @@ import {
   clearMemberSession,
   fetchRecentAttendance,
   fetchTodayAttendance,
+  getMemberCenterSlug,
   getMemberSession,
   type AttendanceLog,
 } from '../api/memberPortal'
 import {
+  isMovelDedicatedHost,
   resolveMemberCenterSlugFromUrl,
   saveRememberedMemberCenterSlug,
 } from '../lib/centerSlug'
@@ -56,6 +59,10 @@ export default function MemberPortalPage() {
   const [centerSlug, setCenterSlug] = useState(() =>
     resolveMemberCenterSlugFromUrl(searchParams.get('center')),
   )
+  const [centerInfo, setCenterInfo] = useState<CenterPublicInfo | null>(null)
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const useMovelLegacy = isMovelDedicatedHost()
+  const resolvedCenterSlug = centerSlug.trim().toLowerCase()
   const [member, setMember] = useState<Member | null>(null)
   const [loading, setLoading] = useState(true)
   const [loginPhone, setLoginPhone] = useState('')
@@ -116,6 +123,17 @@ export default function MemberPortalPage() {
   }, [searchParams])
 
   useEffect(() => {
+    const slug = resolvedCenterSlug || getMemberCenterSlug()
+    if (!slug) {
+      setCenterInfo(null)
+      return
+    }
+    void fetchCenterPublicInfo(slug)
+      .then(setCenterInfo)
+      .catch(() => setCenterInfo(null))
+  }, [resolvedCenterSlug, member])
+
+  useEffect(() => {
     const id = getMemberSession()
     if (!id) {
       setLoading(false)
@@ -146,9 +164,9 @@ export default function MemberPortalPage() {
       return
     }
 
-    const slug = centerSlug.trim().toLowerCase()
+    const slug = resolvedCenterSlug
     if (!slug) {
-      setLoginError('센터 코드를 입력해 주세요.')
+      setLoginError('센터에서 안내한 회원 페이지 링크로 접속해 주세요.')
       return
     }
 
@@ -181,16 +199,24 @@ export default function MemberPortalPage() {
   async function handleLogin(e: FormEvent) {
     e.preventDefault()
     setLoginError(null)
-    const slug = centerSlug.trim().toLowerCase()
+    const slug = resolvedCenterSlug
     if (!slug) {
-      setLoginError('센터 코드를 입력해 주세요.')
+      setLoginError('센터에서 안내한 회원 페이지 링크로 접속해 주세요.')
+      return
+    }
+
+    const slugForLogin =
+      showAdvanced || useMovelLegacy ? resolvedCenterSlug : resolvedCenterSlug || undefined
+
+    if ((showAdvanced || useMovelLegacy) && !resolvedCenterSlug) {
+      setLoginError('센터 주소를 입력해 주세요.')
       return
     }
 
     setLoginLoading(true)
     try {
-      const { memberId } = await loginMember(loginPhone, loginPassword, slug)
-      saveRememberedMemberCenterSlug(slug)
+      const { memberId } = await loginMember(loginPhone, loginPassword, slugForLogin)
+      if (slugForLogin) saveRememberedMemberCenterSlug(slugForLogin)
       const loggedInMember = await fetchMemberById(memberId)
       setMember(loggedInMember)
       if (rememberLogin) {
@@ -254,7 +280,7 @@ export default function MemberPortalPage() {
 
   if (loading) {
     return (
-      <MemberLayout>
+      <MemberLayout centerName={centerInfo?.centerName} centerLogoUrl={centerInfo?.logoUrl}>
         <div className={`${cardClass} p-8 text-center`}>
           <p className="text-sm text-muted">불러오는 중…</p>
         </div>
@@ -263,16 +289,36 @@ export default function MemberPortalPage() {
   }
 
   if (!member) {
+    const memberPortalUrl = resolvedCenterSlug
+      ? getMemberPortalUrl(resolvedCenterSlug)
+      : getMemberPortalUrl()
+
     return (
-      <MemberLayout>
+      <MemberLayout centerName={centerInfo?.centerName} centerLogoUrl={centerInfo?.logoUrl}>
         <section className={`${cardClass} p-6`}>
-          <h2 className="text-lg font-semibold text-charcoal">회원 페이지</h2>
-          <SiteUrlCopy
-            className="mt-3"
-            url={getMemberPortalUrl()}
-            label="회원 페이지 주소 (전체 주소를 북마크·카톡 공유)"
-          />
-          <div className="mt-4 flex rounded-lg border border-gold/30 bg-cream/50 p-1">
+          <h2 className="text-lg font-semibold text-charcoal">
+            {centerInfo?.centerName ?? '회원 페이지'}
+          </h2>
+          <p className="mt-1 text-sm text-muted">
+            {centerInfo
+              ? `${centerInfo.centerName} 회원 로그인·가입`
+              : 'MotionHub에 등록된 센터 회원 전용 페이지입니다.'}
+          </p>
+
+          {resolvedCenterSlug ? (
+            <SiteUrlCopy
+              className="mt-3"
+              url={memberPortalUrl}
+              label="이 센터 회원 페이지 주소 (북마크·카톡 공유)"
+            />
+          ) : (
+            <div className="mt-3 rounded-xl border border-teal-200/80 bg-teal-50/70 px-4 py-3 text-sm text-teal-900">
+              센터에서 공유한 <strong>회원 페이지 링크</strong>로 접속하면 별도 코드 입력 없이
+              로그인·가입할 수 있습니다.
+            </div>
+          )}
+
+          <div className="mt-4 flex rounded-lg border border-charcoal/10 bg-cream/50 p-1">
             <button
               type="button"
               onClick={() => {
@@ -306,27 +352,32 @@ export default function MemberPortalPage() {
           {authMode === 'login' ? (
             <>
               <p className="mt-4 text-sm text-muted">
-                아이디는 휴대전화번호(숫자만)입니다. 관리자 등록 회원은 최초
-                비밀번호가 번호 뒤 4자리입니다.
+                아이디는 휴대전화번호(숫자만)입니다. 관리자 등록 회원은 최초 비밀번호가 번호
+                뒤 4자리입니다.
               </p>
-              <form
-                onSubmit={(e) => void handleLogin(e)}
-                className="mt-5 space-y-4"
-              >
-                <label className="block">
-                  <span className="mb-1.5 block text-sm font-medium">
-                    센터 코드 <span className="text-red-600">*</span>
-                  </span>
-                  <input
-                    type="text"
-                    value={centerSlug}
-                    onChange={(e) => setCenterSlug(e.target.value.toLowerCase())}
-                    placeholder="abc-pt"
-                    className={inputClass}
-                    required
-                    disabled={loginLoading}
-                  />
-                </label>
+              <form onSubmit={(e) => void handleLogin(e)} className="mt-5 space-y-4">
+                {(showAdvanced || useMovelLegacy) && (
+                  <label className="block">
+                    <span className="mb-1.5 block text-sm font-medium">센터 주소</span>
+                    <input
+                      type="text"
+                      value={centerSlug}
+                      onChange={(e) => setCenterSlug(e.target.value.toLowerCase())}
+                      placeholder="abc-pt"
+                      className={inputClass}
+                      disabled={loginLoading}
+                    />
+                  </label>
+                )}
+                {!showAdvanced && !useMovelLegacy && (
+                  <button
+                    type="button"
+                    className="text-xs text-teal-700 hover:underline"
+                    onClick={() => setShowAdvanced(true)}
+                  >
+                    다른 센터 주소로 로그인
+                  </button>
+                )}
                 <label className="block">
                   <span className="mb-1.5 block text-sm font-medium">
                     아이디 (휴대전화번호)
@@ -336,9 +387,7 @@ export default function MemberPortalPage() {
                     inputMode="numeric"
                     value={loginPhone}
                     onChange={(e) =>
-                      setLoginPhone(
-                        e.target.value.replace(/\D/g, '').slice(0, 11),
-                      )
+                      setLoginPhone(e.target.value.replace(/\D/g, '').slice(0, 11))
                     }
                     placeholder="01012345678"
                     className={inputClass}
@@ -347,9 +396,7 @@ export default function MemberPortalPage() {
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-1.5 block text-sm font-medium">
-                    비밀번호
-                  </span>
+                  <span className="mb-1.5 block text-sm font-medium">비밀번호</span>
                   <input
                     type="password"
                     value={loginPassword}
@@ -373,9 +420,7 @@ export default function MemberPortalPage() {
                 </label>
                 <button
                   type="submit"
-                  disabled={
-                    loginLoading || loginPhone.length !== 11 || !loginPassword
-                  }
+                  disabled={loginLoading || loginPhone.length !== 11 || !loginPassword}
                   className={`w-full ${btnPrimary}`}
                 >
                   {loginLoading ? '로그인 중…' : '로그인'}
@@ -384,28 +429,21 @@ export default function MemberPortalPage() {
             </>
           ) : (
             <>
-              <p className="mt-4 text-sm text-muted">
-                이름·휴대전화번호·비밀번호로 가입할 수 있습니다. PT 이용은 센터
-                결제 후 시작됩니다.
-              </p>
+              {!resolvedCenterSlug ? (
+                <p className="mt-4 text-sm text-amber-800">
+                  회원가입은 센터에서 공유한 링크로 접속해야 합니다. 링크에 센터 정보가
+                  포함되어 있습니다.
+                </p>
+              ) : (
+                <p className="mt-4 text-sm text-muted">
+                  이름·휴대전화번호·비밀번호로 가입할 수 있습니다. PT 이용은 센터 결제 후
+                  시작됩니다.
+                </p>
+              )}
               <form
                 onSubmit={(e) => void handleSignup(e)}
                 className="mt-5 space-y-4"
               >
-                <label className="block">
-                  <span className="mb-1.5 block text-sm font-medium">
-                    센터 코드 <span className="text-red-600">*</span>
-                  </span>
-                  <input
-                    type="text"
-                    value={centerSlug}
-                    onChange={(e) => setCenterSlug(e.target.value.toLowerCase())}
-                    placeholder="abc-pt"
-                    className={inputClass}
-                    required
-                    disabled={loginLoading}
-                  />
-                </label>
                 <label className="block">
                   <span className="mb-1.5 block text-sm font-medium">이름</span>
                   <input
@@ -415,32 +453,26 @@ export default function MemberPortalPage() {
                     placeholder="홍길동"
                     className={inputClass}
                     autoComplete="name"
-                    disabled={loginLoading}
+                    disabled={loginLoading || !resolvedCenterSlug}
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-1.5 block text-sm font-medium">
-                    휴대전화번호
-                  </span>
+                  <span className="mb-1.5 block text-sm font-medium">휴대전화번호</span>
                   <input
                     type="tel"
                     inputMode="numeric"
                     value={signupPhone}
                     onChange={(e) =>
-                      setSignupPhone(
-                        e.target.value.replace(/\D/g, '').slice(0, 11),
-                      )
+                      setSignupPhone(e.target.value.replace(/\D/g, '').slice(0, 11))
                     }
                     placeholder="01012345678"
                     className={inputClass}
                     autoComplete="tel"
-                    disabled={loginLoading}
+                    disabled={loginLoading || !resolvedCenterSlug}
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-1.5 block text-sm font-medium">
-                    비밀번호
-                  </span>
+                  <span className="mb-1.5 block text-sm font-medium">비밀번호</span>
                   <input
                     type="password"
                     value={signupPassword}
@@ -449,13 +481,11 @@ export default function MemberPortalPage() {
                     className={inputClass}
                     autoComplete="new-password"
                     maxLength={32}
-                    disabled={loginLoading}
+                    disabled={loginLoading || !resolvedCenterSlug}
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-1.5 block text-sm font-medium">
-                    비밀번호 확인
-                  </span>
+                  <span className="mb-1.5 block text-sm font-medium">비밀번호 확인</span>
                   <input
                     type="password"
                     value={signupPasswordConfirm}
@@ -464,7 +494,7 @@ export default function MemberPortalPage() {
                     className={inputClass}
                     autoComplete="new-password"
                     maxLength={32}
-                    disabled={loginLoading}
+                    disabled={loginLoading || !resolvedCenterSlug}
                   />
                 </label>
                 <label className="flex cursor-pointer items-center gap-2 text-sm text-charcoal/80">
@@ -481,6 +511,7 @@ export default function MemberPortalPage() {
                   type="submit"
                   disabled={
                     loginLoading ||
+                    !resolvedCenterSlug ||
                     !signupName.trim() ||
                     signupPhone.length !== 11 ||
                     signupPassword.length < 4 ||
@@ -494,10 +525,15 @@ export default function MemberPortalPage() {
             </>
           )}
 
-          {loginError && (
-            <p className="mt-4 text-sm text-red-700">{loginError}</p>
-          )}
+          {loginError && <p className="mt-4 text-sm text-red-700">{loginError}</p>}
         </section>
+
+        <p className="text-center text-xs text-muted">
+          센터 관리자이신가요?{' '}
+          <Link to="/login" className="font-semibold text-teal-700 hover:underline">
+            관리자 로그인
+          </Link>
+        </p>
       </MemberLayout>
     )
   }
@@ -510,6 +546,8 @@ export default function MemberPortalPage() {
   return (
     <MemberLayout
       memberName={member.name}
+      centerName={centerInfo?.centerName}
+      centerLogoUrl={centerInfo?.logoUrl}
       onLogout={handleLogout}
       onDashboard={() => setTab('home')}
     >
