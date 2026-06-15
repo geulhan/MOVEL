@@ -16,3 +16,14 @@ export const supabase = createClient<Database>(
 )
 
 export const isSupabaseConfigured = Boolean(url && anonKey)
+
+/** Vercel 환경 변수가 가리키는 Supabase 프로젝트 (디버그·점검용) */
+export function getSupabaseProjectRef(): string | null {
+  if (!url) return null
+  try {
+    const host = new URL(url).hostname
+    return host.endsWith('.supabase.co') ? host.replace('.supabase.co', '') : host
+  } catch {
+    return null
+  }
+}

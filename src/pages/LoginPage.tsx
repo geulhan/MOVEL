@@ -3,14 +3,17 @@ import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react
 import { loginAdmin } from '../api/adminAuth'
 import { MotionHubAuthShell } from '../components/layouts/MotionHubAuthShell'
 import { getErrorMessage } from '../lib/errors'
-import { isSupabaseConfigured } from '../lib/supabase'
+import { isSupabaseConfigured, getSupabaseProjectRef } from '../lib/supabase'
 import {
   clearAdminAuth,
   getAdminSession,
   isAdminAuthenticated,
 } from '../lib/adminSession'
 import { resetCenterIdCache } from '../lib/center'
-import { loadRememberedAdminCenterSlug, saveRememberedAdminCenterSlug } from '../lib/centerSlug'
+import {
+  clearRememberedAdminCenterSlug,
+  saveRememberedAdminCenterSlug,
+} from '../lib/centerSlug'
 import {
   clearRememberedAdminLogin,
   loadRememberedAdminLogin,
@@ -78,9 +81,7 @@ export default function LoginPage() {
       return
     }
 
-    const slug = needCenterSlug
-      ? centerSlug.trim().toLowerCase()
-      : urlCenter || loadRememberedAdminCenterSlug() || undefined
+    const slug = needCenterSlug ? centerSlug.trim().toLowerCase() : undefined
     if (needCenterSlug && !slug) {
       setError('센터 주소를 입력해 주세요.')
       return
@@ -109,11 +110,18 @@ export default function LoginPage() {
       if (message.includes('여러 센터')) {
         setNeedCenterSlug(true)
       }
+      if (message.includes('센터를 찾을 수 없습니다')) {
+        clearRememberedAdminCenterSlug()
+        setNeedCenterSlug(true)
+        if (!centerSlug) setCenterSlug('movel')
+      }
       setError(message)
     } finally {
       setLoading(false)
     }
   }
+
+  const supabaseProjectRef = getSupabaseProjectRef()
 
   return (
     <MotionHubAuthShell
@@ -166,7 +174,8 @@ export default function LoginPage() {
                 disabled={loading}
               />
               <p className="mt-1 text-xs text-muted">
-                동일한 아이디가 여러 센터에 등록되어 있을 때만 필요합니다.
+                동일한 아이디가 여러 센터에 있거나 센터를 찾지 못할 때 입력합니다. (모벨:
+                movel)
               </p>
             </label>
           )}
@@ -191,6 +200,14 @@ export default function LoginPage() {
           </button>
 
           {error && <p className="text-sm text-red-700">{error}</p>}
+          {supabaseProjectRef && (
+            <p className="text-[11px] text-muted">
+              연결 DB: <span className="font-mono">{supabaseProjectRef}</span>
+              <span className="block mt-0.5">
+                SQL Editor 프로젝트 URL의 ID와 같아야 합니다.
+              </span>
+            </p>
+          )}
         </form>
       </section>
 

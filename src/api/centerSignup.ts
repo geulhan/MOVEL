@@ -7,7 +7,11 @@ export type CenterSignupInput = {
   adminUsername: string
   adminPassword: string
   contactEmail?: string
-  contactPhone?: string
+  contactPhone: string
+  agreeAge: boolean
+  agreeTerms: boolean
+  agreePrivacy: boolean
+  agreeMarketing: boolean
 }
 
 export type CenterSignupResult = {
@@ -26,7 +30,11 @@ export async function selfRegisterCenter(
     p_admin_username: input.adminUsername.trim().toLowerCase(),
     p_admin_password: input.adminPassword,
     p_contact_email: input.contactEmail?.trim() || null,
-    p_contact_phone: input.contactPhone?.trim() || null,
+    p_contact_phone: input.contactPhone.trim(),
+    p_agree_age: input.agreeAge,
+    p_agree_terms: input.agreeTerms,
+    p_agree_privacy: input.agreePrivacy,
+    p_agree_marketing: input.agreeMarketing,
   })
 
   if (error) throw error
@@ -50,6 +58,18 @@ export async function selfRegisterCenter(
         )
       case 'invalid_admin_password':
         throw new Error('비밀번호는 4자 이상이어야 합니다.')
+      case 'invalid_phone':
+        throw new Error(
+          row.message != null
+            ? String(row.message)
+            : '010으로 시작하는 11자리 휴대전화번호를 입력해 주세요.',
+        )
+      case 'consent_required':
+        throw new Error(
+          row.message != null
+            ? String(row.message)
+            : '필수 약관에 모두 동의해 주세요.',
+        )
       default:
         throw new Error('센터 등록에 실패했습니다.')
     }

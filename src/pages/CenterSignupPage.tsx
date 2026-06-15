@@ -1,8 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { selfRegisterCenter } from '../api/centerSignup'
+import {
+  SignupConsentFields,
+  isSignupConsentComplete,
+  type SignupConsentState,
+} from '../components/auth/SignupConsentFields'
 import { MotionHubAuthShell } from '../components/layouts/MotionHubAuthShell'
-import { saveRememberedAdminCenterSlug } from '../lib/centerSlug'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../styles/theme'
 
 function slugify(value: string): string {
@@ -23,6 +27,12 @@ export default function CenterSignupPage() {
   const [adminPassword, setAdminPassword] = useState('')
   const [contactEmail, setContactEmail] = useState('')
   const [contactPhone, setContactPhone] = useState('')
+  const [consents, setConsents] = useState<SignupConsentState>({
+    agreeAge: false,
+    agreeTerms: false,
+    agreePrivacy: false,
+    agreeMarketing: false,
+  })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<{
@@ -48,9 +58,12 @@ export default function CenterSignupPage() {
         adminUsername,
         adminPassword,
         contactEmail: contactEmail || undefined,
-        contactPhone: contactPhone || undefined,
+        contactPhone,
+        agreeAge: consents.agreeAge,
+        agreeTerms: consents.agreeTerms,
+        agreePrivacy: consents.agreePrivacy,
+        agreeMarketing: consents.agreeMarketing,
       })
-      saveRememberedAdminCenterSlug(created.centerSlug)
       setResult({
         centerName: created.centerName,
         centerSlug: created.centerSlug,
@@ -70,7 +83,8 @@ export default function CenterSignupPage() {
           <h1 className="text-lg font-bold text-charcoal">센터 등록이 완료되었습니다</h1>
           <p className="text-sm leading-relaxed text-charcoal/75">
             <strong>{result.centerName}</strong> 센터가 MotionHub에 등록되었습니다.
-            슈퍼 관리자가 이용 기간을 설정하면 관리자 화면을 사용할 수 있습니다.
+            가입일 기준 <strong>14일 베타 이용</strong>이 시작됩니다. 기간 종료 후 요금제 적용이
+            필요하면 Super Admin에서 이용 기간을 연장해 주세요.
           </p>
           <dl className="space-y-2 rounded-xl border border-teal-200/60 bg-white/70 px-4 py-3 text-sm">
             <div className="flex justify-between gap-4">
@@ -97,7 +111,7 @@ export default function CenterSignupPage() {
   return (
     <MotionHubAuthShell
       title="센터 등록"
-      subtitle="MotionHub에서 센터를 개설하고 관리자 계정을 만듭니다. 승인 후 이용할 수 있습니다."
+      subtitle="MotionHub에서 센터를 개설합니다. 가입 즉시 14일 베타 이용이 시작됩니다."
     >
       <section className={`${cardClass} card-pad`}>
         <form className="space-y-4" onSubmit={handleSubmit}>
@@ -175,16 +189,25 @@ export default function CenterSignupPage() {
           </label>
 
           <label className="block text-sm">
-            <span className="mb-1.5 block font-medium text-charcoal">연락처</span>
+            <span className="mb-1.5 block font-medium text-charcoal">휴대전화번호 *</span>
             <input
               type="tel"
+              inputMode="numeric"
               value={contactPhone}
-              onChange={(e) => setContactPhone(e.target.value)}
+              onChange={(e) =>
+                setContactPhone(e.target.value.replace(/\D/g, '').slice(0, 11))
+              }
               className={inputClass}
-              placeholder="010-0000-0000"
+              placeholder="01012345678"
+              required
               disabled={loading}
             />
+            <p className="mt-1 text-xs text-muted">
+              비밀번호 초기화 시 휴대폰 뒤 4자리를 사용합니다.
+            </p>
           </label>
+
+          <SignupConsentFields value={consents} onChange={setConsents} disabled={loading} />
 
           <button
             type="submit"
@@ -193,7 +216,9 @@ export default function CenterSignupPage() {
               !name.trim() ||
               !slug.trim() ||
               !adminUsername.trim() ||
-              adminPassword.length < 4
+              adminPassword.length < 4 ||
+              contactPhone.length !== 11 ||
+              !isSignupConsentComplete(consents)
             }
             className={`w-full ${btnPrimary}`}
           >

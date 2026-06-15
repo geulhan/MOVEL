@@ -69,7 +69,10 @@ function loginErrorMessage(row?: { error?: string; message?: string }): string {
   if (row?.message) return row.message
   switch (row?.error) {
     case 'center_not_found':
-      return '센터를 찾을 수 없습니다.'
+      return (
+        '센터를 찾을 수 없습니다. Supabase SQL Editor에서 migration_056_fix_admin_login_global.sql을 ' +
+        '실행했는지 확인해 주세요. 모벨 센터는 센터 주소 movel 로도 시도해 볼 수 있습니다.'
+      )
     case 'center_suspended':
       return '정지된 센터입니다. MotionHub에 문의해 주세요.'
     case 'center_service_expired':
@@ -90,34 +93,62 @@ function loginErrorMessage(row?: { error?: string; message?: string }): string {
   }
 }
 
+async function callVerifyAdminLogin(
+  username: string,
+  password: string,
+  centerSlug?: string,
+): Promise<{ data: Json | null; error: Error | null }> {
+  const slug = centerSlug?.trim().toLowerCase() || undefined
+  const args: {
+    p_username: string
+    p_password: string
+    p_center_slug?: string
+  } = {
+    p_username: username.trim(),
+    p_password: password,
+  }
+  if (slug) args.p_center_slug = slug
+
+  const { data, error } = await supabase.rpc('verify_admin_login', args)
+  return {
+    data: data ?? null,
+    error: error ? new Error(getErrorMessage(error)) : null,
+  }
+}
+
+function parseFailedLogin(
+  data: Json | null,
+): { error?: string; message?: string } {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return {}
+  const row = data as Record<string, Json | undefined>
+  return {
+    error: row.error != null ? String(row.error) : undefined,
+    message: row.message != null ? String(row.message) : undefined,
+  }
+}
+
 export async function loginAdmin(
   username: string,
   password: string,
   centerSlug?: string,
 ): Promise<AdminSessionInfo> {
   const slug = centerSlug?.trim().toLowerCase() || undefined
-  const { data, error } = await supabase.rpc('verify_admin_login', {
-    p_username: username.trim(),
-    p_password: password,
-    p_center_slug: slug,
-  })
+  let { data, error } = await callVerifyAdminLogin(username, password, slug)
 
-  if (error) {
-    throw new Error(getErrorMessage(error))
+  if (error) throw error
+
+  let failed = parseFailedLogin(data)
+  if (failed.error === 'center_not_found' && slug) {
+    const retry = await callVerifyAdminLogin(username, password)
+    data = retry.data
+    error = retry.error
+    if (error) throw error
+    failed = parseFailedLogin(data)
   }
 
   const result = parseLoginResponse(data)
   if (!result.ok || !result.id || !result.username || !result.token) {
-    const row =
-      data && typeof data === 'object' && !Array.isArray(data)
-        ? (data as Record<string, Json | undefined>)
-        : undefined
-    throw new Error(
-      loginErrorMessage({
-        error: result.error ?? (row?.error != null ? String(row.error) : undefined),
-        message: row?.message != null ? String(row.message) : undefined,
-      }),
-    )
+    throw new Error(loginErrorMessage(failed))
   }
 
   const role = result.role ?? 'admin'

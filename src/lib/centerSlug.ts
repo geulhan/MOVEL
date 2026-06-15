@@ -90,7 +90,6 @@ export function clearRememberedMemberCenterSlug(): void {
   }
 }
 
-export function buildAdminLoginPath(centerSlug?: string | null): string {
-  const slug = centerSlug?.trim().toLowerCase() || loadRememberedAdminCenterSlug() || ''
-  return slug ? `/login?center=${encodeURIComponent(slug)}` : '/login'
+export function buildAdminLoginPath(_centerSlug?: string | null): string {
+  return '/login'
 }

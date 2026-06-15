@@ -22,6 +22,11 @@ import {
 } from '../lib/centerSlug'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { CenterSearchPicker } from '../components/member/CenterSearchPicker'
+import {
+  SignupConsentFields,
+  isSignupConsentComplete,
+  type SignupConsentState,
+} from '../components/auth/SignupConsentFields'
 import { MemberMyPageSection } from '../components/MemberMyPageSection'
 import { getErrorMessage } from '../lib/errors'
 import { closeVerificationCodePiP } from '../lib/verificationCodePip'
@@ -74,6 +79,12 @@ export default function MemberPortalPage() {
   const [signupPhone, setSignupPhone] = useState('')
   const [signupPassword, setSignupPassword] = useState('')
   const [signupPasswordConfirm, setSignupPasswordConfirm] = useState('')
+  const [signupConsents, setSignupConsents] = useState<SignupConsentState>({
+    agreeAge: false,
+    agreeTerms: false,
+    agreePrivacy: false,
+    agreeMarketing: false,
+  })
   const [loginError, setLoginError] = useState<string | null>(null)
   const [loginLoading, setLoginLoading] = useState(false)
   const [rememberLogin, setRememberLogin] = useState(false)
@@ -184,6 +195,12 @@ export default function MemberPortalPage() {
         signupPhone,
         signupPassword,
         centerSlug,
+        {
+          agreeAge: signupConsents.agreeAge,
+          agreeTerms: signupConsents.agreeTerms,
+          agreePrivacy: signupConsents.agreePrivacy,
+          agreeMarketing: signupConsents.agreeMarketing,
+        },
       )
       saveRememberedMemberCenterSlug(slug)
       const registeredMember = await fetchMemberById(memberId)
@@ -455,6 +472,11 @@ export default function MemberPortalPage() {
                   />
                   아이디·비밀번호 기억하기
                 </label>
+                <SignupConsentFields
+                  value={signupConsents}
+                  onChange={setSignupConsents}
+                  disabled={loginLoading || !resolvedCenterSlug}
+                />
                 <button
                   type="submit"
                   disabled={
@@ -463,7 +485,8 @@ export default function MemberPortalPage() {
                     !signupName.trim() ||
                     signupPhone.length !== 11 ||
                     signupPassword.length < 4 ||
-                    !signupPasswordConfirm
+                    !signupPasswordConfirm ||
+                    !isSignupConsentComplete(signupConsents)
                   }
                   className={`w-full ${btnGold}`}
                 >

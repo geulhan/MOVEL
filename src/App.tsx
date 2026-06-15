@@ -20,7 +20,6 @@ import MessagesPage from './pages/admin/MessagesPage'
 import PaymentsPage from './pages/admin/PaymentsPage'
 import CenterSettingsPage from './pages/admin/CenterSettingsPage'
 import MemberPortalPage from './pages/MemberPortalPage'
-import TrainerPortalPage from './pages/TrainerPortalPage'
 import { RootPage } from './pages/RootPage'
 import LoginPage from './pages/LoginPage'
 import CenterSignupPage from './pages/CenterSignupPage'
@@ -28,6 +27,7 @@ import MotionHubLandingPage from './pages/MotionHubLandingPage'
 import PlatformLoginPage from './pages/platform/PlatformLoginPage'
 import PlatformHomePage from './pages/platform/PlatformHomePage'
 import PlatformCreateCenterPage from './pages/platform/PlatformCreateCenterPage'
+import PlatformConsentsPage from './pages/platform/PlatformConsentsPage'
 import { PlatformAccessGuard } from './components/PlatformAccessGuard'
 import { PlatformLayout } from './components/layouts/PlatformLayout'
 import NotFoundPage from './pages/NotFoundPage'
@@ -44,6 +44,7 @@ export default function App() {
         <Route path="/platform" element={<PlatformAccessGuard />}>
           <Route element={<PlatformLayout />}>
             <Route index element={<PlatformHomePage />} />
+            <Route path="consents" element={<PlatformConsentsPage />} />
             <Route path="centers/new" element={<PlatformCreateCenterPage />} />
           </Route>
         </Route>
@@ -78,7 +79,7 @@ export default function App() {
         </Route>
         <Route path="/member/:memberId" element={<MemberAdminDetailRedirect />} />
         <Route path="/member" element={<MemberPortalPage />} />
-        <Route path="/trainer" element={<TrainerPortalPage />} />
+        <Route path="/trainer" element={<Navigate to="/admin" replace />} />
         <Route path="/user" element={<Navigate to="/member" replace />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>

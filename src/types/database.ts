@@ -1217,6 +1217,30 @@ export type Database = {
           p_admin_password: string
           p_contact_email?: string | null
           p_contact_phone?: string | null
+          p_agree_age?: boolean
+          p_agree_terms?: boolean
+          p_agree_privacy?: boolean
+          p_agree_marketing?: boolean
+        }
+        Returns: Json
+      }
+      list_center_users_for_platform: {
+        Args: {
+          p_session_token: string
+          p_center_id: string
+        }
+        Returns: Json
+      }
+      reset_center_user_password_platform: {
+        Args: {
+          p_session_token: string
+          p_center_user_id: string
+        }
+        Returns: Json
+      }
+      list_signup_consents_for_platform: {
+        Args: {
+          p_session_token: string
         }
         Returns: Json
       }
@@ -1272,6 +1296,10 @@ export type Database = {
           p_password: string
           p_device_type?: string
           p_center_slug?: string
+          p_agree_age?: boolean
+          p_agree_terms?: boolean
+          p_agree_privacy?: boolean
+          p_agree_marketing?: boolean
         }
         Returns: Json
       }

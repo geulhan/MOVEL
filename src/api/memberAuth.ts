@@ -116,6 +116,8 @@ function registerErrorMessage(row?: { error?: string; message?: string }): strin
       return '비밀번호는 4자리 이상이어야 합니다.'
     case 'center_required':
       return '가입할 센터를 선택해 주세요.'
+    case 'consent_required':
+      return '필수 약관에 모두 동의해 주세요.'
     default:
       return '회원가입에 실패했습니다. 잠시 후 다시 시도해 주세요.'
   }
@@ -126,6 +128,12 @@ export async function registerMember(
   phone: string,
   password: string,
   centerSlug: string,
+  consents: {
+    agreeAge: boolean
+    agreeTerms: boolean
+    agreePrivacy: boolean
+    agreeMarketing: boolean
+  },
 ): Promise<{ memberId: string; memberName: string }> {
   const digits = normalizeLoginPhone(phone)
   const slug = centerSlug.trim().toLowerCase()
@@ -148,6 +156,10 @@ export async function registerMember(
     p_password: password,
     p_device_type: detectDeviceType(),
     p_center_slug: slug,
+    p_agree_age: consents.agreeAge,
+    p_agree_terms: consents.agreeTerms,
+    p_agree_privacy: consents.agreePrivacy,
+    p_agree_marketing: consents.agreeMarketing,
   })
 
   if (error) {

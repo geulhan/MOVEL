@@ -33,7 +33,7 @@ export default function SchedulePage() {
     <div className="space-y-6">
       <PageHeader
         title="PT 스케줄"
-        description="개별·고정 PT 예약을 등록합니다. 세션 차감은 출석 처리 시에만 됩니다."
+        description="개별·고정 PT 예약을 등록합니다. 출석(완료) 처리는 관리자만 할 수 있습니다."
       />
 
       {isAdmin && (
@@ -56,8 +56,8 @@ export default function SchedulePage() {
             </select>
           </label>
           <p className="pb-2 text-xs text-muted">
-            트레이너를 선택하면 해당 트레이너 일정만 표시되며, 취소·삭제를 관리할
-            수 있습니다.
+            트레이너를 선택하면 해당 트레이너 일정만 표시됩니다. 취소·삭제는
+            트레이너도 가능하며, 완료(출석) 처리는 관리자만 할 수 있습니다.
           </p>
         </div>
       )}

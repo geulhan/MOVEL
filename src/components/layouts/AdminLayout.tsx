@@ -1,4 +1,4 @@
-import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { navItemsForSession } from '../../lib/adminPermissions'
 import { clearAdminAuth, getAdminSession } from '../../lib/adminSession'
 import { resetCenterIdCache } from '../../lib/center'
@@ -116,18 +116,6 @@ function AdminLayoutInner() {
             centerSlug={session?.centerSlug}
             className="w-full !px-3 !py-2 !text-xs"
           />
-          {session?.role === 'admin' && (
-            <Link
-              to="/trainer"
-              className="block w-full truncate rounded-lg border px-3 py-2 text-center text-xs whitespace-nowrap transition"
-              style={{
-                borderColor: 'color-mix(in srgb, var(--center-sidebar-text) 15%, transparent)',
-                color: 'var(--center-sidebar-muted)',
-              }}
-            >
-              트레이너 출석부 →
-            </Link>
-          )}
           <button
             type="button"
             onClick={handleLogout}
@@ -201,18 +189,6 @@ function AdminLayoutInner() {
               {session.username} 님
               <span className="ml-1 text-xs opacity-80">({roleLabel})</span>
             </span>
-          )}
-          {session?.role === 'admin' && (
-            <Link
-              to="/trainer"
-              className="inline-flex shrink-0 items-center rounded-lg border px-4 py-2 text-sm font-medium whitespace-nowrap transition"
-              style={{
-                borderColor: 'color-mix(in srgb, var(--center-accent) 40%, transparent)',
-                color: 'var(--center-main-text)',
-              }}
-            >
-              트레이너 출석부
-            </Link>
           )}
           <MemberPortalLink
             centerSlug={session?.centerSlug}

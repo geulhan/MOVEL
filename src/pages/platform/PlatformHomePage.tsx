@@ -7,6 +7,7 @@ import {
   type PlatformCenter,
 } from '../../api/platformCenters'
 import { PlatformCenterServicePeriodModal } from '../../components/platform/PlatformCenterServicePeriodModal'
+import { PlatformCenterAccountsModal } from '../../components/platform/PlatformCenterAccountsModal'
 import {
   formatServicePeriod,
   getServicePeriodStatus,
@@ -42,6 +43,7 @@ export default function PlatformHomePage() {
   const [error, setError] = useState<string | null>(null)
   const [actionId, setActionId] = useState<string | null>(null)
   const [periodCenter, setPeriodCenter] = useState<PlatformCenter | null>(null)
+  const [accountsCenter, setAccountsCenter] = useState<PlatformCenter | null>(null)
 
   const loadCenters = useCallback(async () => {
     setLoading(true)
@@ -190,12 +192,17 @@ export default function PlatformHomePage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-2">
-                          <Link
-                            to={`/login?center=${encodeURIComponent(center.slug)}`}
-                            className="text-xs text-sky-300 hover:underline"
-                          >
+                          <Link to="/login" className="text-xs text-sky-300 hover:underline">
                             관리자 로그인
                           </Link>
+                          <button
+                            type="button"
+                            disabled={actionId === center.id}
+                            onClick={() => setAccountsCenter(center)}
+                            className="text-xs text-sky-300 hover:underline disabled:opacity-50"
+                          >
+                            계정
+                          </button>
                           <button
                             type="button"
                             disabled={actionId === center.id}
@@ -234,6 +241,13 @@ export default function PlatformHomePage() {
           </div>
         )}
       </section>
+
+      {accountsCenter && (
+        <PlatformCenterAccountsModal
+          center={accountsCenter}
+          onClose={() => setAccountsCenter(null)}
+        />
+      )}
 
       {periodCenter && (
         <PlatformCenterServicePeriodModal

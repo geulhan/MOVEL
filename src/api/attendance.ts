@@ -1,7 +1,7 @@
 import { getCurrentCenterId, resolveCenterIdForMember } from '../lib/center'
 import { supabase } from '../lib/supabase'
 import type { Member } from '../types/database'
-import { localDayEndIso, localDayStartIso } from '../utils/date'
+import { isSameLocalDay, localDayEndIso, localDayStartIso } from '../utils/date'
 import { awardPtAttendance, reversePtAttendance } from './rewards'
 import {
   fetchMemberSchedules,
@@ -148,6 +148,129 @@ export async function checkInMember(
   }
 }
 
+
+async function fetchAttendanceOnScheduleDay(
+  memberId: string,
+  scheduledAt: string,
+): Promise<AttendanceRow | null> {
+  const dayStart = new Date(scheduledAt)
+  dayStart.setHours(0, 0, 0, 0)
+  const dayEnd = new Date(scheduledAt)
+  dayEnd.setHours(23, 59, 59, 999)
+
+  const { data, error } = await supabase
+    .from('attendance_logs')
+    .select('id, member_id, checked_in_at, method')
+    .eq('member_id', memberId)
+    .gte('checked_in_at', dayStart.toISOString())
+    .lte('checked_in_at', dayEnd.toISOString())
+    .order('checked_in_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error) throw error
+  return data as AttendanceRow | null
+}
+
+export type CompleteScheduleResult = {
+  member: Member
+  alreadyAttended: boolean
+}
+
+/** 관리자 전용: PT 일정 완료 + 출석 처리(해당 일 미출석 시 PT 1회 차감) */
+export async function completeScheduleAttendance(
+  scheduleId: string,
+): Promise<CompleteScheduleResult> {
+  const { data: row, error } = await supabase
+    .from('pt_schedules')
+    .select('*')
+    .eq('id', scheduleId)
+    .single()
+
+  if (error) throw error
+  const schedule = row as PtSchedule
+
+  if (schedule.status !== 'scheduled') {
+    throw new Error('이미 처리된 수업입니다.')
+  }
+
+  if (new Date(schedule.scheduled_at).getTime() > Date.now()) {
+    throw new Error('아직 시작되지 않은 수업은 완료 처리할 수 없습니다.')
+  }
+
+  const existing = await fetchAttendanceOnScheduleDay(
+    schedule.member_id,
+    schedule.scheduled_at,
+  )
+
+  if (existing) {
+    await updateScheduleStatus(scheduleId, 'completed')
+    const { data: memberRow, error: memberError } = await supabase
+      .from('members')
+      .select('*')
+      .eq('id', schedule.member_id)
+      .single()
+    if (memberError) throw memberError
+    return { member: normalizeMember(memberRow), alreadyAttended: true }
+  }
+
+  if (isSameLocalDay(schedule.scheduled_at)) {
+    const { member } = await checkInMember(schedule.member_id, 'admin')
+    return { member, alreadyAttended: false }
+  }
+
+  const centerId = await resolveCenterIdForMember(schedule.member_id)
+  const { data: memberRow, error: memberError } = await supabase
+    .from('members')
+    .select('*')
+    .eq('id', schedule.member_id)
+    .single()
+
+  if (memberError) throw memberError
+  const memberPreview = normalizeMember(memberRow)
+  assertMemberCanCheckIn(memberPreview)
+
+  const memberCenterId = memberPreview.center_id ?? centerId
+  let deducted = false
+
+  try {
+    const member = await deductSession(schedule.member_id)
+    deducted = true
+
+    const { data: attendanceRow, error: attendanceError } = await supabase
+      .from('attendance_logs')
+      .insert({
+        center_id: memberCenterId,
+        member_id: schedule.member_id,
+        method: 'admin',
+        checked_in_at: schedule.scheduled_at,
+      })
+      .select('id, member_id, checked_in_at, method')
+      .single()
+
+    if (attendanceError) throw attendanceError
+    const attendance = attendanceRow as AttendanceRow
+
+    await updateScheduleStatus(scheduleId, 'completed')
+
+    try {
+      await awardPtAttendance(schedule.member_id, attendance.id)
+    } catch (rewardErr) {
+      console.warn('리워드 적립 실패:', rewardErr)
+    }
+
+    return { member, alreadyAttended: false }
+  } catch (err) {
+    if (deducted) {
+      try {
+        await restoreOneSession(schedule.member_id)
+      } catch (rollbackErr) {
+        console.warn('출석 실패 후 PT 복구 실패:', rollbackErr)
+      }
+    }
+    throw err
+  }
+}
 
 /** 관리자 전용: 출석 취소 + PT 1회 복구 */
 export async function cancelAttendance(recordId: string): Promise<Member> {

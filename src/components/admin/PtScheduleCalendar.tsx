@@ -21,6 +21,7 @@ import {
   type PtSchedule,
   type ScheduleStatus,
 } from '../../api/schedule'
+import { completeScheduleAttendance } from '../../api/attendance'
 import { formatSupabaseError } from '../../lib/errors'
 import type { Member, Trainer } from '../../types/database'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/theme'
@@ -308,6 +309,30 @@ export function PtScheduleCalendar({
     }
   }
 
+  async function handleComplete(schedule: PtSchedule) {
+    if (
+      !window.confirm(
+        `${schedule.member_name ?? '회원'} 님 수업을 완료(출석) 처리할까요?\n해당 일 미출석이면 PT 1회가 차감됩니다.`,
+      )
+    ) {
+      return
+    }
+    setError(null)
+    try {
+      const { member, alreadyAttended } = await completeScheduleAttendance(
+        schedule.id,
+      )
+      onToast?.(
+        alreadyAttended
+          ? `${member.name} 님 수업 완료 처리됨`
+          : `${member.name} 님 출석 완료 · 잔여 ${member.remaining_sessions}회`,
+      )
+      await load()
+    } catch (err) {
+      setError(formatSupabaseError(err))
+    }
+  }
+
   async function handleDelete(id: string) {
     if (!window.confirm('이 PT 예약을 삭제할까요? 출석 처리된 경우 세션이 복구됩니다.')) {
       return
@@ -540,6 +565,15 @@ export function PtScheduleCalendar({
                       >
                         노쇼
                       </button>
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          className="btn-ghost text-green-700"
+                          onClick={() => void handleComplete(s)}
+                        >
+                          완료
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="btn-ghost text-red-800"
