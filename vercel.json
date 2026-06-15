@@ -1,12 +1,12 @@
 {
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/:path((?!assets|logo|motionhub-og\\.png|motionhub\\.html).*)",
       "has": [{ "type": "host", "value": "motionhub.kr" }],
       "destination": "/motionhub.html"
     },
     {
-      "source": "/(.*)",
+      "source": "/:path((?!assets|logo|motionhub-og\\.png|motionhub\\.html).*)",
       "has": [{ "type": "host", "value": "www.motionhub.kr" }],
       "destination": "/motionhub.html"
     },

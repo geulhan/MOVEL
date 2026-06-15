@@ -42,10 +42,10 @@ motionhub.kr 요청
    ```
 
    기대 결과:
-   - `og:title` → `MotionHub | 운동센터 운영 플랫폼`
+   - `og:title` → `모션허브 | 운동센터 운영 플랫폼`
    - `og:description` → 회원관리, 운동일지…
    - `og:image` → `https://motionhub.kr/motionhub-og.png`
-   - `og:site_name` → `MotionHub`
+   - `og:site_name` → `모션허브`
    - **모벨 퍼포먼스 문구 없음**
 
 4. **OG 이미지 직접**  

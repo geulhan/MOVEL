@@ -113,11 +113,8 @@ function HeroSection() {
       />
       <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
         <div className="max-w-3xl">
-          <p className="text-sm font-semibold tracking-[0.2em] text-teal-300 uppercase">
-            모션허브
-          </p>
-          <h1 className="mt-4 text-4xl font-bold tracking-tight text-cream sm:text-5xl lg:text-6xl">
-            Motion<span className="text-teal-300">Hub</span>
+          <h1 className="mt-0">
+            <MotionHubLogo tone="light" size="hero" />
           </h1>
           <p className="mt-6 text-xl font-semibold leading-snug text-cream sm:text-2xl">
             회원이 운동을 지속하게 만드는
@@ -161,7 +158,7 @@ function TrustSection() {
             현재 베타 운영 중
           </p>
           <p className="mt-5 text-lg font-semibold leading-relaxed text-charcoal sm:text-xl">
-            MotionHub는 실제 PT 센터에서 운영 중인 플랫폼입니다.
+            모션허브는 실제 PT 센터에서 운영 중인 플랫폼입니다.
           </p>
           <ul className="mt-6 flex flex-wrap gap-2">
             {MOTIONHUB_TRUST_FEATURES.map((feature) => (
@@ -217,7 +214,7 @@ function ProblemsSection() {
             여러 도구로 나누어 운영합니다.
           </p>
           <p className="font-medium text-charcoal">
-            MotionHub는 이 과정을 하나의 플랫폼으로 통합합니다.
+            모션허브는 이 과정을 하나의 플랫폼으로 통합합니다.
           </p>
         </div>
       </div>
@@ -234,7 +231,7 @@ function FeaturesSection() {
             Solution
           </p>
           <h2 className="mt-3 text-3xl font-bold tracking-tight text-charcoal sm:text-4xl">
-            MotionHub 기능 소개
+            모션허브 기능 소개
           </h2>
           <p className="mt-4 text-base leading-relaxed text-charcoal/60">
             회원 유지, 재등록 관리, 운영 효율을 돕는 기능을
@@ -275,7 +272,7 @@ function CaseStudySection() {
             MOVEL Performance Training
           </h3>
           <p className="mt-5 max-w-2xl text-base leading-relaxed text-cream/75">
-            MotionHub는 현재 MOVEL Performance Training에서 실제 운영 중입니다.
+            모션허브는 현재 MOVEL Performance Training에서 실제 운영 중입니다.
           </p>
           <p className="mt-4 max-w-2xl text-base leading-relaxed text-cream/65">
             회원관리부터 운동일지, 출석, 알림톡, 마일리지까지
@@ -367,7 +364,7 @@ function BetaSection() {
                 </li>
                 <li className="flex gap-2">
                   <span className="font-bold text-teal-700">✓</span>
-                  MotionHub 초기 파트너 혜택 제공
+                  모션허브 초기 파트너 혜택 제공
                 </li>
               </ul>
             </div>
@@ -538,10 +535,10 @@ function LandingFooter() {
         <MotionHubLogo tone="light" showTagline />
         <p className="mt-4 text-sm text-cream/55">운동센터 운영 플랫폼</p>
         <p className="mt-2 text-xs font-medium tracking-wide text-cream/40">
-          Powered by MotionHub
+          Powered by 모션허브
         </p>
         <p className="mt-8 text-xs text-cream/35">
-          © {new Date().getFullYear()} MotionHub. All rights reserved.
+          © {new Date().getFullYear()} 모션허브 (MotionHub). All rights reserved.
         </p>
       </div>
     </footer>

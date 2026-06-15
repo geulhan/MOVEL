@@ -32,7 +32,7 @@ export function useMotionHubSeo() {
 
     document.title = MOTIONHUB_SEO.title
     upsertMeta('meta[name="description"]', { name: 'description' }, MOTIONHUB_SEO.description)
-    upsertMeta('meta[property="og:site_name"]', { property: 'og:site_name' }, 'MotionHub')
+    upsertMeta('meta[property="og:site_name"]', { property: 'og:site_name' }, MOTIONHUB_SEO.siteName)
     upsertMeta('meta[property="og:locale"]', { property: 'og:locale' }, MOTIONHUB_SEO.locale)
     upsertMeta('meta[property="og:title"]', { property: 'og:title' }, MOTIONHUB_SEO.title)
     upsertMeta(
