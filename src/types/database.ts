@@ -158,6 +158,7 @@ export type ContractInstanceRow = {
   id: string
   payment_request_id: string
   member_id: string
+  center_id: string
   contract_type: ContractType
   status: ContractStatus
   field_data: Json
@@ -669,6 +670,7 @@ export type Database = {
         {
           payment_request_id: string
           member_id: string
+          center_id?: string
           contract_type: ContractType
           status?: ContractStatus
           field_data?: Json
@@ -1221,6 +1223,7 @@ export type Database = {
           p_agree_terms?: boolean
           p_agree_privacy?: boolean
           p_agree_marketing?: boolean
+          p_desired_service_starts_at?: string | null
         }
         Returns: Json
       }

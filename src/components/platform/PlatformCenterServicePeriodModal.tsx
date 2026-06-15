@@ -14,6 +14,15 @@ type Props = {
   onSaved: () => void
 }
 
+function addDays(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const date = new Date(y, m - 1, d)
+  date.setDate(date.getDate() + days)
+  const mm = String(date.getMonth() + 1).padStart(2, '0')
+  const dd = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${mm}-${dd}`
+}
+
 export function PlatformCenterServicePeriodModal({ center, onClose, onSaved }: Props) {
   const [startsAt, setStartsAt] = useState(center.servicePeriod.startsAt ?? '')
   const [endsAt, setEndsAt] = useState(center.servicePeriod.endsAt ?? '')
@@ -24,10 +33,22 @@ export function PlatformCenterServicePeriodModal({ center, onClose, onSaved }: P
   const periodStatus = getServicePeriodStatus(center.status, center.servicePeriod)
 
   useEffect(() => {
-    setStartsAt(center.servicePeriod.startsAt ?? '')
-    setEndsAt(center.servicePeriod.endsAt ?? '')
+    const initialStarts =
+      center.servicePeriod.startsAt ?? center.requestedServiceStartsAt ?? ''
+    setStartsAt(initialStarts)
+    setEndsAt(
+      center.servicePeriod.endsAt ??
+        (initialStarts && center.betaTrial ? addDays(initialStarts, 14) : ''),
+    )
     setReactivate(true)
   }, [center])
+
+  function handleStartsAtChange(value: string) {
+    setStartsAt(value)
+    if (center.betaTrial && value && !center.servicePeriod.endsAt) {
+      setEndsAt(addDays(value, 14))
+    }
+  }
 
   async function handleSave() {
     if (!startsAt && !endsAt) {
@@ -73,6 +94,17 @@ export function PlatformCenterServicePeriodModal({ center, onClose, onSaved }: P
           현재: {formatServicePeriod(center.servicePeriod)} ·{' '}
           {SERVICE_PERIOD_STATUS_LABELS[periodStatus]}
         </p>
+        {center.requestedServiceStartsAt && center.status === 'inactive' && (
+          <p className="mt-2 rounded-lg border border-teal-400/25 bg-teal-500/10 px-3 py-2 text-xs text-teal-100">
+            센터가 희망한 이용 시작일:{' '}
+            <strong>{center.requestedServiceStartsAt}</strong>
+          </p>
+        )}
+        {center.betaTrial && (
+          <p className="mt-2 text-xs text-cream/45">
+            베타 센터는 이용 시작일 기준 14일 무료 이용을 권장합니다.
+          </p>
+        )}
 
         {error && (
           <div className="mt-4 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
@@ -86,7 +118,7 @@ export function PlatformCenterServicePeriodModal({ center, onClose, onSaved }: P
             <input
               type="date"
               value={startsAt}
-              onChange={(e) => setStartsAt(e.target.value)}
+              onChange={(e) => handleStartsAtChange(e.target.value)}
               className="w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white"
             />
           </label>
@@ -111,21 +143,21 @@ export function PlatformCenterServicePeriodModal({ center, onClose, onSaved }: P
                 기간 저장 시 센터 활성화
               </span>
               <span className="mt-0.5 block text-xs text-cream/55">
-                정지된 센터도 오늘이 이용 기간 안이면 다시 운영 중으로 전환됩니다.
+                승인 대기 센터는 이용 시작일·종료일 저장과 함께 운영 중으로 전환됩니다.
               </span>
             </span>
           </label>
         </div>
 
         <div className="mt-6 flex justify-end gap-2">
-          <button type="button" className={btnOutline} onClick={onClose} disabled={saving}>
+          <button type="button" onClick={onClose} className={btnOutline}>
             취소
           </button>
           <button
             type="button"
-            className={btnPrimary}
-            disabled={saving}
             onClick={() => void handleSave()}
+            disabled={saving}
+            className={btnPrimary}
           >
             {saving ? '저장 중…' : '저장'}
           </button>

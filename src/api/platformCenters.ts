@@ -15,6 +15,8 @@ export type PlatformCenter = {
   member_count: number
   trainer_count: number
   servicePeriod: CenterServicePeriod
+  requestedServiceStartsAt: string | null
+  betaTrial: boolean
   created_at: string
 }
 
@@ -70,6 +72,11 @@ function parseCenterList(data: Json): PlatformCenter[] {
           service_ends_at: c.service_ends_at,
           service_period_ok: c.service_period_ok,
         }),
+        requestedServiceStartsAt:
+          c.requested_service_starts_at != null
+            ? String(c.requested_service_starts_at)
+            : null,
+        betaTrial: c.beta_trial === true,
         created_at: c.created_at != null ? String(c.created_at) : '',
       }
     })

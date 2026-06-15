@@ -19,6 +19,14 @@ function slugify(value: string): string {
     .replace(/^-|-$/g, '')
 }
 
+function todayDateInputValue(): string {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+  const d = String(now.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 export default function CenterSignupPage() {
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
@@ -27,6 +35,7 @@ export default function CenterSignupPage() {
   const [adminPassword, setAdminPassword] = useState('')
   const [contactEmail, setContactEmail] = useState('')
   const [contactPhone, setContactPhone] = useState('')
+  const [desiredServiceStartsAt, setDesiredServiceStartsAt] = useState('')
   const [consents, setConsents] = useState<SignupConsentState>({
     agreeAge: false,
     agreeTerms: false,
@@ -59,6 +68,7 @@ export default function CenterSignupPage() {
         adminPassword,
         contactEmail: contactEmail || undefined,
         contactPhone,
+        desiredServiceStartsAt: desiredServiceStartsAt || undefined,
         agreeAge: consents.agreeAge,
         agreeTerms: consents.agreeTerms,
         agreePrivacy: consents.agreePrivacy,
@@ -82,9 +92,9 @@ export default function CenterSignupPage() {
         <section className={`${cardClass} card-pad space-y-4 border-teal-200 bg-teal-50/60`}>
           <h1 className="text-lg font-bold text-charcoal">센터 등록이 완료되었습니다</h1>
           <p className="text-sm leading-relaxed text-charcoal/75">
-            <strong>{result.centerName}</strong> 센터가 MotionHub에 등록되었습니다.
-            가입일 기준 <strong>14일 베타 이용</strong>이 시작됩니다. 기간 종료 후 요금제 적용이
-            필요하면 Super Admin에서 이용 기간을 연장해 주세요.
+            <strong>{result.centerName}</strong> 센터 등록 신청이 접수되었습니다.
+            Super Admin 승인 후 <strong>이용 시작일</strong>이 설정되며, 시작일 기준{' '}
+            <strong>14일 베타 무료 이용</strong>이 제공됩니다.
           </p>
           <dl className="space-y-2 rounded-xl border border-teal-200/60 bg-white/70 px-4 py-3 text-sm">
             <div className="flex justify-between gap-4">
@@ -93,7 +103,8 @@ export default function CenterSignupPage() {
             </div>
           </dl>
           <p className="text-xs text-muted">
-            등록 내역은 MotionHub Super Admin 콘솔의 센터 목록에서 확인·승인할 수 있습니다.
+            승인 전에는 로그인할 수 없습니다. 등록 내역은 모션허브 Super Admin 콘솔의 센터
+            목록에서 확인·승인할 수 있습니다.
           </p>
           <div className="flex flex-wrap gap-3">
             <Link to="/login" className={btnPrimary}>
@@ -111,7 +122,7 @@ export default function CenterSignupPage() {
   return (
     <MotionHubAuthShell
       title="센터 등록"
-      subtitle="MotionHub에서 센터를 개설합니다. 가입 즉시 14일 베타 이용이 시작됩니다."
+      subtitle="모션허브에서 센터를 개설합니다. 승인 후 이용 시작일이 설정되며 14일 베타 무료 이용이 제공됩니다."
     >
       <section className={`${cardClass} card-pad`}>
         <form className="space-y-4" onSubmit={handleSubmit}>
@@ -206,6 +217,31 @@ export default function CenterSignupPage() {
               비밀번호 초기화 시 휴대폰 뒤 4자리를 사용합니다.
             </p>
           </label>
+
+          <label className="block text-sm">
+            <span className="mb-1.5 block font-medium text-charcoal">희망 이용 시작일</span>
+            <input
+              type="date"
+              value={desiredServiceStartsAt}
+              min={todayDateInputValue()}
+              onChange={(e) => setDesiredServiceStartsAt(e.target.value)}
+              className={inputClass}
+              disabled={loading}
+            />
+            <p className="mt-1 text-xs text-muted">
+              선택 사항입니다. 최종 이용 시작일은 Super Admin 승인 시 확정됩니다. 미입력 시
+              승인 후 별도 안내드립니다.
+            </p>
+          </label>
+
+          <div className="rounded-xl border border-teal-200/70 bg-teal-50/50 px-4 py-3 text-sm text-charcoal/75">
+            <p className="font-semibold text-charcoal">베타 이용 안내</p>
+            <ul className="mt-2 space-y-1 text-xs leading-relaxed text-charcoal/70">
+              <li>· 현재 베타 센터 모집 중 · 14일 무료 사용</li>
+              <li>· 이용 시작일은 승인 시 Super Admin이 설정합니다</li>
+              <li>· 승인 전까지는 관리자 로그인이 제한됩니다</li>
+            </ul>
+          </div>
 
           <SignupConsentFields value={consents} onChange={setConsents} disabled={loading} />
 

@@ -8,6 +8,7 @@ export type CenterSignupInput = {
   adminPassword: string
   contactEmail?: string
   contactPhone: string
+  desiredServiceStartsAt?: string
   agreeAge: boolean
   agreeTerms: boolean
   agreePrivacy: boolean
@@ -31,6 +32,7 @@ export async function selfRegisterCenter(
     p_admin_password: input.adminPassword,
     p_contact_email: input.contactEmail?.trim() || null,
     p_contact_phone: input.contactPhone.trim(),
+    p_desired_service_starts_at: input.desiredServiceStartsAt || null,
     p_agree_age: input.agreeAge,
     p_agree_terms: input.agreeTerms,
     p_agree_privacy: input.agreePrivacy,
@@ -65,6 +67,12 @@ export async function selfRegisterCenter(
           row.message != null
             ? String(row.message)
             : '010으로 시작하는 11자리 휴대전화번호를 입력해 주세요.',
+        )
+      case 'invalid_desired_start':
+        throw new Error(
+          row.message != null
+            ? String(row.message)
+            : '희망 이용 시작일은 오늘 이후로 선택해 주세요.',
         )
       case 'consent_required':
         throw new Error(

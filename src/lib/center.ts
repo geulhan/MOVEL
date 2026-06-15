@@ -121,14 +121,25 @@ export async function fetchCenterNameById(centerId: string): Promise<string> {
 
 /** 계약서 등 회원 소속 센터 표시명 */
 export async function resolveCenterNameForMember(
-  member: { center_id?: string | null },
+  member: { id?: string; center_id?: string | null },
 ): Promise<string> {
   if (member.center_id) {
     return fetchCenterNameById(member.center_id)
   }
 
   const admin = getAdminSession()
-  if (admin?.centerName) return admin.centerName
+  if (admin?.centerId) {
+    return fetchCenterNameById(admin.centerId)
+  }
+
+  if (member.id) {
+    try {
+      const centerId = await resolveCenterIdForMember(member.id)
+      return fetchCenterNameById(centerId)
+    } catch {
+      // fall through
+    }
+  }
 
   const slug = resolveSlugFromContext()
   if (slug) {

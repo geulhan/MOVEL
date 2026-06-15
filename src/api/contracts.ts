@@ -8,7 +8,11 @@ import {
   paymentCategoryToContractType,
   type ContractFieldData,
 } from '../lib/contracts/buildContractFields'
-import { resolveCenterNameForMember } from '../lib/center'
+import {
+  fetchCenterNameById,
+  resolveCenterIdForMember,
+  resolveCenterNameForMember,
+} from '../lib/center'
 import { supabase } from '../lib/supabase'
 import type { Member, PaymentRequest } from '../types/database'
 import { fetchMemberById } from './memberDetail'
@@ -17,6 +21,7 @@ export type ContractInstance = {
   id: string
   payment_request_id: string
   member_id: string
+  center_id?: string | null
   contract_type: ContractType
   status: ContractStatus
   field_data: ContractFieldData
@@ -38,8 +43,29 @@ export type ContractWithMember = ContractInstance & {
 function normalizeContract(row: ContractInstance): ContractInstance {
   return {
     ...row,
+    center_id: row.center_id ? String(row.center_id) : null,
     field_data: row.field_data ?? ({} as ContractFieldData),
     terms_accepted: row.terms_accepted ?? {},
+  }
+}
+
+/** 계약서 화면·인쇄용 센터명 — DB 등록명을 우선합니다. */
+export async function resolveContractDisplayCenterName(
+  contract: Pick<ContractInstance, 'center_id' | 'member_id' | 'field_data'>,
+): Promise<string> {
+  if (contract.center_id) {
+    try {
+      return await fetchCenterNameById(contract.center_id)
+    } catch {
+      // fall through
+    }
+  }
+
+  try {
+    const centerId = await resolveCenterIdForMember(contract.member_id)
+    return await fetchCenterNameById(centerId)
+  } catch {
+    return contract.field_data?.centerName?.trim() || '센터'
   }
 }
 
@@ -96,6 +122,7 @@ export async function createContractForPaymentRequest(
 
   const category = request.category ?? 'pt'
   const contractType = paymentCategoryToContractType(category)
+  const centerId = await resolveCenterIdForMember(member.id)
   const centerName = await resolveCenterNameForMember(member)
   const fieldData = buildContractFields(request, member, centerName)
 
@@ -104,6 +131,7 @@ export async function createContractForPaymentRequest(
     .insert({
       payment_request_id: request.id,
       member_id: request.member_id,
+      center_id: centerId,
       contract_type: contractType,
       status: 'pending_signature',
       field_data: fieldData,

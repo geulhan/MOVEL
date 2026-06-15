@@ -9,6 +9,7 @@ import type { ContractFieldData } from '../../lib/contracts/buildContractFields'
 type Props = {
   contractType: ContractType
   fields: ContractFieldData
+  centerName?: string
   signedAt?: string | null
   signatureUrl?: string | null
   compact?: boolean
@@ -22,23 +23,25 @@ function formatSignedAt(iso: string | null | undefined): string {
 export function ContractDocument({
   contractType,
   fields,
+  centerName,
   signedAt,
   signatureUrl,
   compact = false,
 }: Props) {
   const title = CONTRACT_TYPE_LABELS[contractType]
   const sectionClass = compact ? 'space-y-3 text-xs' : 'space-y-4 text-sm'
-  const termSections = applyCenterNameToContractTerms(fields.centerName)
+  const displayCenterName = centerName?.trim() || fields.centerName.trim() || '센터'
+  const termSections = applyCenterNameToContractTerms(displayCenterName)
 
   return (
     <article className={`${sectionClass} text-charcoal`}>
       <header className="border-b border-gold/30 pb-4">
         <p className="text-xs font-semibold uppercase tracking-wide text-gold-dark">
-          {fields.centerName}
+          {displayCenterName}
         </p>
         <h2 className="mt-1 text-xl font-bold">{title}</h2>
         <p className="mt-2 text-muted">
-          계약 당사자: {fields.centerName}(센터) · {fields.memberName}(
+          계약 당사자: {displayCenterName}(센터) · {fields.memberName}(
           {fields.memberPhone})
         </p>
       </header>

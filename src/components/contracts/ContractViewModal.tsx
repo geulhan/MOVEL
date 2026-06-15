@@ -7,6 +7,7 @@ import {
   type ContractInstance,
 } from '../../api/contracts'
 import { btnOutline, btnPrimary } from '../../styles/theme'
+import { useContractCenterName } from '../../hooks/useContractCenterName'
 import { ContractDocument } from './ContractDocument'
 
 type Props = {
@@ -22,6 +23,8 @@ export function ContractViewModal({
   memberName,
   onClose,
 }: Props) {
+  const centerName = useContractCenterName(contract)
+
   if (!open || !contract) return null
 
   function handlePrint() {
@@ -63,6 +66,7 @@ export function ContractViewModal({
           <ContractDocument
             contractType={contract.contract_type}
             fields={contract.field_data}
+            centerName={centerName}
             signedAt={contract.signed_at}
             signatureUrl={getContractSignatureUrl(contract.signature_path)}
           />
