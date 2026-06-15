@@ -106,3 +106,42 @@ export function resetCenterIdCache(): void {
   cachedCenterId = null
   cachedCenterSlug = null
 }
+
+export async function fetchCenterNameById(centerId: string): Promise<string> {
+  const { data, error } = await supabase
+    .from('centers')
+    .select('name')
+    .eq('id', centerId)
+    .is('deleted_at', null)
+    .maybeSingle()
+
+  if (error) throw error
+  return data?.name ? String(data.name) : '센터'
+}
+
+/** 계약서 등 회원 소속 센터 표시명 */
+export async function resolveCenterNameForMember(
+  member: { center_id?: string | null },
+): Promise<string> {
+  if (member.center_id) {
+    return fetchCenterNameById(member.center_id)
+  }
+
+  const admin = getAdminSession()
+  if (admin?.centerName) return admin.centerName
+
+  const slug = resolveSlugFromContext()
+  if (slug) {
+    const { data, error } = await supabase
+      .from('centers')
+      .select('name')
+      .eq('slug', slug)
+      .is('deleted_at', null)
+      .maybeSingle()
+
+    if (error) throw error
+    if (data?.name) return String(data.name)
+  }
+
+  return '센터'
+}

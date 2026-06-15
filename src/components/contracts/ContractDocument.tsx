@@ -1,5 +1,5 @@
 import {
-  CONTRACT_TERM_SECTIONS,
+  applyCenterNameToContractTerms,
   CONTRACT_TYPE_LABELS,
   type ContractType,
 } from '../../constants/contractTerms'
@@ -28,6 +28,7 @@ export function ContractDocument({
 }: Props) {
   const title = CONTRACT_TYPE_LABELS[contractType]
   const sectionClass = compact ? 'space-y-3 text-xs' : 'space-y-4 text-sm'
+  const termSections = applyCenterNameToContractTerms(fields.centerName)
 
   return (
     <article className={`${sectionClass} text-charcoal`}>
@@ -123,7 +124,7 @@ export function ContractDocument({
         </dl>
       </section>
 
-      {CONTRACT_TERM_SECTIONS.map((section) => (
+      {termSections.map((section) => (
         <section key={section.id}>
           <h3 className="font-semibold">
             {section.title}

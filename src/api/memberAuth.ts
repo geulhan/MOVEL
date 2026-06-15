@@ -193,21 +193,24 @@ export async function loginMember(
   }
 
   const slug = centerSlug?.trim().toLowerCase() || undefined
-  const { data, error } = await supabase.rpc('verify_member_login', {
-    p_phone: digits,
-    p_password: password,
-    p_device_type: detectDeviceType(),
-    p_center_slug: slug,
-  })
+  const { data, error } = await supabase.rpc(
+    'verify_member_login',
+    slug
+      ? {
+          p_phone: digits,
+          p_password: password,
+          p_device_type: detectDeviceType(),
+          p_center_slug: slug,
+        }
+      : {
+          p_phone: digits,
+          p_password: password,
+          p_device_type: detectDeviceType(),
+        },
+  )
 
   if (error) {
-    const msg = formatSupabaseError(error)
-    if (msg.includes('verify_member_login') || msg.includes('member_credentials')) {
-      throw new Error(
-        '회원 로그인 DB 설정이 필요합니다. Supabase SQL Editor에서 migration_014_member_auth.sql을 실행해 주세요.',
-      )
-    }
-    throw new Error(msg)
+    throw error
   }
 
   const result = parseLoginResponse(data)

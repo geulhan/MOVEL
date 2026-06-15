@@ -1,7 +1,5 @@
 /** MOVEL 기본 계약 약관 (센터별 커스터마이즈 전까지 공통 사용) */
 
-export const CONTRACT_CENTER_NAME = 'MOVEL 피트니스'
-
 export type ContractTermSection = {
   id: string
   title: string
@@ -15,7 +13,7 @@ export const CONTRACT_TERM_SECTIONS: ContractTermSection[] = [
     title: '센터 이용 약관',
     required: true,
     paragraphs: [
-      '본 약관은 MOVEL 피트니스(이하 "센터")와 회원 간의 시설 이용 및 서비스 제공에 관한 기본 사항을 정합니다.',
+      '본 약관은 {{centerName}}(이하 "센터")와 회원 간의 시설 이용 및 서비스 제공에 관한 기본 사항을 정합니다.',
       '회원은 센터의 운영 규정, 안전 수칙, 이용 시간 및 시설 사용 방법을 준수해야 하며, 타 회원 또는 직원에게 피해를 주는 행위를 해서는 안 됩니다.',
       '회원은 본인의 건강 상태를 고지하고, 의사의 운동 제한 권고가 있는 경우 사전에 센터에 알려야 합니다. 운동 중 발생할 수 있는 위험에 대해 회원은 스스로 주의를 기울여야 합니다.',
       '센터는 시설 점검, 천재지변, 행정 명령 등 불가피한 사유로 일시적으로 운영을 중단할 수 있으며, 이 경우 회원에게 사전 또는 사후 안내합니다.',
@@ -67,3 +65,16 @@ export const CONTRACT_STATUS_LABELS = {
 } as const
 
 export type ContractStatus = keyof typeof CONTRACT_STATUS_LABELS
+
+export function applyCenterNameToContractTerms(
+  centerName: string,
+  sections: ContractTermSection[] = CONTRACT_TERM_SECTIONS,
+): ContractTermSection[] {
+  const name = centerName.trim() || '센터'
+  return sections.map((section) => ({
+    ...section,
+    paragraphs: section.paragraphs.map((paragraph) =>
+      paragraph.replaceAll('{{centerName}}', name),
+    ),
+  }))
+}

@@ -8,6 +8,7 @@ import {
   paymentCategoryToContractType,
   type ContractFieldData,
 } from '../lib/contracts/buildContractFields'
+import { resolveCenterNameForMember } from '../lib/center'
 import { supabase } from '../lib/supabase'
 import type { Member, PaymentRequest } from '../types/database'
 import { fetchMemberById } from './memberDetail'
@@ -95,7 +96,8 @@ export async function createContractForPaymentRequest(
 
   const category = request.category ?? 'pt'
   const contractType = paymentCategoryToContractType(category)
-  const fieldData = buildContractFields(request, member)
+  const centerName = await resolveCenterNameForMember(member)
+  const fieldData = buildContractFields(request, member, centerName)
 
   const { data, error } = await supabase
     .from('contract_instances')

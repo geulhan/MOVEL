@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react
 import { loginAdmin } from '../api/adminAuth'
 import { MotionHubAuthShell } from '../components/layouts/MotionHubAuthShell'
 import { formatSupabaseError } from '../lib/errors'
+import { isSupabaseConfigured } from '../lib/supabase'
 import {
   clearAdminAuth,
   getAdminSession,
@@ -121,6 +122,13 @@ export default function LoginPage() {
       subtitle="MotionHub에 등록한 아이디와 비밀번호만 입력하세요."
     >
       <section className={`${cardClass} card-pad`}>
+        {!isSupabaseConfigured && (
+          <p className="mb-3 rounded-lg border border-amber-300/70 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            Supabase 연결 설정이 없습니다. Vercel 환경 변수{' '}
+            <code className="text-xs">VITE_SUPABASE_URL</code>,{' '}
+            <code className="text-xs">VITE_SUPABASE_ANON_KEY</code>를 확인해 주세요.
+          </p>
+        )}
         <form className="space-y-3" onSubmit={handleSubmit}>
           <label className="block text-sm">
             <span className="mb-1.5 block font-medium text-charcoal">아이디</span>

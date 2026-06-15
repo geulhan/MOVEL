@@ -1,4 +1,3 @@
-import { CONTRACT_CENTER_NAME } from '../../constants/contractTerms'
 import type { ContractType } from '../../constants/contractTerms'
 import type { PaymentCategory } from '../../constants/paymentCategories'
 import type { Member, PaymentRequest } from '../../types/database'
@@ -70,10 +69,11 @@ function inferLockerTowelPeriods(
 export function buildContractFields(
   request: PaymentRequest,
   member: Pick<Member, 'name' | 'phone' | 'trainer_name'>,
+  centerName: string,
 ): ContractFieldData {
   const category = request.category ?? 'pt'
   const base: ContractFieldData = {
-    centerName: CONTRACT_CENTER_NAME,
+    centerName: centerName.trim() || '센터',
     memberName: member.name,
     memberPhone: member.phone,
     productLabel: request.label,

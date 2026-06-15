@@ -90,11 +90,19 @@ export async function loginAdmin(
   centerSlug?: string,
 ): Promise<AdminSessionInfo> {
   const slug = centerSlug?.trim().toLowerCase() || undefined
-  const { data, error } = await supabase.rpc('verify_admin_login', {
-    p_username: username.trim(),
-    p_password: password,
-    p_center_slug: slug,
-  })
+  const { data, error } = await supabase.rpc(
+    'verify_admin_login',
+    slug
+      ? {
+          p_username: username.trim(),
+          p_password: password,
+          p_center_slug: slug,
+        }
+      : {
+          p_username: username.trim(),
+          p_password: password,
+        },
+  )
 
   if (error) throw error
 
