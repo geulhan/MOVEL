@@ -30,6 +30,8 @@ import {
   loadRememberedMemberLogin,
   saveRememberedMemberLogin,
 } from '../lib/rememberLogin'
+import { loadMemberTheme } from '../lib/memberTheme'
+import type { CenterTheme } from '../types/centerBranding'
 import { MemberLayout } from '../components/layouts/MemberLayout'
 import { btnGold, btnPrimary, cardClass, inputClass } from '../styles/theme'
 import type { Member } from '../types/database'
@@ -63,6 +65,7 @@ export default function MemberPortalPage() {
   const [signupCentersLoading, setSignupCentersLoading] = useState(false)
   const resolvedCenterSlug = centerSlug.trim().toLowerCase()
   const [member, setMember] = useState<Member | null>(null)
+  const [memberTheme, setMemberTheme] = useState<CenterTheme | undefined>(undefined)
   const [loading, setLoading] = useState(true)
   const [loginPhone, setLoginPhone] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
@@ -150,6 +153,14 @@ export default function MemberPortalPage() {
       })
       .finally(() => setLoading(false))
   }, [loadMemberData])
+
+  useEffect(() => {
+    if (member) {
+      setMemberTheme(loadMemberTheme(member.id))
+    } else {
+      setMemberTheme(undefined)
+    }
+  }, [member?.id])
 
   async function handleSignup(e: FormEvent) {
     e.preventDefault()
@@ -483,6 +494,7 @@ export default function MemberPortalPage() {
   return (
     <MemberLayout
       memberName={member.name}
+      memberTheme={memberTheme}
       onLogout={handleLogout}
       onDashboard={() => setTab('home')}
     >
@@ -589,7 +601,11 @@ export default function MemberPortalPage() {
         )}
 
         {tab === 'mypage' && member && (
-          <MemberMyPageSection phone={member.phone} />
+          <MemberMyPageSection
+            phone={member.phone}
+            memberId={member.id}
+            onThemeChange={setMemberTheme}
+          />
         )}
 
         {tab === 'journal' && member && (

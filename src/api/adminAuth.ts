@@ -96,20 +96,11 @@ export async function loginAdmin(
   centerSlug?: string,
 ): Promise<AdminSessionInfo> {
   const slug = centerSlug?.trim().toLowerCase() || undefined
-  const rpcArgs = {
+  const { data, error } = await supabase.rpc('verify_admin_login', {
     p_username: username.trim(),
     p_password: password,
     p_center_slug: slug,
-  }
-
-  console.error('[loginAdmin] verify_admin_login request', {
-    username: rpcArgs.p_username,
-    center_slug: rpcArgs.p_center_slug,
   })
-
-  const { data, error } = await supabase.rpc('verify_admin_login', rpcArgs)
-
-  console.error('[loginAdmin] verify_admin_login response', { data, error })
 
   if (error) {
     throw new Error(getErrorMessage(error))
@@ -142,12 +133,6 @@ export async function loginAdmin(
     result.center_slug!,
     result.center_name ?? result.center_slug!,
   )
-
-  console.error('[loginAdmin] session saved', {
-    adminId: result.id,
-    centerSlug: result.center_slug,
-    role,
-  })
 
   return {
     adminId: result.id,

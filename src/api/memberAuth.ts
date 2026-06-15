@@ -193,21 +193,12 @@ export async function loginMember(
   }
 
   const slug = centerSlug?.trim().toLowerCase() || undefined
-  const rpcArgs = {
+  const { data, error } = await supabase.rpc('verify_member_login', {
     p_phone: digits,
     p_password: password,
     p_device_type: detectDeviceType(),
     p_center_slug: slug,
-  }
-
-  console.error('[loginMember] verify_member_login request', {
-    phone: rpcArgs.p_phone,
-    center_slug: rpcArgs.p_center_slug,
   })
-
-  const { data, error } = await supabase.rpc('verify_member_login', rpcArgs)
-
-  console.error('[loginMember] verify_member_login response', { data, error })
 
   if (error) {
     throw new Error(getErrorMessage(error))

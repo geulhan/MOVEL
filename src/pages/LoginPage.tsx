@@ -86,13 +86,6 @@ export default function LoginPage() {
       return
     }
 
-    console.error('[LoginPage] submit', {
-      username: username.trim(),
-      center_slug: slug ?? null,
-      needCenterSlug,
-      urlCenter,
-    })
-
     setLoading(true)
     try {
       const info = await loginAdmin(username, password, slug)
@@ -112,7 +105,6 @@ export default function LoginPage() {
             : '/admin'
       navigate(target, { replace: true })
     } catch (err) {
-      console.error('[LoginPage] login failed', err)
       const message = getErrorMessage(err)
       if (message.includes('여러 센터')) {
         setNeedCenterSlug(true)

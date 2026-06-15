@@ -105,6 +105,6 @@ export function useApplyCenterTheme(theme: CenterTheme, centerName?: string) {
   }, [theme])
 
   useEffect(() => {
-    document.title = centerName ? `${centerName} | MotionHub` : 'MotionHub'
+    document.title = centerName ? `${centerName} | 모션허브` : '모션허브'
   }, [centerName])
 }

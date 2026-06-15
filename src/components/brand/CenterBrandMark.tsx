@@ -35,14 +35,6 @@ export function CenterBrandMark({
       >
         {branding.centerName}
       </p>
-      {!isMobile && (
-        <p
-          className="mt-1 text-[10px] font-semibold uppercase tracking-[0.18em]"
-          style={{ color: 'var(--center-sidebar-muted)' }}
-        >
-          {branding.centerSlug}
-        </p>
-      )}
     </div>
   )
 

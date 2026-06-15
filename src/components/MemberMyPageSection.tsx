@@ -3,11 +3,16 @@ import { changeMemberPassword } from '../api/memberAuth'
 import { formatPhone } from '../api/members'
 import { btnPrimary, cardClass, inputClass } from '../styles/theme'
 
+import type { CenterTheme } from '../types/centerBranding'
+import { MemberThemeSettings } from './member/MemberThemeSettings'
+
 type Props = {
   phone: string
+  memberId: string
+  onThemeChange: (theme: CenterTheme) => void
 }
 
-export function MemberMyPageSection({ phone }: Props) {
+export function MemberMyPageSection({ phone, memberId, onThemeChange }: Props) {
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -115,6 +120,8 @@ export function MemberMyPageSection({ phone }: Props) {
         {error && <p className="text-sm text-red-700">{error}</p>}
         {success && <p className="text-sm text-emerald-700">{success}</p>}
       </form>
+
+      <MemberThemeSettings memberId={memberId} onThemeChange={onThemeChange} />
     </section>
   )
 }
