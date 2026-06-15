@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase'
 import { resetCenterIdCache } from '../lib/center'
+import { LEGACY_MOVEL_SLUG } from '../lib/centerSlug'
 import { getErrorMessage } from '../lib/errors'
 import { saveAdminAuth, type AdminRole } from '../lib/adminSession'
 import type { Json } from '../types/database'
@@ -69,10 +70,7 @@ function loginErrorMessage(row?: { error?: string; message?: string }): string {
   if (row?.message) return row.message
   switch (row?.error) {
     case 'center_not_found':
-      return (
-        '센터를 찾을 수 없습니다. Supabase SQL Editor에서 migration_056_fix_admin_login_global.sql을 ' +
-        '실행했는지 확인해 주세요. 모벨 센터는 센터 주소 movel 로도 시도해 볼 수 있습니다.'
-      )
+      return '센터를 찾을 수 없습니다. 센터 주소에 movel 을 입력해 보시거나, 페이지를 새로고침(Ctrl+Shift+R)해 주세요.'
     case 'center_suspended':
       return '정지된 센터입니다. MotionHub에 문의해 주세요.'
     case 'center_service_expired':
@@ -127,54 +125,70 @@ function parseFailedLogin(
   }
 }
 
+function uniqueLoginSlugAttempts(preferred?: string): (string | undefined)[] {
+  const attempts: (string | undefined)[] = []
+  const seen = new Set<string>()
+
+  const add = (slug?: string) => {
+    const key = slug ?? ''
+    if (seen.has(key)) return
+    seen.add(key)
+    attempts.push(slug)
+  }
+
+  const slug = preferred?.trim().toLowerCase()
+  if (slug) add(slug)
+  add(undefined)
+  if (slug !== LEGACY_MOVEL_SLUG) add(LEGACY_MOVEL_SLUG)
+
+  return attempts
+}
+
 export async function loginAdmin(
   username: string,
   password: string,
   centerSlug?: string,
 ): Promise<AdminSessionInfo> {
-  const slug = centerSlug?.trim().toLowerCase() || undefined
-  let { data, error } = await callVerifyAdminLogin(username, password, slug)
+  let lastFailed: { error?: string; message?: string } = {}
 
-  if (error) throw error
-
-  let failed = parseFailedLogin(data)
-  if (failed.error === 'center_not_found' && slug) {
-    const retry = await callVerifyAdminLogin(username, password)
-    data = retry.data
-    error = retry.error
+  for (const trySlug of uniqueLoginSlugAttempts(centerSlug)) {
+    const { data, error } = await callVerifyAdminLogin(username, password, trySlug)
     if (error) throw error
-    failed = parseFailedLogin(data)
+
+    const result = parseLoginResponse(data)
+    if (result.ok && result.id && result.username && result.token) {
+      const role = result.role ?? 'admin'
+      resetCenterIdCache()
+      saveAdminAuth(
+        result.token,
+        result.id,
+        result.username,
+        role,
+        result.trainer_id ?? null,
+        result.trainer_name ?? null,
+        result.center_id!,
+        result.center_slug!,
+        result.center_name ?? result.center_slug!,
+      )
+
+      return {
+        adminId: result.id,
+        username: result.username,
+        role,
+        trainerId: result.trainer_id ?? null,
+        trainerName: result.trainer_name ?? null,
+        centerId: result.center_id!,
+        centerSlug: result.center_slug!,
+        centerName: result.center_name ?? result.center_slug!,
+      }
+    }
+
+    lastFailed = parseFailedLogin(data)
+    const err = result.error ?? lastFailed.error
+    if (err && err !== 'center_not_found') break
   }
 
-  const result = parseLoginResponse(data)
-  if (!result.ok || !result.id || !result.username || !result.token) {
-    throw new Error(loginErrorMessage(failed))
-  }
-
-  const role = result.role ?? 'admin'
-  resetCenterIdCache()
-  saveAdminAuth(
-    result.token,
-    result.id,
-    result.username,
-    role,
-    result.trainer_id ?? null,
-    result.trainer_name ?? null,
-    result.center_id!,
-    result.center_slug!,
-    result.center_name ?? result.center_slug!,
-  )
-
-  return {
-    adminId: result.id,
-    username: result.username,
-    role,
-    trainerId: result.trainer_id ?? null,
-    trainerName: result.trainer_name ?? null,
-    centerId: result.center_id!,
-    centerSlug: result.center_slug!,
-    centerName: result.center_name ?? result.center_slug!,
-  }
+  throw new Error(loginErrorMessage(lastFailed))
 }
 
 export type AdminSessionInfo = {

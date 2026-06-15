@@ -29,7 +29,7 @@ type LoginLocationState = {
 export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [centerSlug, setCenterSlug] = useState('')
   const [needCenterSlug, setNeedCenterSlug] = useState(false)
   const [username, setUsername] = useState('')
@@ -40,6 +40,13 @@ export default function LoginPage() {
 
   const urlCenter = searchParams.get('center')?.trim().toLowerCase() || null
   const session = getAdminSession()
+
+  useEffect(() => {
+    clearRememberedAdminCenterSlug()
+    if (urlCenter) {
+      setSearchParams({}, { replace: true })
+    }
+  }, [urlCenter, setSearchParams])
 
   useEffect(() => {
     if (urlCenter && session && urlCenter !== session.centerSlug) {
