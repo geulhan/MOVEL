@@ -16,6 +16,8 @@ export type PtSchedule = {
   note: string | null
   created_at: string
   updated_at: string
+  fixed_schedule_id?: string | null
+  is_detached?: boolean
   member_name?: string
   trainer_name?: string
 }
@@ -23,15 +25,22 @@ export type PtSchedule = {
 export async function fetchSchedulesInRange(
   startIso: string,
   endIso: string,
+  options?: { trainerId?: string },
 ): Promise<PtSchedule[]> {
   const centerId = await getCurrentCenterId()
-  const { data, error } = await supabase
+  let query = supabase
     .from('pt_schedules')
     .select('*')
     .eq('center_id', centerId)
     .gte('scheduled_at', startIso)
     .lte('scheduled_at', endIso)
     .order('scheduled_at')
+
+  if (options?.trainerId) {
+    query = query.eq('trainer_id', options.trainerId)
+  }
+
+  const { data, error } = await query
 
   if (error) throw error
   return (data ?? []) as PtSchedule[]
@@ -63,6 +72,27 @@ export async function createSchedule(input: {
 
   if (error) throw error
   return data as PtSchedule
+}
+
+export async function updateScheduleDetails(
+  id: string,
+  input: {
+    scheduled_at?: string
+    trainer_id?: string | null
+    note?: string | null
+    is_detached?: boolean
+  },
+): Promise<void> {
+  const { error } = await supabase
+    .from('pt_schedules')
+    .update({
+      ...input,
+      note: input.note === undefined ? undefined : input.note?.trim() || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+
+  if (error) throw error
 }
 
 export async function updateScheduleStatus(

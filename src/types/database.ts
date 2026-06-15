@@ -284,6 +284,22 @@ export type PtSchedule = {
   duration_minutes: number
   status: string
   note: string | null
+  fixed_schedule_id?: string | null
+  is_detached?: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type PtFixedSchedule = {
+  id: string
+  center_id: string
+  member_id: string
+  trainer_id: string | null
+  day_of_week: number
+  time_of_day: string
+  duration_minutes: number
+  note: string | null
+  is_active: boolean
   created_at: string
   updated_at: string
 }
@@ -757,6 +773,8 @@ export type Database = {
           duration_minutes?: number
           status?: string
           note?: string | null
+          fixed_schedule_id?: string | null
+          is_detached?: boolean
         },
         {
           trainer_id?: string | null
@@ -764,6 +782,30 @@ export type Database = {
           duration_minutes?: number
           status?: string
           note?: string | null
+          fixed_schedule_id?: string | null
+          is_detached?: boolean
+          updated_at?: string
+        }
+      >
+      pt_fixed_schedules: TableDef<
+        PtFixedSchedule,
+        {
+          center_id: string
+          member_id: string
+          trainer_id?: string | null
+          day_of_week: number
+          time_of_day: string
+          duration_minutes?: number
+          note?: string | null
+          is_active?: boolean
+        },
+        {
+          trainer_id?: string | null
+          day_of_week?: number
+          time_of_day?: string
+          duration_minutes?: number
+          note?: string | null
+          is_active?: boolean
           updated_at?: string
         }
       >

@@ -2,9 +2,14 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { fetchMembers } from '../../api/members'
 import { fetchTrainers } from '../../api/trainers'
 import {
+  cancelScheduleWithSessionRestore,
+  deleteScheduleAdmin,
+  updateDetachedSchedule,
+  updateFixedScheduleSeries,
+} from '../../api/fixedSchedule'
+import {
   createSchedule,
   DEFAULT_PT_DURATION_MINUTES,
-  deleteSchedule,
   fetchSchedulesInRange,
   updateScheduleStatus,
   type PtSchedule,
@@ -14,6 +19,11 @@ import { formatSupabaseError } from '../../lib/errors'
 import type { Member, Trainer } from '../../types/database'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/theme'
 import { dateKey, getMonthMatrix, monthLabel, WEEKDAYS } from '../../utils/calendar'
+import {
+  scheduleDateKey,
+  scheduleTimeHHMM,
+  toLocalScheduleIso,
+} from '../../utils/fixedScheduleDates'
 
 const STATUS_LABELS: Record<ScheduleStatus, string> = {
   scheduled: '예정',
@@ -43,16 +53,21 @@ function formatTime(iso: string): string {
   })
 }
 
-function toLocalIso(dateStr: string, timeStr: string): string {
-  return new Date(`${dateStr}T${timeStr}:00`).toISOString()
-}
-
 type Props = {
   onToast?: (msg: string) => void
-  trainerId?: string
+  lockedTrainerId?: string
+  filterTrainerId?: string
+  isAdmin?: boolean
+  refreshKey?: number
 }
 
-export function PtScheduleCalendar({ onToast, trainerId }: Props) {
+export function PtScheduleCalendar({
+  onToast,
+  lockedTrainerId,
+  filterTrainerId,
+  isAdmin = false,
+  refreshKey = 0,
+}: Props) {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
@@ -69,6 +84,16 @@ export function PtScheduleCalendar({ onToast, trainerId }: Props) {
   const [formTime, setFormTime] = useState('10:00')
   const [formNote, setFormNote] = useState('')
 
+  const [editSchedule, setEditSchedule] = useState<PtSchedule | null>(null)
+  const [editDate, setEditDate] = useState('')
+  const [editTime, setEditTime] = useState('10:00')
+  const [editTrainerId, setEditTrainerId] = useState('')
+  const [editNote, setEditNote] = useState('')
+  const [editSeries, setEditSeries] = useState(false)
+
+  const effectiveTrainerId = lockedTrainerId ?? filterTrainerId
+  const canManage = isAdmin || Boolean(lockedTrainerId)
+
   const range = useMemo(() => {
     const start = new Date(year, month, 1)
     const end = new Date(year, month + 1, 0, 23, 59, 59)
@@ -80,7 +105,9 @@ export function PtScheduleCalendar({ onToast, trainerId }: Props) {
     setError(null)
     try {
       const [scheduleData, memberData, trainerData] = await Promise.all([
-        fetchSchedulesInRange(range.startIso, range.endIso),
+        fetchSchedulesInRange(range.startIso, range.endIso, {
+          trainerId: effectiveTrainerId || undefined,
+        }),
         fetchMembers(),
         fetchTrainers(),
       ])
@@ -91,15 +118,11 @@ export function PtScheduleCalendar({ onToast, trainerId }: Props) {
         member_name: memberMap.get(s.member_id),
         trainer_name: s.trainer_id ? trainerMap.get(s.trainer_id) : undefined,
       }))
-      setSchedules(
-        trainerId
-          ? enriched.filter((schedule) => schedule.trainer_id === trainerId)
-          : enriched,
-      )
+      setSchedules(enriched)
       const activeMembers = memberData.filter((m) => m.status !== 'terminated')
       setMembers(
-        trainerId
-          ? activeMembers.filter((member) => member.trainer_id === trainerId)
+        lockedTrainerId
+          ? activeMembers.filter((member) => member.trainer_id === lockedTrainerId)
           : activeMembers,
       )
       setTrainers(trainerData)
@@ -108,17 +131,15 @@ export function PtScheduleCalendar({ onToast, trainerId }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [range.startIso, range.endIso, trainerId])
+  }, [range.startIso, range.endIso, effectiveTrainerId, lockedTrainerId])
 
   useEffect(() => {
     void load()
-  }, [load])
+  }, [load, refreshKey])
 
   useEffect(() => {
-    if (trainerId) {
-      setFormTrainerId(trainerId)
-    }
-  }, [trainerId])
+    if (lockedTrainerId) setFormTrainerId(lockedTrainerId)
+  }, [lockedTrainerId])
 
   const byDate = useMemo(() => {
     const map = new Map<string, PtSchedule[]>()
@@ -169,7 +190,7 @@ export function PtScheduleCalendar({ onToast, trainerId }: Props) {
       await createSchedule({
         member_id: formMemberId,
         trainer_id: formTrainerId || member?.trainer_id || null,
-        scheduled_at: toLocalIso(selectedDate, formTime),
+        scheduled_at: toLocalScheduleIso(selectedDate, formTime),
         duration_minutes: DEFAULT_PT_DURATION_MINUTES,
         note: formNote,
       })
@@ -180,6 +201,20 @@ export function PtScheduleCalendar({ onToast, trainerId }: Props) {
       setError(formatSupabaseError(err))
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleCancel(id: string) {
+    if (!window.confirm('이 수업을 취소할까요? 해당 일 출석이 있으면 세션이 복구됩니다.')) {
+      return
+    }
+    setError(null)
+    try {
+      await cancelScheduleWithSessionRestore(id)
+      onToast?.('수업 취소됨 (출석 시 세션 복구)')
+      await load()
+    } catch (err) {
+      setError(formatSupabaseError(err))
     }
   }
 
@@ -195,14 +230,58 @@ export function PtScheduleCalendar({ onToast, trainerId }: Props) {
   }
 
   async function handleDelete(id: string) {
-    if (!window.confirm('이 PT 예약을 삭제할까요?')) return
+    if (!window.confirm('이 PT 예약을 삭제할까요? 출석 처리된 경우 세션이 복구됩니다.')) {
+      return
+    }
     setError(null)
     try {
-      await deleteSchedule(id)
+      await deleteScheduleAdmin(id)
       onToast?.('예약 삭제됨')
       await load()
     } catch (err) {
       setError(formatSupabaseError(err))
+    }
+  }
+
+  function openEdit(schedule: PtSchedule) {
+    setEditSchedule(schedule)
+    setEditDate(scheduleDateKey(schedule.scheduled_at))
+    setEditTime(scheduleTimeHHMM(schedule.scheduled_at))
+    setEditTrainerId(schedule.trainer_id ?? '')
+    setEditNote(schedule.note ?? '')
+    setEditSeries(false)
+  }
+
+  async function handleSaveEdit(e: FormEvent) {
+    e.preventDefault()
+    if (!editSchedule) return
+    setSaving(true)
+    setError(null)
+    try {
+      const scheduledAt = toLocalScheduleIso(editDate, editTime)
+      if (editSeries && editSchedule.fixed_schedule_id && !editSchedule.is_detached) {
+        const d = new Date(scheduledAt)
+        await updateFixedScheduleSeries(editSchedule.fixed_schedule_id, {
+          day_of_week: d.getDay(),
+          time_of_day: editTime,
+          trainer_id: editTrainerId || null,
+          note: editNote,
+        })
+        onToast?.('고정 수업 전체 변경 완료')
+      } else {
+        await updateDetachedSchedule(editSchedule.id, {
+          scheduled_at: scheduledAt,
+          trainer_id: editTrainerId || null,
+          note: editNote,
+        })
+        onToast?.('개별 일정 변경 완료')
+      }
+      setEditSchedule(null)
+      await load()
+    } catch (err) {
+      setError(formatSupabaseError(err))
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -216,31 +295,19 @@ export function PtScheduleCalendar({ onToast, trainerId }: Props) {
 
       <div className={`${cardClass} card-pad`}>
         <div className="mb-5 flex items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={prevMonth}
-            className={btnOutline}
-            aria-label="이전 달"
-          >
+          <button type="button" onClick={prevMonth} className={btnOutline} aria-label="이전 달">
             ←
           </button>
           <h3 className="text-lg font-bold whitespace-nowrap text-charcoal">
             {monthLabel(year, month)}
           </h3>
-          <button
-            type="button"
-            onClick={nextMonth}
-            className={btnOutline}
-            aria-label="다음 달"
-          >
+          <button type="button" onClick={nextMonth} className={btnOutline} aria-label="다음 달">
             →
           </button>
         </div>
 
         {loading ? (
-          <p className="py-12 text-center text-sm text-charcoal/50">
-            캘린더 불러오는 중…
-          </p>
+          <p className="py-12 text-center text-sm text-charcoal/50">캘린더 불러오는 중…</p>
         ) : (
           <>
             <div className="grid grid-cols-7 gap-px overflow-hidden rounded-lg border border-gold/20 bg-gold/20 text-center text-xs font-semibold text-charcoal/50">
@@ -277,9 +344,7 @@ export function PtScheduleCalendar({ onToast, trainerId }: Props) {
                     type="button"
                     onClick={() => setSelectedDate(key)}
                     className={`flex min-h-[4.5rem] min-w-0 flex-col bg-white p-1.5 text-left transition sm:min-h-[5.5rem] sm:p-2 ${
-                      isSelected
-                        ? 'ring-2 ring-inset ring-gold'
-                        : 'hover:bg-cream/80'
+                      isSelected ? 'ring-2 ring-inset ring-gold' : 'hover:bg-cream/80'
                     }`}
                   >
                     <div className="flex items-center justify-between gap-0.5">
@@ -307,7 +372,9 @@ export function PtScheduleCalendar({ onToast, trainerId }: Props) {
                         <span
                           key={s.id}
                           title={`${formatTime(s.scheduled_at)} ${s.member_name ?? ''}`}
-                          className={`h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_COLORS[s.status]}`}
+                          className={`h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_COLORS[s.status]} ${
+                            s.fixed_schedule_id ? 'ring-1 ring-charcoal/30' : ''
+                          }`}
                         />
                       ))}
                     </div>
@@ -316,7 +383,8 @@ export function PtScheduleCalendar({ onToast, trainerId }: Props) {
               })}
             </div>
             <p className="mt-3 text-xs text-charcoal/45">
-              날짜를 선택하면 일정 목록과 예약 추가가 표시됩니다.
+              날짜를 선택하면 일정 목록과 예약 추가가 표시됩니다. PT 차감은 출석
+              처리 시에만 됩니다.
             </p>
           </>
         )}
@@ -343,20 +411,22 @@ export function PtScheduleCalendar({ onToast, trainerId }: Props) {
                     <div className="flex min-w-0 items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-semibold text-charcoal">
-                          <span className="tabular-nums">
-                            {formatTime(s.scheduled_at)}
-                          </span>
+                          <span className="tabular-nums">{formatTime(s.scheduled_at)}</span>
                           <span className="mx-1.5 text-charcoal/30">·</span>
                           <span>{s.member_name}</span>
                         </p>
                         <p className="mt-0.5 truncate text-xs text-charcoal/55">
-                          {s.trainer_name ?? '트레이너 미지정'} ·{' '}
-                          {s.duration_minutes}분
+                          {s.trainer_name ?? '트레이너 미지정'} · {s.duration_minutes}분
                         </p>
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {s.fixed_schedule_id && (
+                            <span className="rounded bg-gold/20 px-1.5 py-0.5 text-[10px] font-semibold text-charcoal/70">
+                              {s.is_detached ? '고정·개별' : '고정'}
+                            </span>
+                          )}
+                        </div>
                         {s.note && (
-                          <p className="mt-1 truncate text-xs text-charcoal/65">
-                            {s.note}
-                          </p>
+                          <p className="mt-1 truncate text-xs text-charcoal/65">{s.note}</p>
                         )}
                       </div>
                       <span
@@ -365,19 +435,19 @@ export function PtScheduleCalendar({ onToast, trainerId }: Props) {
                         {STATUS_LABELS[s.status]}
                       </span>
                     </div>
-                    {s.status === 'scheduled' && (
+                    {s.status === 'scheduled' && canManage && (
                       <div className="mt-2.5 flex flex-wrap gap-1">
                         <button
                           type="button"
-                          className="btn-ghost text-green-700"
-                          onClick={() => void handleStatus(s.id, 'completed')}
+                          className="btn-ghost"
+                          onClick={() => openEdit(s)}
                         >
-                          완료
+                          변경
                         </button>
                         <button
                           type="button"
                           className="btn-ghost"
-                          onClick={() => void handleStatus(s.id, 'cancelled')}
+                          onClick={() => void handleCancel(s.id)}
                         >
                           취소
                         </button>
@@ -407,7 +477,10 @@ export function PtScheduleCalendar({ onToast, trainerId }: Props) {
             onSubmit={(e) => void handleCreate(e)}
             className={`${cardClass} card-pad min-w-0`}
           >
-            <h3 className="font-bold text-charcoal">PT 예약 추가</h3>
+            <h3 className="font-bold text-charcoal">개별 PT 예약</h3>
+            <p className="mt-1 text-xs text-muted">
+              단건 예약은 고정 수업과 별도로 추가됩니다.
+            </p>
             <div className="mt-4 space-y-3">
               <label className="block min-w-0 text-sm">
                 <span className="mb-1 block font-medium text-charcoal/70">회원</span>
@@ -431,13 +504,11 @@ export function PtScheduleCalendar({ onToast, trainerId }: Props) {
                 </select>
               </label>
               <label className="block min-w-0 text-sm">
-                <span className="mb-1 block font-medium text-charcoal/70">
-                  트레이너
-                </span>
+                <span className="mb-1 block font-medium text-charcoal/70">트레이너</span>
                 <select
                   value={formTrainerId}
                   onChange={(e) => setFormTrainerId(e.target.value)}
-                  disabled={Boolean(trainerId)}
+                  disabled={Boolean(lockedTrainerId)}
                   className={inputClass}
                 >
                   <option value="">미지정</option>
@@ -460,9 +531,7 @@ export function PtScheduleCalendar({ onToast, trainerId }: Props) {
                   />
                 </label>
                 <label className="block min-w-0 text-sm">
-                  <span className="mb-1 block font-medium text-charcoal/70">
-                    수업 시간
-                  </span>
+                  <span className="mb-1 block font-medium text-charcoal/70">수업</span>
                   <input
                     type="text"
                     readOnly
@@ -483,6 +552,87 @@ export function PtScheduleCalendar({ onToast, trainerId }: Props) {
               </label>
               <button type="submit" disabled={saving} className={btnPrimary}>
                 {saving ? '등록 중…' : '예약 등록'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {editSchedule && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/40 p-4">
+          <form
+            onSubmit={(e) => void handleSaveEdit(e)}
+            className={`${cardClass} w-full max-w-md card-pad`}
+          >
+            <h3 className="font-bold text-charcoal">일정 변경</h3>
+            {editSchedule.fixed_schedule_id && !editSchedule.is_detached && (
+              <label className="mt-3 flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={editSeries}
+                  onChange={(e) => setEditSeries(e.target.checked)}
+                />
+                고정 수업 전체에 적용 (분리되지 않은 미래 일정)
+              </label>
+            )}
+            <div className="mt-4 space-y-3">
+              <label className="block text-sm">
+                <span className="mb-1 block font-medium text-charcoal/70">날짜</span>
+                <input
+                  type="date"
+                  required
+                  value={editDate}
+                  onChange={(e) => setEditDate(e.target.value)}
+                  disabled={editSeries}
+                  className={inputClass}
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="mb-1 block font-medium text-charcoal/70">시간</span>
+                <input
+                  type="time"
+                  required
+                  value={editTime}
+                  onChange={(e) => setEditTime(e.target.value)}
+                  className={inputClass}
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="mb-1 block font-medium text-charcoal/70">트레이너</span>
+                <select
+                  value={editTrainerId}
+                  onChange={(e) => setEditTrainerId(e.target.value)}
+                  disabled={Boolean(lockedTrainerId)}
+                  className={inputClass}
+                >
+                  <option value="">미지정</option>
+                  {trainers.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block text-sm">
+                <span className="mb-1 block font-medium text-charcoal/70">메모</span>
+                <input
+                  type="text"
+                  value={editNote}
+                  onChange={(e) => setEditNote(e.target.value)}
+                  className={inputClass}
+                />
+              </label>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                className={btnOutline}
+                onClick={() => setEditSchedule(null)}
+              >
+                닫기
+              </button>
+              <button type="submit" disabled={saving} className={btnPrimary}>
+                {saving ? '저장 중…' : '저장'}
               </button>
             </div>
           </form>
