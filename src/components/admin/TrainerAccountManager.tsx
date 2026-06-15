@@ -5,12 +5,14 @@ import {
   upsertTrainerAdminAccount,
   type TrainerAdminAccount,
 } from '../../api/trainerAccounts'
+import { deleteTrainer } from '../../api/trainers'
 import { formatSupabaseError } from '../../lib/errors'
 import { btnGold, btnOutline, cardClass, inputClass } from '../../styles/theme'
 import type { Trainer } from '../../types/database'
 
 type Props = {
   trainers: Trainer[]
+  onTrainersChange?: () => void
 }
 
 type EditorState = {
@@ -20,11 +22,12 @@ type EditorState = {
   passwordConfirm: string
 }
 
-export function TrainerAccountManager({ trainers }: Props) {
+export function TrainerAccountManager({ trainers, onTrainersChange }: Props) {
   const [accounts, setAccounts] = useState<TrainerAdminAccount[]>([])
   const [loading, setLoading] = useState(true)
   const [savingId, setSavingId] = useState<string | null>(null)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deletingAccountId, setDeletingAccountId] = useState<string | null>(null)
+  const [deletingTrainerId, setDeletingTrainerId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [editor, setEditor] = useState<EditorState | null>(null)
@@ -48,7 +51,7 @@ export function TrainerAccountManager({ trainers }: Props) {
 
   useEffect(() => {
     void load()
-  }, [load])
+  }, [load, trainers])
 
   function openEditor(trainer: Trainer) {
     const existing = accountByTrainerId.get(trainer.id)
@@ -105,18 +108,18 @@ export function TrainerAccountManager({ trainers }: Props) {
     }
   }
 
-  async function handleDelete(trainer: Trainer) {
+  async function handleDeleteAccount(trainer: Trainer) {
     const existing = accountByTrainerId.get(trainer.id)
     if (!existing) return
     if (
       !window.confirm(
-        `${trainer.name} 트레이너의 로그인 계정(${existing.username})을 삭제할까요?`,
+        `${trainer.name} 트레이너의 로그인 계정(${existing.username})만 삭제할까요?\n트레이너 목록에는 남습니다.`,
       )
     ) {
       return
     }
 
-    setDeletingId(trainer.id)
+    setDeletingAccountId(trainer.id)
     setError(null)
     setMessage(null)
     try {
@@ -127,7 +130,32 @@ export function TrainerAccountManager({ trainers }: Props) {
     } catch (err) {
       setError(formatSupabaseError(err))
     } finally {
-      setDeletingId(null)
+      setDeletingAccountId(null)
+    }
+  }
+
+  async function handleDeleteTrainer(trainer: Trainer) {
+    if (
+      !window.confirm(
+        `${trainer.name} 트레이너를 삭제할까요?\n로그인 계정이 있으면 함께 삭제되며, 기존 회원 담당 정보는 유지됩니다.`,
+      )
+    ) {
+      return
+    }
+
+    setDeletingTrainerId(trainer.id)
+    setError(null)
+    setMessage(null)
+    try {
+      await deleteTrainer(trainer.id)
+      setMessage(`${trainer.name} 트레이너가 삭제되었습니다.`)
+      if (editor?.trainerId === trainer.id) closeEditor()
+      await load()
+      onTrainersChange?.()
+    } catch (err) {
+      setError(formatSupabaseError(err))
+    } finally {
+      setDeletingTrainerId(null)
     }
   }
 
@@ -212,13 +240,25 @@ export function TrainerAccountManager({ trainers }: Props) {
                         {account && (
                           <button
                             type="button"
-                            disabled={deletingId === trainer.id}
-                            onClick={() => void handleDelete(trainer)}
-                            className={`${btnOutline} px-3 py-1.5 text-xs text-red-700`}
+                            disabled={deletingAccountId === trainer.id}
+                            onClick={() => void handleDeleteAccount(trainer)}
+                            className={`${btnOutline} px-3 py-1.5 text-xs text-charcoal/70`}
                           >
-                            {deletingId === trainer.id ? '삭제 중…' : '삭제'}
+                            {deletingAccountId === trainer.id
+                              ? '삭제 중…'
+                              : '계정 삭제'}
                           </button>
                         )}
+                        <button
+                          type="button"
+                          disabled={deletingTrainerId === trainer.id}
+                          onClick={() => void handleDeleteTrainer(trainer)}
+                          className={`${btnOutline} px-3 py-1.5 text-xs text-red-700`}
+                        >
+                          {deletingTrainerId === trainer.id
+                            ? '삭제 중…'
+                            : '트레이너 삭제'}
+                        </button>
                       </div>
                     </td>
                   </tr>

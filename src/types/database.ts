@@ -22,6 +22,19 @@ export type Trainer = {
   created_at: string
 }
 
+export type BetaCenterType = 'pt' | 'pilates' | 'freelance' | 'other'
+
+export type BetaApplication = {
+  id: string
+  center_name: string
+  contact_name: string
+  phone: string
+  email: string | null
+  center_type: BetaCenterType
+  message: string | null
+  created_at: string
+}
+
 export type AdminRole = 'admin' | 'trainer'
 
 export type AdminUser = {
@@ -1060,6 +1073,18 @@ export type Database = {
           updated_at?: string
         }
       >
+      beta_applications: TableDef<
+        BetaApplication,
+        {
+          center_name: string
+          contact_name: string
+          phone: string
+          email?: string | null
+          center_type: BetaCenterType
+          message?: string | null
+        },
+        never
+      >
       admin_users: TableDef<
         AdminUser,
         {
@@ -1140,6 +1165,16 @@ export type Database = {
           p_member_id: string
         }
         Returns: Json
+      }
+      deactivate_trainer: {
+        Args: {
+          p_trainer_id: string
+        }
+        Returns: Json
+      }
+      get_beta_application_count: {
+        Args: Record<string, never>
+        Returns: number
       }
     }
     Enums: Record<string, never>

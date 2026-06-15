@@ -38,7 +38,10 @@ export default function TrainersPage() {
       )}
 
       <TrainerManage trainers={trainers} onUpdated={() => void load()} />
-      <TrainerAccountManager trainers={trainers} />
+      <TrainerAccountManager
+        trainers={trainers}
+        onTrainersChange={() => void load()}
+      />
     </div>
   )
 }

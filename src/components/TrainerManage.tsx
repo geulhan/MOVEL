@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
-import { createTrainer } from '../api/trainers'
-import { btnGold, cardClass, inputClass } from '../styles/theme'
+import { createTrainer, deleteTrainer } from '../api/trainers'
+import { btnGold, btnOutline, cardClass, inputClass } from '../styles/theme'
 import type { Trainer } from '../types/database'
 
 type Props = {
@@ -11,8 +11,34 @@ type Props = {
 export function TrainerManage({ trainers, onUpdated }: Props) {
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+
+  async function handleDelete(trainer: Trainer) {
+    if (
+      !window.confirm(
+        `${trainer.name} 트레이너를 삭제할까요?\n로그인 계정이 있으면 함께 삭제되며, 기존 회원 담당 정보는 유지됩니다.`,
+      )
+    ) {
+      return
+    }
+
+    setDeletingId(trainer.id)
+    setError(null)
+    setMessage(null)
+    try {
+      await deleteTrainer(trainer.id)
+      setMessage(`${trainer.name} 트레이너가 삭제되었습니다.`)
+      onUpdated()
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : '트레이너 삭제에 실패했습니다.',
+      )
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -41,16 +67,24 @@ export function TrainerManage({ trainers, onUpdated }: Props) {
       </p>
 
       {trainers.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-2">
+        <ul className="mt-4 divide-y divide-gold/15 rounded-xl border border-gold/25 bg-cream/40">
           {trainers.map((t) => (
-            <span
+            <li
               key={t.id}
-              className="rounded-full border border-gold/40 bg-cream px-3 py-1 text-sm font-medium text-charcoal"
+              className="flex items-center justify-between gap-3 px-4 py-2.5"
             >
-              {t.name}
-            </span>
+              <span className="text-sm font-medium text-charcoal">{t.name}</span>
+              <button
+                type="button"
+                disabled={deletingId === t.id}
+                onClick={() => void handleDelete(t)}
+                className={`${btnOutline} px-3 py-1.5 text-xs text-red-700`}
+              >
+                {deletingId === t.id ? '삭제 중…' : '삭제'}
+              </button>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
 
       <form
