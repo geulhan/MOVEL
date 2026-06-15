@@ -5,8 +5,6 @@ import { isPlatformLandingHost } from '../../pages/RootPage'
 type Props = {
   children: React.ReactNode
   memberName?: string
-  centerName?: string | null
-  centerLogoUrl?: string | null
   onLogout?: () => void
   onDashboard?: () => void
 }
@@ -14,27 +12,13 @@ type Props = {
 export function MemberLayout({
   children,
   memberName,
-  centerName,
-  centerLogoUrl,
   onLogout,
   onDashboard,
 }: Props) {
   const homeTo = isPlatformLandingHost() ? '/' : '/motionhub'
 
-  const brand = centerLogoUrl ? (
-    <img
-      src={centerLogoUrl}
-      alt={centerName ? `${centerName} 로고` : '센터 로고'}
-      className="mx-auto h-16 max-w-[14rem] object-contain"
-      decoding="async"
-    />
-  ) : (
-    <div className="space-y-2">
-      <MotionHubLogo tone="dark" />
-      {centerName && (
-        <p className="text-sm font-semibold text-charcoal">{centerName}</p>
-      )}
-    </div>
+  const brand = (
+    <MotionHubLogo tone="dark" showEnglish={false} className="items-center" />
   )
 
   const brandWrapper = onDashboard ? (
@@ -76,8 +60,8 @@ export function MemberLayout({
             {memberName && (
               <p className="mt-2 text-base font-bold text-charcoal">{memberName} 님</p>
             )}
-            {!memberName && !centerName && (
-              <p className="mt-2 text-xs text-muted">MotionHub 회원 페이지</p>
+            {!memberName && (
+              <p className="mt-2 text-xs text-muted">모션허브 회원 페이지</p>
             )}
           </div>
         </div>

@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
-  fetchCenterPublicInfo,
   fetchSignupCenters,
-  type CenterPublicInfo,
   type SignupCenterOption,
 } from '../api/centerPublic'
 import { fetchMemberById } from '../api/memberDetail'
@@ -15,7 +13,6 @@ import {
   clearMemberSession,
   fetchRecentAttendance,
   fetchTodayAttendance,
-  getMemberCenterSlug,
   getMemberSession,
   type AttendanceLog,
 } from '../api/memberPortal'
@@ -24,9 +21,8 @@ import {
   saveRememberedMemberCenterSlug,
 } from '../lib/centerSlug'
 import { ConfirmModal } from '../components/ConfirmModal'
-import { SiteUrlCopy } from '../components/SiteUrlCopy'
+import { CenterSearchPicker } from '../components/member/CenterSearchPicker'
 import { MemberMyPageSection } from '../components/MemberMyPageSection'
-import { getMemberPortalUrl } from '../lib/siteUrl'
 import { getErrorMessage } from '../lib/errors'
 import { closeVerificationCodePiP } from '../lib/verificationCodePip'
 import {
@@ -63,7 +59,6 @@ export default function MemberPortalPage() {
   const [centerSlug, setCenterSlug] = useState(() =>
     resolveMemberCenterSlugFromUrl(searchParams.get('center')),
   )
-  const [centerInfo, setCenterInfo] = useState<CenterPublicInfo | null>(null)
   const [signupCenters, setSignupCenters] = useState<SignupCenterOption[]>([])
   const [signupCentersLoading, setSignupCentersLoading] = useState(false)
   const resolvedCenterSlug = centerSlug.trim().toLowerCase()
@@ -135,17 +130,6 @@ export default function MemberPortalPage() {
   }, [])
 
   useEffect(() => {
-    const slug = resolvedCenterSlug || getMemberCenterSlug()
-    if (!slug) {
-      setCenterInfo(null)
-      return
-    }
-    void fetchCenterPublicInfo(slug)
-      .then(setCenterInfo)
-      .catch(() => setCenterInfo(null))
-  }, [resolvedCenterSlug, member])
-
-  useEffect(() => {
     const id = getMemberSession()
     if (!id) {
       setLoading(false)
@@ -178,7 +162,7 @@ export default function MemberPortalPage() {
 
     const slug = resolvedCenterSlug
     if (!slug) {
-      setLoginError('가입할 센터를 선택해 주세요.')
+      setLoginError('센터를 검색해서 선택해 주세요.')
       return
     }
 
@@ -281,7 +265,7 @@ export default function MemberPortalPage() {
 
   if (loading) {
     return (
-      <MemberLayout centerName={centerInfo?.centerName} centerLogoUrl={centerInfo?.logoUrl}>
+      <MemberLayout>
         <div className={`${cardClass} p-8 text-center`}>
           <p className="text-sm text-muted">불러오는 중…</p>
         </div>
@@ -290,36 +274,10 @@ export default function MemberPortalPage() {
   }
 
   if (!member) {
-    const memberPortalUrl = resolvedCenterSlug
-      ? getMemberPortalUrl(resolvedCenterSlug)
-      : getMemberPortalUrl()
-
     return (
-      <MemberLayout centerName={centerInfo?.centerName} centerLogoUrl={centerInfo?.logoUrl}>
+      <MemberLayout>
         <section className={`${cardClass} p-6`}>
-          <h2 className="text-lg font-semibold text-charcoal">
-            {centerInfo?.centerName ?? '회원 페이지'}
-          </h2>
-          <p className="mt-1 text-sm text-muted">
-            {centerInfo
-              ? `${centerInfo.centerName} 회원 로그인·가입`
-              : 'MotionHub에 등록된 센터 회원 전용 페이지입니다.'}
-          </p>
-
-          {resolvedCenterSlug ? (
-            <SiteUrlCopy
-              className="mt-3"
-              url={memberPortalUrl}
-              label="이 센터 회원 페이지 주소 (북마크·카톡 공유)"
-            />
-          ) : (
-            <div className="mt-3 rounded-xl border border-teal-200/80 bg-teal-50/70 px-4 py-3 text-sm text-teal-900">
-              회원가입 시 센터를 선택할 수 있습니다. 센터 링크로 접속하면 해당 센터가
-              자동으로 선택됩니다.
-            </div>
-          )}
-
-          <div className="mt-4 flex rounded-lg border border-charcoal/10 bg-cream/50 p-1">
+          <div className="flex rounded-lg border border-charcoal/10 bg-cream/50 p-1">
             <button
               type="button"
               onClick={() => {
@@ -416,29 +374,13 @@ export default function MemberPortalPage() {
                 onSubmit={(e) => void handleSignup(e)}
                 className="mt-5 space-y-4"
               >
-                <label className="block">
-                  <span className="mb-1.5 block text-sm font-medium">센터 선택</span>
-                  <select
-                    value={resolvedCenterSlug}
-                    onChange={(e) => setCenterSlug(e.target.value)}
-                    className={inputClass}
-                    disabled={loginLoading || signupCentersLoading}
-                  >
-                    <option value="">
-                      {signupCentersLoading ? '센터 목록 불러오는 중…' : '센터를 선택하세요'}
-                    </option>
-                    {signupCenters.map((center) => (
-                      <option key={center.centerId} value={center.centerSlug}>
-                        {center.centerName}
-                      </option>
-                    ))}
-                  </select>
-                  {!signupCentersLoading && signupCenters.length === 0 && (
-                    <p className="mt-1 text-xs text-amber-800">
-                      현재 가입 가능한 센터가 없습니다. 센터에 문의해 주세요.
-                    </p>
-                  )}
-                </label>
+                <CenterSearchPicker
+                  centers={signupCenters}
+                  loading={signupCentersLoading}
+                  selectedSlug={resolvedCenterSlug}
+                  onSelect={setCenterSlug}
+                  disabled={loginLoading}
+                />
                 <label className="block">
                   <span className="mb-1.5 block text-sm font-medium">이름</span>
                   <input
@@ -541,8 +483,6 @@ export default function MemberPortalPage() {
   return (
     <MemberLayout
       memberName={member.name}
-      centerName={centerInfo?.centerName}
-      centerLogoUrl={centerInfo?.logoUrl}
       onLogout={handleLogout}
       onDashboard={() => setTab('home')}
     >
