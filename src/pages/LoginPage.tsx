@@ -1,9 +1,17 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { loginAdmin } from '../api/adminAuth'
-import { DEFAULT_CENTER_SLUG } from '../lib/center'
 import { formatSupabaseError } from '../lib/errors'
-import { getAdminSession, isAdminAuthenticated } from '../lib/adminSession'
+import {
+  clearAdminAuth,
+  getAdminSession,
+  isAdminAuthenticated,
+} from '../lib/adminSession'
+import { resetCenterIdCache } from '../lib/center'
+import {
+  resolveAdminCenterSlugFromUrl,
+  saveRememberedAdminCenterSlug,
+} from '../lib/centerSlug'
 import {
   clearRememberedAdminLogin,
   loadRememberedAdminLogin,
@@ -20,14 +28,24 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams] = useSearchParams()
-  const [centerSlug, setCenterSlug] = useState(
-    () => searchParams.get('center')?.trim().toLowerCase() || DEFAULT_CENTER_SLUG,
+  const [centerSlug, setCenterSlug] = useState(() =>
+    resolveAdminCenterSlugFromUrl(searchParams.get('center')),
   )
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [rememberLogin, setRememberLogin] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const urlCenter = searchParams.get('center')?.trim().toLowerCase() || null
+  const session = getAdminSession()
+
+  useEffect(() => {
+    if (urlCenter && session && urlCenter !== session.centerSlug) {
+      clearAdminAuth()
+      resetCenterIdCache()
+    }
+  }, [urlCenter, session])
 
   useEffect(() => {
     const saved = loadRememberedAdminLogin()
@@ -37,23 +55,36 @@ export default function LoginPage() {
     setRememberLogin(true)
   }, [])
 
+  useEffect(() => {
+    const fromUrl = resolveAdminCenterSlugFromUrl(searchParams.get('center'))
+    if (fromUrl) setCenterSlug(fromUrl)
+  }, [searchParams])
+
   if (isAdminAuthenticated()) {
-    const session = getAdminSession()
+    const active = getAdminSession()
     const from = (location.state as LoginLocationState | null)?.from?.pathname
-    if (session?.role === 'trainer') {
-      return <Navigate to="/admin/members" replace />
+    if (!urlCenter || urlCenter === active?.centerSlug) {
+      if (active?.role === 'trainer') {
+        return <Navigate to="/admin/members" replace />
+      }
+      return (
+        <Navigate
+          to={from && from.startsWith('/admin') ? from : '/admin'}
+          replace
+        />
+      )
     }
-    return (
-      <Navigate
-        to={from && from.startsWith('/admin') ? from : '/admin'}
-        replace
-      />
-    )
   }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
     setError(null)
+
+    const slug = centerSlug.trim().toLowerCase()
+    if (!slug) {
+      setError('센터 코드를 입력해 주세요.')
+      return
+    }
 
     if (!username.trim() || !password) {
       setError('아이디와 비밀번호를 입력해 주세요.')
@@ -62,7 +93,8 @@ export default function LoginPage() {
 
     setLoading(true)
     try {
-      const info = await loginAdmin(username, password, centerSlug)
+      const info = await loginAdmin(username, password, slug)
+      saveRememberedAdminCenterSlug(slug)
       if (rememberLogin) {
         saveRememberedAdminLogin(username, password)
       } else {
@@ -99,22 +131,22 @@ export default function LoginPage() {
             관리자 · 트레이너 로그인
           </h1>
           <p className="mt-2 text-sm text-muted">
-            관리자는 전체 메뉴, 트레이너는 회원 관리·PT 스케줄만 이용할 수
-            있습니다. 센터 코드로 로그인 센터를 구분합니다.
+            소속 센터 코드로 로그인합니다. 센터마다 계정·데이터가 분리됩니다.
           </p>
 
           <form className="mt-5 space-y-3" onSubmit={handleSubmit}>
             <label className="block text-sm">
               <span className="mb-1.5 block font-medium text-charcoal">
-                센터 코드
+                센터 코드 <span className="text-red-600">*</span>
               </span>
               <input
                 type="text"
                 value={centerSlug}
                 onChange={(e) => setCenterSlug(e.target.value.toLowerCase())}
                 className={inputClass}
-                placeholder="movel"
+                placeholder="abc-pt"
                 autoComplete="organization"
+                required
                 disabled={loading}
               />
             </label>
@@ -160,7 +192,9 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={loading || !username.trim() || !password}
+              disabled={
+                loading || !centerSlug.trim() || !username.trim() || !password
+              }
               className={`w-full ${btnPrimary}`}
             >
               {loading ? '로그인 중…' : '로그인'}
@@ -171,7 +205,14 @@ export default function LoginPage() {
         </section>
 
         <p className="text-center text-xs text-muted">
-          <Link to="/member" className="text-gold-dark hover:underline">
+          <Link
+            to={
+              centerSlug.trim()
+                ? `/member?center=${encodeURIComponent(centerSlug.trim().toLowerCase())}`
+                : '/member'
+            }
+            className="text-gold-dark hover:underline"
+          >
             회원 페이지 →
           </Link>
           <span className="mx-2">·</span>

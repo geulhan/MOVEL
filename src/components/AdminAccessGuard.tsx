@@ -6,6 +6,8 @@ import {
   getDefaultAdminPath,
 } from '../lib/adminPermissions'
 import { getAdminSession, isAdminAuthenticated } from '../lib/adminSession'
+import { buildAdminLoginPath } from '../lib/centerSlug'
+import { useCenterFeatures } from '../hooks/useCenterFeatures'
 
 type Props = {
   children: ReactNode
@@ -14,9 +16,12 @@ type Props = {
 
 export function AdminAccessGuard({ children, adminOnly = false }: Props) {
   const location = useLocation()
+  const { features } = useCenterFeatures()
 
   if (!isAdminAuthenticated()) {
-    return <Navigate to="/login" replace state={{ from: location }} />
+    const session = getAdminSession()
+    const loginPath = buildAdminLoginPath(session?.centerSlug)
+    return <Navigate to={loginPath} replace state={{ from: location }} />
   }
 
   const session = getAdminSession()
@@ -25,7 +30,7 @@ export function AdminAccessGuard({ children, adminOnly = false }: Props) {
     return <Navigate to={getDefaultAdminPath(session)} replace />
   }
 
-  if (!canAccessAdminPath(location.pathname, session)) {
+  if (!canAccessAdminPath(location.pathname, session, features)) {
     return <Navigate to={getDefaultAdminPath(session)} replace />
   }
 

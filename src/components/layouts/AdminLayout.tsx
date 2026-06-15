@@ -2,48 +2,77 @@ import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom'
 import { navItemsForSession } from '../../lib/adminPermissions'
 import { clearAdminAuth, getAdminSession } from '../../lib/adminSession'
 import { resetCenterIdCache } from '../../lib/center'
-import { MovelBrandSubtitle, MovelLogo } from '../brand/MovelLogo'
+import { buildAdminLoginPath } from '../../lib/centerSlug'
+import { CenterBrandMark } from '../brand/CenterBrandMark'
 import { SetupBanner } from '../SetupBanner'
+import {
+  CenterBrandingProvider,
+  useCenterBranding,
+  useCenterThemeVars,
+} from '../../hooks/useCenterBranding'
+import { useCenterFeatures } from '../../hooks/useCenterFeatures'
 
-function MemberPortalLink({ className = '' }: { className?: string }) {
+function MemberPortalLink({
+  className = '',
+  centerSlug,
+}: {
+  className?: string
+  centerSlug?: string
+}) {
+  const to = centerSlug ? `/member?center=${encodeURIComponent(centerSlug)}` : '/member'
+
   return (
     <Link
-      to="/member"
-      className={`inline-flex shrink-0 items-center justify-center rounded-lg border border-gold/60 bg-gold/15 px-4 py-2 text-sm font-semibold whitespace-nowrap text-gold transition hover:bg-gold/25 ${className}`}
+      to={to}
+      className={`inline-flex shrink-0 items-center justify-center rounded-lg border px-4 py-2 text-sm font-semibold whitespace-nowrap transition ${className}`}
+      style={{
+        borderColor: 'color-mix(in srgb, var(--center-accent) 60%, transparent)',
+        background: 'color-mix(in srgb, var(--center-accent) 15%, transparent)',
+        color: 'var(--center-accent)',
+      }}
     >
       회원 페이지 →
     </Link>
   )
 }
 
-export function AdminLayout() {
+function AdminLayoutInner() {
   const navigate = useNavigate()
   const session = getAdminSession()
-  const navItems = navItemsForSession(session)
+  const { branding } = useCenterBranding()
+  const { features } = useCenterFeatures()
+  const themeVars = useCenterThemeVars(branding.theme)
+  const navItems = navItemsForSession(session, features)
   const roleLabel = session?.role === 'trainer' ? '트레이너' : '관리자'
 
   function handleLogout() {
+    const centerSlug = session?.centerSlug
     clearAdminAuth()
     resetCenterIdCache()
-    navigate('/login', { replace: true })
+    navigate(buildAdminLoginPath(centerSlug), { replace: true })
   }
 
   return (
-    <div className="flex min-h-screen bg-cream">
-      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-gold/30 bg-charcoal lg:flex">
-        <div className="border-b border-gold/20 px-4 py-5">
-          <MovelLogo
-            tone="cream"
-            className="h-[4.25rem] w-auto"
-            linkTo="/admin"
-          />
-          <MovelBrandSubtitle tone="gold" className="mt-2 px-1" />
-          {session?.centerName && (
-            <p className="mt-2 truncate px-1 text-xs font-medium text-gold/90">
-              {session.centerName}
-            </p>
-          )}
-          <p className="mt-1 px-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-cream/40">
+    <div
+      className="flex min-h-screen"
+      style={{ ...themeVars, background: 'var(--center-main-bg)', color: 'var(--center-main-text)' }}
+    >
+      <aside
+        className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r lg:flex"
+        style={{
+          background: 'var(--center-sidebar-bg)',
+          borderColor: 'color-mix(in srgb, var(--center-accent) 30%, transparent)',
+        }}
+      >
+        <div
+          className="border-b px-4 py-5"
+          style={{ borderColor: 'color-mix(in srgb, var(--center-accent) 20%, transparent)' }}
+        >
+          <CenterBrandMark branding={branding} linkTo="/admin" />
+          <p
+            className="mt-2 px-1 text-[10px] font-semibold uppercase tracking-[0.18em]"
+            style={{ color: 'var(--center-sidebar-muted)' }}
+          >
             Admin
           </p>
         </div>
@@ -53,12 +82,16 @@ export function AdminLayout() {
               key={item.to}
               to={item.to}
               end={item.end}
-              className={({ isActive }) =>
-                `flex min-w-0 items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium whitespace-nowrap transition ${
-                  isActive
-                    ? 'bg-gold/20 text-gold'
-                    : 'text-cream/70 hover:bg-charcoal-light hover:text-cream'
-                }`
+              className="flex min-w-0 items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium whitespace-nowrap transition"
+              style={({ isActive }) =>
+                isActive
+                  ? {
+                      background: 'var(--center-tab-active-bg)',
+                      color: 'var(--center-tab-active-text)',
+                    }
+                  : {
+                      color: 'var(--center-sidebar-muted)',
+                    }
               }
             >
               <span className="w-4 shrink-0 text-center text-sm opacity-80">
@@ -68,18 +101,28 @@ export function AdminLayout() {
             </NavLink>
           ))}
         </nav>
-        <div className="space-y-2 border-t border-gold/20 p-3">
+        <div
+          className="space-y-2 border-t p-3"
+          style={{ borderColor: 'color-mix(in srgb, var(--center-accent) 20%, transparent)' }}
+        >
           {session && (
-            <p className="truncate px-1 text-xs text-cream/60">
+            <p className="truncate px-1 text-xs" style={{ color: 'var(--center-sidebar-muted)' }}>
               {session.username}
-              <span className="ml-1 text-cream/40">({roleLabel})</span>
+              <span className="ml-1 opacity-70">({roleLabel})</span>
             </p>
           )}
-          <MemberPortalLink className="w-full !border-gold/40 !bg-gold/10 !text-gold hover:!bg-gold/20" />
+          <MemberPortalLink
+            centerSlug={session?.centerSlug}
+            className="w-full !px-3 !py-2 !text-xs"
+          />
           {session?.role === 'admin' && (
             <Link
               to="/trainer"
-              className="block w-full truncate rounded-lg border border-cream/15 px-3 py-2 text-center text-xs whitespace-nowrap text-cream/80 transition hover:bg-charcoal-light"
+              className="block w-full truncate rounded-lg border px-3 py-2 text-center text-xs whitespace-nowrap transition"
+              style={{
+                borderColor: 'color-mix(in srgb, var(--center-sidebar-text) 15%, transparent)',
+                color: 'var(--center-sidebar-muted)',
+              }}
             >
               트레이너 출석부 →
             </Link>
@@ -95,17 +138,20 @@ export function AdminLayout() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* 모바일 헤더 */}
-        <header className="border-b border-gold/30 bg-charcoal lg:hidden">
+        <header
+          className="border-b lg:hidden"
+          style={{
+            background: 'var(--center-sidebar-bg)',
+            borderColor: 'color-mix(in srgb, var(--center-accent) 30%, transparent)',
+          }}
+        >
           <div className="flex items-center justify-between gap-3 px-4 py-3">
-            <MovelLogo
-              variant="horizontal"
-              tone="cream"
-              className="h-8 w-auto max-w-[10rem]"
-              linkTo="/admin"
-            />
+            <CenterBrandMark branding={branding} variant="mobile" linkTo="/admin" />
             <div className="flex min-w-0 shrink items-center gap-1.5">
-              <MemberPortalLink className="!px-2.5 !py-1.5 !text-[11px]" />
+              <MemberPortalLink
+                centerSlug={session?.centerSlug}
+                className="!px-2.5 !py-1.5 !text-[11px]"
+              />
               <button
                 type="button"
                 onClick={handleLogout}
@@ -121,8 +167,19 @@ export function AdminLayout() {
                 key={item.to}
                 to={item.to}
                 end={item.end}
-                className={({ isActive }) =>
-                  `chip ${isActive ? 'chip-active' : 'chip-inactive !border-charcoal/20 !bg-charcoal-light !text-cream/90'}`
+                className="chip rounded-full border px-3 py-1.5 text-xs font-medium transition"
+                style={({ isActive }) =>
+                  isActive
+                    ? {
+                        background: 'var(--center-tab-active-bg)',
+                        color: 'var(--center-tab-active-text)',
+                        borderColor: 'color-mix(in srgb, var(--center-accent) 40%, transparent)',
+                      }
+                    : {
+                        background: 'color-mix(in srgb, var(--center-sidebar-text) 8%, transparent)',
+                        color: 'var(--center-sidebar-muted)',
+                        borderColor: 'color-mix(in srgb, var(--center-sidebar-text) 12%, transparent)',
+                      }
                 }
               >
                 {item.label}
@@ -131,23 +188,35 @@ export function AdminLayout() {
           </nav>
         </header>
 
-        {/* 데스크톱 상단 바 — 회원 페이지 전환 버튼 항상 표시 */}
-        <div className="sticky top-0 z-20 hidden items-center justify-end gap-2 border-b border-gold/25 bg-white/95 px-6 py-3 backdrop-blur-sm lg:flex">
+        <div
+          className="sticky top-0 z-20 hidden items-center justify-end gap-2 border-b px-6 py-3 backdrop-blur-sm lg:flex"
+          style={{
+            background: 'color-mix(in srgb, var(--center-main-bg) 95%, white)',
+            borderColor: 'color-mix(in srgb, var(--center-accent) 25%, transparent)',
+          }}
+        >
           {session && (
-            <span className="mr-auto text-sm font-medium text-muted">
+            <span className="mr-auto text-sm font-medium opacity-70">
               {session.username} 님
-              <span className="ml-1 text-xs text-muted">({roleLabel})</span>
+              <span className="ml-1 text-xs opacity-80">({roleLabel})</span>
             </span>
           )}
           {session?.role === 'admin' && (
             <Link
               to="/trainer"
-              className="inline-flex shrink-0 items-center rounded-lg border border-gold/40 px-4 py-2 text-sm font-medium whitespace-nowrap text-charcoal transition hover:bg-cream"
+              className="inline-flex shrink-0 items-center rounded-lg border px-4 py-2 text-sm font-medium whitespace-nowrap transition"
+              style={{
+                borderColor: 'color-mix(in srgb, var(--center-accent) 40%, transparent)',
+                color: 'var(--center-main-text)',
+              }}
             >
               트레이너 출석부
             </Link>
           )}
-          <MemberPortalLink className="!border-gold !bg-cream !text-charcoal hover:!bg-gold/20" />
+          <MemberPortalLink
+            centerSlug={session?.centerSlug}
+            className="!border-[color-mix(in_srgb,var(--center-accent)_60%,transparent)] !bg-[color-mix(in_srgb,var(--center-accent)_12%,transparent)] !text-[var(--center-main-text)]"
+          />
           <button
             type="button"
             onClick={handleLogout}
@@ -163,5 +232,13 @@ export function AdminLayout() {
         </main>
       </div>
     </div>
+  )
+}
+
+export function AdminLayout() {
+  return (
+    <CenterBrandingProvider>
+      <AdminLayoutInner />
+    </CenterBrandingProvider>
   )
 }

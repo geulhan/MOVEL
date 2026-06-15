@@ -12,7 +12,10 @@ import {
   getMemberSession,
   type AttendanceLog,
 } from '../api/memberPortal'
-import { DEFAULT_CENTER_SLUG } from '../lib/center'
+import {
+  resolveMemberCenterSlugFromUrl,
+  saveRememberedMemberCenterSlug,
+} from '../lib/centerSlug'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { SiteUrlCopy } from '../components/SiteUrlCopy'
 import { MemberMyPageSection } from '../components/MemberMyPageSection'
@@ -50,8 +53,8 @@ type AuthMode = 'login' | 'signup'
 
 export default function MemberPortalPage() {
   const [searchParams] = useSearchParams()
-  const [centerSlug, setCenterSlug] = useState(
-    () => searchParams.get('center')?.trim().toLowerCase() || DEFAULT_CENTER_SLUG,
+  const [centerSlug, setCenterSlug] = useState(() =>
+    resolveMemberCenterSlugFromUrl(searchParams.get('center')),
   )
   const [member, setMember] = useState<Member | null>(null)
   const [loading, setLoading] = useState(true)
@@ -108,6 +111,11 @@ export default function MemberPortalPage() {
   }, [])
 
   useEffect(() => {
+    const fromUrl = resolveMemberCenterSlugFromUrl(searchParams.get('center'))
+    if (fromUrl) setCenterSlug(fromUrl)
+  }, [searchParams])
+
+  useEffect(() => {
     const id = getMemberSession()
     if (!id) {
       setLoading(false)
@@ -138,6 +146,12 @@ export default function MemberPortalPage() {
       return
     }
 
+    const slug = centerSlug.trim().toLowerCase()
+    if (!slug) {
+      setLoginError('센터 코드를 입력해 주세요.')
+      return
+    }
+
     setLoginLoading(true)
     try {
       const { memberId } = await registerMember(
@@ -146,6 +160,7 @@ export default function MemberPortalPage() {
         signupPassword,
         centerSlug,
       )
+      saveRememberedMemberCenterSlug(slug)
       const registeredMember = await fetchMemberById(memberId)
       setMember(registeredMember)
       setSignupPassword('')
@@ -166,9 +181,16 @@ export default function MemberPortalPage() {
   async function handleLogin(e: FormEvent) {
     e.preventDefault()
     setLoginError(null)
+    const slug = centerSlug.trim().toLowerCase()
+    if (!slug) {
+      setLoginError('센터 코드를 입력해 주세요.')
+      return
+    }
+
     setLoginLoading(true)
     try {
-      const { memberId } = await loginMember(loginPhone, loginPassword, centerSlug)
+      const { memberId } = await loginMember(loginPhone, loginPassword, slug)
+      saveRememberedMemberCenterSlug(slug)
       const loggedInMember = await fetchMemberById(memberId)
       setMember(loggedInMember)
       if (rememberLogin) {
@@ -293,14 +315,15 @@ export default function MemberPortalPage() {
               >
                 <label className="block">
                   <span className="mb-1.5 block text-sm font-medium">
-                    센터 코드
+                    센터 코드 <span className="text-red-600">*</span>
                   </span>
                   <input
                     type="text"
                     value={centerSlug}
                     onChange={(e) => setCenterSlug(e.target.value.toLowerCase())}
-                    placeholder="movel"
+                    placeholder="abc-pt"
                     className={inputClass}
+                    required
                     disabled={loginLoading}
                   />
                 </label>
@@ -371,14 +394,15 @@ export default function MemberPortalPage() {
               >
                 <label className="block">
                   <span className="mb-1.5 block text-sm font-medium">
-                    센터 코드
+                    센터 코드 <span className="text-red-600">*</span>
                   </span>
                   <input
                     type="text"
                     value={centerSlug}
                     onChange={(e) => setCenterSlug(e.target.value.toLowerCase())}
-                    placeholder="movel"
+                    placeholder="abc-pt"
                     className={inputClass}
+                    required
                     disabled={loginLoading}
                   />
                 </label>

@@ -18,6 +18,7 @@ import TrainersPage from './pages/admin/TrainersPage'
 import RewardsPage from './pages/admin/RewardsPage'
 import MessagesPage from './pages/admin/MessagesPage'
 import PaymentsPage from './pages/admin/PaymentsPage'
+import CenterSettingsPage from './pages/admin/CenterSettingsPage'
 import MemberPortalPage from './pages/MemberPortalPage'
 import TrainerPortalPage from './pages/TrainerPortalPage'
 import { RootPage } from './pages/RootPage'
@@ -66,6 +67,7 @@ export default function App() {
             <Route path="rewards" element={<RewardsPage />} />
             <Route path="messages" element={<MessagesPage />} />
             <Route path="payments" element={<PaymentsPage />} />
+            <Route path="settings" element={<CenterSettingsPage />} />
             <Route
               path="facility"
               element={<Navigate to="/admin/payments?category=center_pass" replace />}

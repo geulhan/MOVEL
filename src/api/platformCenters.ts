@@ -1,6 +1,8 @@
 import { getPlatformSession } from '../lib/platformSession'
 import { supabase } from '../lib/supabase'
 import type { Json } from '../types/database'
+import type { CenterFeatures } from '../types/centerFeatures'
+import { parseCenterFeatures } from '../types/centerFeatures'
 
 export type PlatformCenter = {
   id: string
@@ -10,6 +12,7 @@ export type PlatformCenter = {
   plan_code: string | null
   member_count: number
   trainer_count: number
+  features: CenterFeatures
   created_at: string
 }
 
@@ -60,6 +63,7 @@ function parseCenterList(data: Json): PlatformCenter[] {
         member_count: typeof c.member_count === 'number' ? c.member_count : 0,
         trainer_count:
           typeof c.trainer_count === 'number' ? c.trainer_count : 0,
+        features: parseCenterFeatures(c.features),
         created_at: c.created_at != null ? String(c.created_at) : '',
       }
     })
@@ -129,6 +133,41 @@ export async function createPlatformCenter(
   return { centerId, centerSlug, centerName, adminUsername }
 }
 
+export async function deletePlatformCenter(
+  centerId: string,
+  confirmSlug: string,
+): Promise<void> {
+  const { data, error } = await supabase.rpc('delete_center', {
+    p_session_token: requirePlatformToken(),
+    p_center_id: centerId,
+    p_confirm_slug: confirmSlug.trim().toLowerCase(),
+  })
+
+  if (error) throw error
+
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error('센터 삭제에 실패했습니다.')
+  }
+
+  const row = data as Record<string, Json | undefined>
+  if (row.ok !== true) {
+    switch (row.error) {
+      case 'protected_center':
+        throw new Error(
+          row.message != null
+            ? String(row.message)
+            : '이 센터는 삭제할 수 없습니다.',
+        )
+      case 'slug_mismatch':
+        throw new Error('센터 코드 확인이 일치하지 않습니다.')
+      case 'unauthorized':
+        throw new Error('플랫폼 권한이 없습니다.')
+      default:
+        throw new Error('센터 삭제에 실패했습니다.')
+    }
+  }
+}
+
 export async function suspendPlatformCenter(centerId: string): Promise<void> {
   const { data, error } = await supabase.rpc('suspend_center', {
     p_session_token: requirePlatformToken(),
@@ -145,4 +184,35 @@ export async function suspendPlatformCenter(centerId: string): Promise<void> {
   if (row.ok !== true) {
     throw new Error('센터 정지에 실패했습니다.')
   }
+}
+
+export async function updatePlatformCenterFeatures(
+  centerId: string,
+  features: CenterFeatures,
+): Promise<CenterFeatures> {
+  const { data, error } = await supabase.rpc('update_center_features', {
+    p_session_token: requirePlatformToken(),
+    p_center_id: centerId,
+    p_features: features as unknown as Json,
+  })
+
+  if (error) throw error
+
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error('이용 권한 저장에 실패했습니다.')
+  }
+
+  const row = data as Record<string, Json | undefined>
+  if (row.ok !== true) {
+    switch (row.error) {
+      case 'unauthorized':
+        throw new Error('플랫폼 권한이 없습니다.')
+      case 'not_found':
+        throw new Error('센터를 찾을 수 없습니다.')
+      default:
+        throw new Error('이용 권한 저장에 실패했습니다.')
+    }
+  }
+
+  return parseCenterFeatures(row.features)
 }

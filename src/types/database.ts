@@ -54,7 +54,17 @@ export type Center = {
   name: string
   slug: string
   status: CenterStatus
+  logo_url?: string | null
+  settings?: Json | null
   created_at: string
+  updated_at: string
+}
+
+export type CenterFeatureRow = {
+  center_id: string
+  feature_key: string
+  enabled: boolean
+  config: Json
   updated_at: string
 }
 
@@ -556,6 +566,20 @@ export type Database = {
           name?: string
           slug?: string
           status?: CenterStatus
+          updated_at?: string
+        }
+      >
+      center_features: TableDef<
+        CenterFeatureRow,
+        {
+          center_id: string
+          feature_key: string
+          enabled?: boolean
+          config?: Json
+        },
+        {
+          enabled?: boolean
+          config?: Json
           updated_at?: string
         }
       >
@@ -1141,6 +1165,31 @@ export type Database = {
         Args: {
           p_session_token: string
           p_center_id: string
+        }
+        Returns: Json
+      }
+      delete_center: {
+        Args: {
+          p_session_token: string
+          p_center_id: string
+          p_confirm_slug: string
+        }
+        Returns: Json
+      }
+      update_center_branding: {
+        Args: {
+          p_session_token: string
+          p_theme?: Json | null
+          p_logo_url?: string | null
+          p_clear_logo?: boolean
+        }
+        Returns: Json
+      }
+      update_center_features: {
+        Args: {
+          p_session_token: string
+          p_center_id: string
+          p_features: Json
         }
         Returns: Json
       }

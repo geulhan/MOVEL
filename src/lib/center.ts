@@ -1,9 +1,10 @@
 import { getAdminSession } from './adminSession'
 import { getMemberCenterSlug } from '../api/memberPortal'
 import { supabase } from './supabase'
+import { LEGACY_MOVEL_SLUG, isMovelDedicatedHost } from './centerSlug'
 
-/** 기본 센터 slug (MOVEL 단일 운영 호환) */
-export const DEFAULT_CENTER_SLUG = 'movel'
+/** @deprecated LEGACY_MOVEL_SLUG 사용 */
+export const DEFAULT_CENTER_SLUG = LEGACY_MOVEL_SLUG
 
 let cachedCenterId: string | null = null
 let cachedCenterSlug: string | null = null
@@ -31,14 +32,16 @@ async function fetchMemberCenterId(memberId: string): Promise<string | null> {
   return data?.center_id ? String(data.center_id) : null
 }
 
-function resolveSlugFromContext(): string {
+function resolveSlugFromContext(): string | null {
   const admin = getAdminSession()
   if (admin?.centerSlug) return admin.centerSlug
 
   const memberSlug = getMemberCenterSlug()
   if (memberSlug) return memberSlug
 
-  return DEFAULT_CENTER_SLUG
+  if (isMovelDedicatedHost()) return LEGACY_MOVEL_SLUG
+
+  return null
 }
 
 /**
@@ -51,21 +54,23 @@ export async function resolveCenterIdForMember(
   const admin = getAdminSession()
   if (admin?.centerId) return admin.centerId
 
-  if (cachedCenterId && cachedCenterSlug === resolveSlugFromContext()) {
+  const slug = resolveSlugFromContext()
+
+  if (cachedCenterId && slug && cachedCenterSlug === slug) {
     return cachedCenterId
   }
 
-  const slug = resolveSlugFromContext()
-
-  try {
-    const fromSlug = await fetchCenterIdBySlug(slug)
-    if (fromSlug) {
-      cachedCenterId = fromSlug
-      cachedCenterSlug = slug
-      return cachedCenterId
+  if (slug) {
+    try {
+      const fromSlug = await fetchCenterIdBySlug(slug)
+      if (fromSlug) {
+        cachedCenterId = fromSlug
+        cachedCenterSlug = slug
+        return cachedCenterId
+      }
+    } catch (centersErr) {
+      if (!memberId) throw centersErr
     }
-  } catch (centersErr) {
-    if (!memberId) throw centersErr
   }
 
   if (memberId) {
@@ -77,7 +82,7 @@ export async function resolveCenterIdForMember(
   }
 
   throw new Error(
-    '센터를 찾을 수 없습니다. Supabase에서 migration_040~046을 실행해 주세요.',
+    '센터 코드가 지정되지 않았습니다. 로그인 후 다시 시도해 주세요.',
   )
 }
 
@@ -92,7 +97,7 @@ export async function getCurrentCenterId(): Promise<string> {
   return resolveCenterIdForMember()
 }
 
-export function getCurrentCenterSlug(): string {
+export function getCurrentCenterSlug(): string | null {
   return resolveSlugFromContext()
 }
 

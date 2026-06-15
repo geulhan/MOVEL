@@ -10,12 +10,24 @@ export function getSiteOrigin(): string {
   return DEFAULT_SITE_ORIGIN
 }
 
-export function getMemberPortalUrl(): string {
-  return `${getSiteOrigin()}/member`
+import { isMovelDedicatedHost, LEGACY_MOVEL_SLUG } from './centerSlug'
+
+export function getMemberPortalUrl(centerSlug?: string): string {
+  const slug =
+    centerSlug?.trim().toLowerCase() ||
+    (isMovelDedicatedHost() ? LEGACY_MOVEL_SLUG : '')
+  return slug
+    ? `${getSiteOrigin()}/member?center=${encodeURIComponent(slug)}`
+    : `${getSiteOrigin()}/member`
 }
 
-export function getAdminLoginUrl(): string {
-  return `${getSiteOrigin()}/login`
+export function getAdminLoginUrl(centerSlug?: string): string {
+  const slug =
+    centerSlug?.trim().toLowerCase() ||
+    (isMovelDedicatedHost() ? LEGACY_MOVEL_SLUG : '')
+  return slug
+    ? `${getSiteOrigin()}/login?center=${encodeURIComponent(slug)}`
+    : `${getSiteOrigin()}/login`
 }
 
 export async function copyText(text: string): Promise<boolean> {

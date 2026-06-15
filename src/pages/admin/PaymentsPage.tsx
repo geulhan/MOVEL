@@ -27,6 +27,7 @@ import {
 } from '../../constants/paymentCategories'
 import { PAYMENT_REQUEST_STATUS_LABELS } from '../../constants/pricing'
 import { formatPaymentRequestDetail } from '../../lib/paymentRequestDisplay'
+import { useCenterFeatures } from '../../hooks/useCenterFeatures'
 import type { PaymentRequestStatus } from '../../types/database'
 
 type AdminTab = 'pricing' | 'requests' | 'contracts'
@@ -54,6 +55,8 @@ function parsePricingCategory(value: string | null): PaymentCategory {
 
 export default function PaymentsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const { features } = useCenterFeatures()
+  const contractsEnabled = features.contracts
   const pricingCategory = parsePricingCategory(searchParams.get('category'))
   const [adminTab, setAdminTab] = useState<AdminTab>('pricing')
   const [statusFilter, setStatusFilter] = useState<'all' | PaymentRequestStatus>(
@@ -72,6 +75,12 @@ export default function PaymentsPage() {
   const [toast, setToast] = useState<string | null>(null)
   const [completeTarget, setCompleteTarget] =
     useState<PaymentRequestWithMember | null>(null)
+
+  useEffect(() => {
+    if (!contractsEnabled && adminTab === 'contracts') {
+      setAdminTab('pricing')
+    }
+  }, [adminTab, contractsEnabled])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -169,13 +178,15 @@ export default function PaymentsPage() {
         >
           결제 요청
         </button>
-        <button
-          type="button"
-          onClick={() => setAdminTab('contracts')}
-          className={`chip ${adminTab === 'contracts' ? 'chip-active' : 'chip-inactive'}`}
-        >
-          계약서
-        </button>
+        {contractsEnabled && (
+          <button
+            type="button"
+            onClick={() => setAdminTab('contracts')}
+            className={`chip ${adminTab === 'contracts' ? 'chip-active' : 'chip-inactive'}`}
+          >
+            계약서
+          </button>
+        )}
       </nav>
 
       {toast && (
