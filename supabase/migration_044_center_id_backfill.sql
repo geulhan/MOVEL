@@ -86,7 +86,7 @@ begin
   update public.member_referral_rewards mrr
   set center_id = m.center_id
   from public.members m
-  where mrr.member_id = m.id and mrr.center_id is null;
+  where mrr.referred_member_id = m.id and mrr.center_id is null;
 
   update public.center_photo_submissions cps
   set center_id = m.center_id
