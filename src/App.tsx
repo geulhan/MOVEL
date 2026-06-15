@@ -20,15 +20,17 @@ import MessagesPage from './pages/admin/MessagesPage'
 import PaymentsPage from './pages/admin/PaymentsPage'
 import MemberPortalPage from './pages/MemberPortalPage'
 import TrainerPortalPage from './pages/TrainerPortalPage'
-import HomePage from './pages/HomePage'
+import { RootPage } from './pages/RootPage'
 import LoginPage from './pages/LoginPage'
+import MotionHubLandingPage from './pages/MotionHubLandingPage'
 import NotFoundPage from './pages/NotFoundPage'
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<HomePage />} />
+        <Route path="/" element={<RootPage />} />
+        <Route path="/motionhub" element={<MotionHubLandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/admin" element={<ProtectedRoute />}>
           <Route element={<AdminLayout />}>

@@ -1172,10 +1172,6 @@ export type Database = {
         }
         Returns: Json
       }
-      get_beta_application_count: {
-        Args: Record<string, never>
-        Returns: number
-      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
