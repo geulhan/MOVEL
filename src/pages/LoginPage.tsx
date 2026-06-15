@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
-import type { FormEvent } from 'react'
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { useEffect, useState, type FormEvent } from 'react'
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { loginAdmin } from '../api/adminAuth'
+import { DEFAULT_CENTER_SLUG } from '../lib/center'
 import { formatSupabaseError } from '../lib/errors'
 import { getAdminSession, isAdminAuthenticated } from '../lib/adminSession'
 import {
@@ -19,6 +19,10 @@ type LoginLocationState = {
 export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
+  const [searchParams] = useSearchParams()
+  const [centerSlug, setCenterSlug] = useState(
+    () => searchParams.get('center')?.trim().toLowerCase() || DEFAULT_CENTER_SLUG,
+  )
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [rememberLogin, setRememberLogin] = useState(false)
@@ -58,7 +62,7 @@ export default function LoginPage() {
 
     setLoading(true)
     try {
-      const info = await loginAdmin(username, password)
+      const info = await loginAdmin(username, password, centerSlug)
       if (rememberLogin) {
         saveRememberedAdminLogin(username, password)
       } else {
@@ -96,10 +100,25 @@ export default function LoginPage() {
           </h1>
           <p className="mt-2 text-sm text-muted">
             관리자는 전체 메뉴, 트레이너는 회원 관리·PT 스케줄만 이용할 수
-            있습니다.
+            있습니다. 센터 코드로 로그인 센터를 구분합니다.
           </p>
 
           <form className="mt-5 space-y-3" onSubmit={handleSubmit}>
+            <label className="block text-sm">
+              <span className="mb-1.5 block font-medium text-charcoal">
+                센터 코드
+              </span>
+              <input
+                type="text"
+                value={centerSlug}
+                onChange={(e) => setCenterSlug(e.target.value.toLowerCase())}
+                className={inputClass}
+                placeholder="movel"
+                autoComplete="organization"
+                disabled={loading}
+              />
+            </label>
+
             <label className="block text-sm">
               <span className="mb-1.5 block font-medium text-charcoal">
                 아이디
@@ -154,6 +173,10 @@ export default function LoginPage() {
         <p className="text-center text-xs text-muted">
           <Link to="/member" className="text-gold-dark hover:underline">
             회원 페이지 →
+          </Link>
+          <span className="mx-2">·</span>
+          <Link to="/platform/login" className="text-gold-dark hover:underline">
+            MotionHub Super Admin →
           </Link>
         </p>
       </div>

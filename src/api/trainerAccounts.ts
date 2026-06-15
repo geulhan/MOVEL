@@ -1,3 +1,4 @@
+import { getCurrentCenterId } from '../lib/center'
 import { supabase } from '../lib/supabase'
 import type { Json } from '../types/database'
 
@@ -44,7 +45,10 @@ function parseRpcResult(data: Json): RpcResult & Partial<TrainerAdminAccount> {
 }
 
 export async function fetchTrainerAdminAccounts(): Promise<TrainerAdminAccount[]> {
-  const { data, error } = await supabase.rpc('list_trainer_admin_accounts')
+  const centerId = await getCurrentCenterId()
+  const { data, error } = await supabase.rpc('list_trainer_admin_accounts', {
+    p_center_id: centerId,
+  })
   if (error) throw error
   return parseAccountList(data)
 }

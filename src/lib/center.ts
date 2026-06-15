@@ -1,16 +1,19 @@
+import { getAdminSession } from './adminSession'
+import { getMemberCenterSlug } from '../api/memberPortal'
 import { supabase } from './supabase'
 
-/** 기본 센터 slug (MOVEL 단일 운영) */
+/** 기본 센터 slug (MOVEL 단일 운영 호환) */
 export const DEFAULT_CENTER_SLUG = 'movel'
 
-let cachedDefaultCenterId: string | null = null
+let cachedCenterId: string | null = null
+let cachedCenterSlug: string | null = null
 
-async function fetchDefaultCenterIdFromDb(): Promise<string | null> {
+async function fetchCenterIdBySlug(slug: string): Promise<string | null> {
   const { data, error } = await supabase
     .from('centers')
     .select('id')
-    .eq('slug', DEFAULT_CENTER_SLUG)
-    .eq('status', 'active')
+    .eq('slug', slug)
+    .is('deleted_at', null)
     .maybeSingle()
 
   if (error) throw error
@@ -28,20 +31,38 @@ async function fetchMemberCenterId(memberId: string): Promise<string | null> {
   return data?.center_id ? String(data.center_id) : null
 }
 
+function resolveSlugFromContext(): string {
+  const admin = getAdminSession()
+  if (admin?.centerSlug) return admin.centerSlug
+
+  const memberSlug = getMemberCenterSlug()
+  if (memberSlug) return memberSlug
+
+  return DEFAULT_CENTER_SLUG
+}
+
 /**
  * insert/update에 사용할 center_id.
- * centers 조회 실패 시 회원 row의 center_id로 fallback (인앱 브라우저·캐시 이슈 대비).
+ * 관리자 세션 → 회원 세션 slug → 기본 센터 순으로 해석합니다.
  */
 export async function resolveCenterIdForMember(
   memberId?: string,
 ): Promise<string> {
-  if (cachedDefaultCenterId) return cachedDefaultCenterId
+  const admin = getAdminSession()
+  if (admin?.centerId) return admin.centerId
+
+  if (cachedCenterId && cachedCenterSlug === resolveSlugFromContext()) {
+    return cachedCenterId
+  }
+
+  const slug = resolveSlugFromContext()
 
   try {
-    const fromCenters = await fetchDefaultCenterIdFromDb()
-    if (fromCenters) {
-      cachedDefaultCenterId = fromCenters
-      return cachedDefaultCenterId
+    const fromSlug = await fetchCenterIdBySlug(slug)
+    if (fromSlug) {
+      cachedCenterId = fromSlug
+      cachedCenterSlug = slug
+      return cachedCenterId
     }
   } catch (centersErr) {
     if (!memberId) throw centersErr
@@ -50,33 +71,33 @@ export async function resolveCenterIdForMember(
   if (memberId) {
     const fromMember = await fetchMemberCenterId(memberId)
     if (fromMember) {
-      cachedDefaultCenterId = fromMember
-      return cachedDefaultCenterId
+      cachedCenterId = fromMember
+      return cachedCenterId
     }
   }
 
   throw new Error(
-    '기본 센터를 찾을 수 없습니다. Supabase에서 migration_032_centers.sql을 실행해 주세요.',
+    '센터를 찾을 수 없습니다. Supabase에서 migration_040~046을 실행해 주세요.',
   )
 }
 
-/**
- * DB에서 기본 센터(MOVEL) ID를 조회합니다.
- * migration_032_centers.sql 적용 후 사용 가능합니다.
- */
 export async function getDefaultCenterId(): Promise<string> {
   return resolveCenterIdForMember()
 }
 
 /**
  * 현재 요청 컨텍스트의 센터 ID.
- * 1단계에서는 항상 기본 센터(MOVEL)를 반환합니다.
  */
 export async function getCurrentCenterId(): Promise<string> {
-  return getDefaultCenterId()
+  return resolveCenterIdForMember()
+}
+
+export function getCurrentCenterSlug(): string {
+  return resolveSlugFromContext()
 }
 
 /** 테스트·센터 전환 시 캐시 초기화 */
 export function resetCenterIdCache(): void {
-  cachedDefaultCenterId = null
+  cachedCenterId = null
+  cachedCenterSlug = null
 }

@@ -75,11 +75,24 @@ export async function fetchRecentAttendance(
 
 const SESSION_KEY = 'mobel_member_id'
 const TOKEN_KEY = 'mobel_member_token'
+const CENTER_SLUG_KEY = 'mobel_member_center_slug'
+const CENTER_ID_KEY = 'mobel_member_center_id'
 
-export function saveMemberSession(memberId: string, token?: string): void {
+export function saveMemberSession(
+  memberId: string,
+  token?: string,
+  centerSlug?: string,
+  centerId?: string,
+): void {
   setPersistedItem(SESSION_KEY, memberId)
   if (token) {
     setPersistedItem(TOKEN_KEY, token)
+  }
+  if (centerSlug) {
+    setPersistedItem(CENTER_SLUG_KEY, centerSlug)
+  }
+  if (centerId) {
+    setPersistedItem(CENTER_ID_KEY, centerId)
   }
 }
 
@@ -91,7 +104,17 @@ export function getMemberAuthToken(): string | null {
   return getPersistedItem(TOKEN_KEY)
 }
 
+export function getMemberCenterSlug(): string | null {
+  return getPersistedItem(CENTER_SLUG_KEY)
+}
+
+export function getMemberCenterId(): string | null {
+  return getPersistedItem(CENTER_ID_KEY)
+}
+
 export function clearMemberSession(): void {
   removePersistedItem(SESSION_KEY)
   removePersistedItem(TOKEN_KEY)
+  removePersistedItem(CENTER_SLUG_KEY)
+  removePersistedItem(CENTER_ID_KEY)
 }

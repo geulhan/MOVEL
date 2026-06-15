@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { fetchMemberById } from '../api/memberDetail'
 import { formatDate, formatPhone, isExpired } from '../api/members'
 import { loginMember, registerMember } from '../api/memberAuth'
@@ -11,6 +12,7 @@ import {
   getMemberSession,
   type AttendanceLog,
 } from '../api/memberPortal'
+import { DEFAULT_CENTER_SLUG } from '../lib/center'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { SiteUrlCopy } from '../components/SiteUrlCopy'
 import { MemberMyPageSection } from '../components/MemberMyPageSection'
@@ -47,6 +49,10 @@ type Tab =
 type AuthMode = 'login' | 'signup'
 
 export default function MemberPortalPage() {
+  const [searchParams] = useSearchParams()
+  const [centerSlug, setCenterSlug] = useState(
+    () => searchParams.get('center')?.trim().toLowerCase() || DEFAULT_CENTER_SLUG,
+  )
   const [member, setMember] = useState<Member | null>(null)
   const [loading, setLoading] = useState(true)
   const [loginPhone, setLoginPhone] = useState('')
@@ -138,6 +144,7 @@ export default function MemberPortalPage() {
         signupName,
         signupPhone,
         signupPassword,
+        centerSlug,
       )
       const registeredMember = await fetchMemberById(memberId)
       setMember(registeredMember)
@@ -161,7 +168,7 @@ export default function MemberPortalPage() {
     setLoginError(null)
     setLoginLoading(true)
     try {
-      const { memberId } = await loginMember(loginPhone, loginPassword)
+      const { memberId } = await loginMember(loginPhone, loginPassword, centerSlug)
       const loggedInMember = await fetchMemberById(memberId)
       setMember(loggedInMember)
       if (rememberLogin) {
@@ -286,6 +293,19 @@ export default function MemberPortalPage() {
               >
                 <label className="block">
                   <span className="mb-1.5 block text-sm font-medium">
+                    센터 코드
+                  </span>
+                  <input
+                    type="text"
+                    value={centerSlug}
+                    onChange={(e) => setCenterSlug(e.target.value.toLowerCase())}
+                    placeholder="movel"
+                    className={inputClass}
+                    disabled={loginLoading}
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-sm font-medium">
                     아이디 (휴대전화번호)
                   </span>
                   <input
@@ -349,6 +369,19 @@ export default function MemberPortalPage() {
                 onSubmit={(e) => void handleSignup(e)}
                 className="mt-5 space-y-4"
               >
+                <label className="block">
+                  <span className="mb-1.5 block text-sm font-medium">
+                    센터 코드
+                  </span>
+                  <input
+                    type="text"
+                    value={centerSlug}
+                    onChange={(e) => setCenterSlug(e.target.value.toLowerCase())}
+                    placeholder="movel"
+                    className={inputClass}
+                    disabled={loginLoading}
+                  />
+                </label>
                 <label className="block">
                   <span className="mb-1.5 block text-sm font-medium">이름</span>
                   <input

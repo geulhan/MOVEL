@@ -1,6 +1,7 @@
 import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom'
 import { navItemsForSession } from '../../lib/adminPermissions'
 import { clearAdminAuth, getAdminSession } from '../../lib/adminSession'
+import { resetCenterIdCache } from '../../lib/center'
 import { MovelBrandSubtitle, MovelLogo } from '../brand/MovelLogo'
 import { SetupBanner } from '../SetupBanner'
 
@@ -23,6 +24,7 @@ export function AdminLayout() {
 
   function handleLogout() {
     clearAdminAuth()
+    resetCenterIdCache()
     navigate('/login', { replace: true })
   }
 
@@ -36,6 +38,11 @@ export function AdminLayout() {
             linkTo="/admin"
           />
           <MovelBrandSubtitle tone="gold" className="mt-2 px-1" />
+          {session?.centerName && (
+            <p className="mt-2 truncate px-1 text-xs font-medium text-gold/90">
+              {session.centerName}
+            </p>
+          )}
           <p className="mt-1 px-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-cream/40">
             Admin
           </p>

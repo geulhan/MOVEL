@@ -2,7 +2,7 @@ import { detectDeviceType } from '../lib/deviceType'
 import { supabase } from '../lib/supabase'
 import { formatSupabaseError } from '../lib/errors'
 import { notifyMemberWelcome } from './notifications'
-import { saveMemberSession } from './memberPortal'
+import { getMemberCenterSlug, saveMemberSession } from './memberPortal'
 import type { Json } from '../types/database'
 import { normalizePhone } from './members'
 
@@ -12,6 +12,8 @@ type MemberLoginResponse = {
   name?: string
   phone?: string
   token?: string
+  center_id?: string
+  center_slug?: string
   error?: string
 }
 
@@ -37,9 +39,11 @@ function parseLoginResponse(data: Json): MemberLoginResponse {
   const name = row.name != null ? String(row.name) : undefined
   const phone = row.phone != null ? String(row.phone) : undefined
   const token = row.token != null ? String(row.token) : undefined
+  const center_id = row.center_id != null ? String(row.center_id) : undefined
+  const center_slug = row.center_slug != null ? String(row.center_slug) : undefined
   if (!id || !token) return { ok: false }
 
-  return { ok: true, id, name, phone, token }
+  return { ok: true, id, name, phone, token, center_id, center_slug }
 }
 
 function loginErrorMessage(code?: string): string {
@@ -94,6 +98,7 @@ export async function registerMember(
   name: string,
   phone: string,
   password: string,
+  centerSlug = 'movel',
 ): Promise<{ memberId: string; memberName: string }> {
   const digits = normalizeLoginPhone(phone)
   if (!name.trim()) {
@@ -111,6 +116,7 @@ export async function registerMember(
     p_phone: digits,
     p_password: password,
     p_device_type: detectDeviceType(),
+    p_center_slug: centerSlug.trim().toLowerCase() || 'movel',
   })
 
   if (error) {
@@ -128,7 +134,12 @@ export async function registerMember(
     throw new Error(registerErrorMessage(result.error))
   }
 
-  saveMemberSession(result.id, result.token)
+  saveMemberSession(
+    result.id,
+    result.token,
+    result.center_slug,
+    result.center_id,
+  )
   notifyMemberWelcome(result.id)
 
   return {
@@ -140,6 +151,7 @@ export async function registerMember(
 export async function loginMember(
   phone: string,
   password: string,
+  centerSlug = 'movel',
 ): Promise<{ memberId: string; memberName: string }> {
   const digits = normalizeLoginPhone(phone)
   if (digits.length !== 11 || !digits.startsWith('010')) {
@@ -153,6 +165,7 @@ export async function loginMember(
     p_phone: digits,
     p_password: password,
     p_device_type: detectDeviceType(),
+    p_center_slug: centerSlug.trim().toLowerCase() || 'movel',
   })
 
   if (error) {
@@ -170,7 +183,12 @@ export async function loginMember(
     throw new Error(loginErrorMessage(result.error))
   }
 
-  saveMemberSession(result.id, result.token)
+  saveMemberSession(
+    result.id,
+    result.token,
+    result.center_slug,
+    result.center_id,
+  )
   return {
     memberId: result.id,
     memberName: result.name ?? '회원',
@@ -232,10 +250,13 @@ export async function changeMemberPassword(
     throw new Error('새 비밀번호는 현재 비밀번호와 달라야 합니다.')
   }
 
+  const centerSlug = getMemberCenterSlug() ?? 'movel'
+
   const { data, error } = await supabase.rpc('change_member_password', {
     p_phone: digits,
     p_old_password: oldPassword,
     p_new_password: newPassword,
+    p_center_slug: centerSlug.trim().toLowerCase() || 'movel',
   })
 
   if (error) throw error

@@ -1103,15 +1103,51 @@ export type Database = {
     }
     Views: Record<string, never>
     Functions: {
-      verify_admin_login: {
+      verify_platform_admin_login: {
         Args: {
           p_username: string
           p_password: string
         }
         Returns: Json
       }
+      verify_admin_login: {
+        Args: {
+          p_username: string
+          p_password: string
+          p_center_slug?: string
+        }
+        Returns: Json
+      }
+      list_centers_for_platform: {
+        Args: {
+          p_session_token: string
+        }
+        Returns: Json
+      }
+      create_center: {
+        Args: {
+          p_session_token: string
+          p_name: string
+          p_slug: string
+          p_admin_username: string
+          p_admin_password: string
+          p_plan_code?: string
+          p_contact_email?: string | null
+          p_contact_phone?: string | null
+        }
+        Returns: Json
+      }
+      suspend_center: {
+        Args: {
+          p_session_token: string
+          p_center_id: string
+        }
+        Returns: Json
+      }
       list_trainer_admin_accounts: {
-        Args: Record<string, never>
+        Args: {
+          p_center_id?: string | null
+        }
         Returns: Json
       }
       upsert_trainer_admin_account: {
@@ -1140,6 +1176,7 @@ export type Database = {
           p_phone: string
           p_password: string
           p_device_type?: string
+          p_center_slug?: string
         }
         Returns: Json
       }
@@ -1148,6 +1185,7 @@ export type Database = {
           p_phone: string
           p_old_password: string
           p_new_password: string
+          p_center_slug?: string
         }
         Returns: Json
       }
@@ -1157,6 +1195,7 @@ export type Database = {
           p_phone: string
           p_password: string
           p_device_type?: string
+          p_center_slug?: string
         }
         Returns: Json
       }

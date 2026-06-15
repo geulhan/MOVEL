@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { resetCenterIdCache } from '../lib/center'
 import { saveAdminAuth, type AdminRole } from '../lib/adminSession'
 import type { Json } from '../types/database'
 
@@ -10,6 +11,10 @@ type AdminLoginResponse = {
   role?: AdminRole
   trainer_id?: string | null
   trainer_name?: string | null
+  center_id?: string
+  center_slug?: string
+  center_name?: string
+  error?: string
 }
 
 function parseLoginResponse(data: Json): AdminLoginResponse {
@@ -18,12 +23,21 @@ function parseLoginResponse(data: Json): AdminLoginResponse {
   }
 
   const row = data as Record<string, Json | undefined>
-  if (row.ok !== true) return { ok: false }
+  if (row.ok !== true) {
+    return {
+      ok: false,
+      error: row.error != null ? String(row.error) : undefined,
+    }
+  }
 
   const id = row.id != null ? String(row.id) : undefined
   const username = row.username != null ? String(row.username) : undefined
   const token = row.token != null ? String(row.token) : undefined
-  if (!id || !username || !token) return { ok: false }
+  const center_id = row.center_id != null ? String(row.center_id) : undefined
+  const center_slug = row.center_slug != null ? String(row.center_slug) : undefined
+  if (!id || !username || !token || !center_id || !center_slug) {
+    return { ok: false }
+  }
 
   const roleRaw = row.role != null ? String(row.role) : 'admin'
   const role: AdminRole = roleRaw === 'trainer' ? 'trainer' : 'admin'
@@ -33,27 +47,56 @@ function parseLoginResponse(data: Json): AdminLoginResponse {
     row.trainer_name != null && row.trainer_name !== ''
       ? String(row.trainer_name)
       : null
+  const center_name =
+    row.center_name != null ? String(row.center_name) : center_slug
 
-  return { ok: true, id, username, token, role, trainer_id, trainer_name }
+  return {
+    ok: true,
+    id,
+    username,
+    token,
+    role,
+    trainer_id,
+    trainer_name,
+    center_id,
+    center_slug,
+    center_name,
+  }
+}
+
+function loginErrorMessage(code?: string): string {
+  switch (code) {
+    case 'center_not_found':
+      return '센터 코드를 찾을 수 없습니다.'
+    case 'center_suspended':
+      return '정지된 센터입니다. MotionHub에 문의해 주세요.'
+    case 'center_inactive':
+      return '비활성 센터입니다.'
+    default:
+      return '아이디 또는 비밀번호가 올바르지 않습니다.'
+  }
 }
 
 export async function loginAdmin(
   username: string,
   password: string,
+  centerSlug: string,
 ): Promise<AdminSessionInfo> {
   const { data, error } = await supabase.rpc('verify_admin_login', {
     p_username: username.trim(),
     p_password: password,
+    p_center_slug: centerSlug.trim().toLowerCase() || 'movel',
   })
 
   if (error) throw error
 
   const result = parseLoginResponse(data)
   if (!result.ok || !result.id || !result.username || !result.token) {
-    throw new Error('아이디 또는 비밀번호가 올바르지 않습니다.')
+    throw new Error(loginErrorMessage(result.error))
   }
 
   const role = result.role ?? 'admin'
+  resetCenterIdCache()
   saveAdminAuth(
     result.token,
     result.id,
@@ -61,6 +104,9 @@ export async function loginAdmin(
     role,
     result.trainer_id ?? null,
     result.trainer_name ?? null,
+    result.center_id!,
+    result.center_slug!,
+    result.center_name ?? result.center_slug!,
   )
 
   return {
@@ -69,6 +115,9 @@ export async function loginAdmin(
     role,
     trainerId: result.trainer_id ?? null,
     trainerName: result.trainer_name ?? null,
+    centerId: result.center_id!,
+    centerSlug: result.center_slug!,
+    centerName: result.center_name ?? result.center_slug!,
   }
 }
 
@@ -78,4 +127,7 @@ export type AdminSessionInfo = {
   role: AdminRole
   trainerId: string | null
   trainerName: string | null
+  centerId: string
+  centerSlug: string
+  centerName: string
 }

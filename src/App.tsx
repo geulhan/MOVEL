@@ -23,6 +23,11 @@ import TrainerPortalPage from './pages/TrainerPortalPage'
 import { RootPage } from './pages/RootPage'
 import LoginPage from './pages/LoginPage'
 import MotionHubLandingPage from './pages/MotionHubLandingPage'
+import PlatformLoginPage from './pages/platform/PlatformLoginPage'
+import PlatformHomePage from './pages/platform/PlatformHomePage'
+import PlatformCreateCenterPage from './pages/platform/PlatformCreateCenterPage'
+import { PlatformAccessGuard } from './components/PlatformAccessGuard'
+import { PlatformLayout } from './components/layouts/PlatformLayout'
 import NotFoundPage from './pages/NotFoundPage'
 
 export default function App() {
@@ -32,6 +37,13 @@ export default function App() {
         <Route path="/" element={<RootPage />} />
         <Route path="/motionhub" element={<MotionHubLandingPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/platform/login" element={<PlatformLoginPage />} />
+        <Route path="/platform" element={<PlatformAccessGuard />}>
+          <Route element={<PlatformLayout />}>
+            <Route index element={<PlatformHomePage />} />
+            <Route path="centers/new" element={<PlatformCreateCenterPage />} />
+          </Route>
+        </Route>
         <Route path="/admin" element={<ProtectedRoute />}>
           <Route element={<AdminLayout />}>
             <Route index element={<AdminHomePage />} />
