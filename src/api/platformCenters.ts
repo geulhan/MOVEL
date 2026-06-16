@@ -12,6 +12,8 @@ export type PlatformCenter = {
   slug: string
   status: string
   plan_code: string | null
+  contactEmail: string | null
+  contactPhone: string | null
   member_count: number
   trainer_count: number
   servicePeriod: CenterServicePeriod
@@ -28,6 +30,8 @@ export type CreateCenterInput = {
   planCode?: string
   contactEmail?: string
   contactPhone?: string
+  serviceStartsAt?: string
+  serviceEndsAt?: string
 }
 
 export type CreateCenterResult = {
@@ -64,6 +68,10 @@ function parseCenterList(data: Json): PlatformCenter[] {
         slug,
         status: c.status != null ? String(c.status) : 'active',
         plan_code: c.plan_code != null ? String(c.plan_code) : null,
+        contactEmail:
+          c.contact_email != null ? String(c.contact_email) : null,
+        contactPhone:
+          c.contact_phone != null ? String(c.contact_phone) : null,
         member_count: typeof c.member_count === 'number' ? c.member_count : 0,
         trainer_count:
           typeof c.trainer_count === 'number' ? c.trainer_count : 0,
@@ -105,6 +113,8 @@ export async function createPlatformCenter(
     p_plan_code: input.planCode ?? 'starter',
     p_contact_email: input.contactEmail?.trim() || null,
     p_contact_phone: input.contactPhone?.trim() || null,
+    p_service_starts_at: input.serviceStartsAt || null,
+    p_service_ends_at: input.serviceEndsAt || null,
   })
 
   if (error) throw error
@@ -128,6 +138,18 @@ export async function createPlatformCenter(
         )
       case 'invalid_admin_password':
         throw new Error('관리자 비밀번호는 4자 이상이어야 합니다.')
+      case 'invalid_phone':
+        throw new Error(
+          row.message != null
+            ? String(row.message)
+            : '연락처 형식이 올바르지 않습니다.',
+        )
+      case 'invalid_service_period':
+        throw new Error(
+          row.message != null
+            ? String(row.message)
+            : '이용 기간이 올바르지 않습니다.',
+        )
       default:
         throw new Error('센터 생성에 실패했습니다.')
     }

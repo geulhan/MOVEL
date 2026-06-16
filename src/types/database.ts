@@ -1184,6 +1184,8 @@ export type Database = {
           p_plan_code?: string
           p_contact_email?: string | null
           p_contact_phone?: string | null
+          p_service_starts_at?: string | null
+          p_service_ends_at?: string | null
         }
         Returns: Json
       }
@@ -1199,6 +1201,41 @@ export type Database = {
           p_session_token: string
           p_center_id: string
           p_confirm_slug: string
+        }
+        Returns: Json
+      }
+      get_center_message_dashboard: {
+        Args: { p_session_token: string }
+        Returns: Json
+      }
+      update_center_notifications_enabled: {
+        Args: { p_session_token: string; p_enabled: boolean }
+        Returns: Json
+      }
+      list_center_message_credits_for_platform: {
+        Args: { p_session_token: string }
+        Returns: Json
+      }
+      grant_center_message_credits_platform: {
+        Args: {
+          p_session_token: string
+          p_center_id: string
+          p_amount: number
+          p_description?: string | null
+        }
+        Returns: Json
+      }
+      get_center_messaging_settings: {
+        Args: { p_session_token: string }
+        Returns: Json
+      }
+      update_center_messaging_settings: {
+        Args: {
+          p_session_token: string
+          p_config: Json
+          p_api_key?: string | null
+          p_api_secret?: string | null
+          p_clear_api_keys?: boolean
         }
         Returns: Json
       }

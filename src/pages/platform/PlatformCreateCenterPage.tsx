@@ -1,8 +1,17 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { createPlatformCenter } from '../../api/platformCenters'
-import { formatPhone } from '../../api/members'
+import { formatPhone, todayDateString } from '../../api/members'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/theme'
+
+function addDays(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const date = new Date(y, m - 1, d)
+  date.setDate(date.getDate() + days)
+  const mm = String(date.getMonth() + 1).padStart(2, '0')
+  const dd = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${mm}-${dd}`
+}
 
 function slugify(value: string): string {
   return value
@@ -23,6 +32,8 @@ export default function PlatformCreateCenterPage() {
   const [adminPassword, setAdminPassword] = useState('')
   const [contactEmail, setContactEmail] = useState('')
   const [contactPhone, setContactPhone] = useState('')
+  const [serviceStartsAt, setServiceStartsAt] = useState(todayDateString())
+  const [serviceEndsAt, setServiceEndsAt] = useState(addDays(todayDateString(), 14))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<{
@@ -30,6 +41,8 @@ export default function PlatformCreateCenterPage() {
     centerSlug: string
     adminUsername: string
     contactPhone?: string
+    serviceStartsAt?: string
+    serviceEndsAt?: string
   } | null>(null)
 
   function handleNameChange(value: string) {
@@ -50,6 +63,11 @@ export default function PlatformCreateCenterPage() {
       return
     }
 
+    if (serviceStartsAt && serviceEndsAt && serviceEndsAt < serviceStartsAt) {
+      setError('이용 종료일은 시작일보다 빠를 수 없습니다.')
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -60,12 +78,16 @@ export default function PlatformCreateCenterPage() {
         adminPassword,
         contactEmail: contactEmail || undefined,
         contactPhone: phoneDigits || undefined,
+        serviceStartsAt: serviceStartsAt || undefined,
+        serviceEndsAt: serviceEndsAt || undefined,
       })
       setResult({
         centerName: created.centerName,
         centerSlug: created.centerSlug,
         adminUsername: created.adminUsername,
         contactPhone: phoneDigits || undefined,
+        serviceStartsAt: serviceStartsAt || undefined,
+        serviceEndsAt: serviceEndsAt || undefined,
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : '센터 생성에 실패했습니다.')
@@ -96,6 +118,18 @@ export default function PlatformCreateCenterPage() {
               <div className="flex justify-between gap-4">
                 <dt>연락처</dt>
                 <dd className="font-mono">{formatPhone(result.contactPhone)}</dd>
+              </div>
+            )}
+            {result.serviceStartsAt && (
+              <div className="flex justify-between gap-4">
+                <dt>이용 시작일</dt>
+                <dd>{result.serviceStartsAt}</dd>
+              </div>
+            )}
+            {result.serviceEndsAt && (
+              <div className="flex justify-between gap-4">
+                <dt>이용 종료일</dt>
+                <dd>{result.serviceEndsAt}</dd>
               </div>
             )}
           </dl>
@@ -218,6 +252,42 @@ export default function PlatformCreateCenterPage() {
               센터 담당자 연락처입니다. 010으로 시작하는 11자리 숫자만 입력합니다.
             </p>
           </label>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block text-sm">
+              <span className="mb-1.5 block font-medium text-cream">이용 시작일</span>
+              <input
+                type="date"
+                value={serviceStartsAt}
+                onChange={(e) => {
+                  const value = e.target.value
+                  setServiceStartsAt(value)
+                  if (value && serviceEndsAt < value) {
+                    setServiceEndsAt(addDays(value, 14))
+                  }
+                }}
+                className={inputClass}
+                required
+                disabled={loading}
+              />
+            </label>
+
+            <label className="block text-sm">
+              <span className="mb-1.5 block font-medium text-cream">이용 종료일</span>
+              <input
+                type="date"
+                value={serviceEndsAt}
+                min={serviceStartsAt}
+                onChange={(e) => setServiceEndsAt(e.target.value)}
+                className={inputClass}
+                required
+                disabled={loading}
+              />
+              <p className="mt-1 text-xs text-cream/50">
+                베타 체험 기본 14일. 필요 시 조정하세요.
+              </p>
+            </label>
+          </div>
 
           <div className="flex flex-wrap gap-3 pt-2">
             <button

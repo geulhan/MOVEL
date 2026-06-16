@@ -7,7 +7,7 @@ export type CenterFeatures = Record<CenterFeatureKey, boolean>
 export const DEFAULT_CENTER_FEATURES: CenterFeatures = {
   mileage: true,
   contracts: false,
-  notifications: true,
+  notifications: false,
 }
 
 export const CENTER_FEATURE_LABELS: Record<

@@ -5,6 +5,7 @@ import {
   triggerRenewalReminders,
 } from '../../api/notifications'
 import { MessageCampaignPanel } from '../../components/admin/MessageCampaignPanel'
+import { MessagingCreditPanel } from '../../components/admin/MessagingCreditPanel'
 import { PageHeader } from '../../components/admin/PageHeader'
 import type { MessageCampaignKind } from '../../api/messageCampaigns'
 import {
@@ -98,6 +99,8 @@ export default function MessagesPage() {
         title="메시지 발송"
         description="회원 유형별로 알림톡을 확인하고 수동 발송할 수 있습니다."
       />
+
+      <MessagingCreditPanel onUpdated={() => void loadLogs()} />
 
       <nav className="chip-scroll -mx-1 px-1">
         {SEND_TABS.map((tab) => (

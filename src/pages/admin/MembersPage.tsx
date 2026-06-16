@@ -12,12 +12,13 @@ import { isTrainerStaff } from '../../lib/adminPermissions'
 import { getAdminSession } from '../../lib/adminSession'
 import { MemberFilterBar } from '../../components/MemberFilterBar'
 import { MemberForm } from '../../components/MemberForm'
+import { MemberImportPanel } from '../../components/admin/MemberImportPanel'
 import { MemberSearchCombobox } from '../../components/admin/MemberSearchCombobox'
 import { MemberList } from '../../components/MemberList'
 import { exportMembersExcel } from '../../lib/excelExport'
 import { formatSupabaseError } from '../../lib/errors'
 import { btnOutline } from '../../styles/theme'
-import type { MemberStatus, Trainer } from '../../types/database'
+import type { Member, MemberStatus, Trainer } from '../../types/database'
 import { MEMBER_STATUS_LABELS } from '../../types/database'
 import {
   applyRenewalFilter,
@@ -30,6 +31,42 @@ import {
   isUnregisteredMember,
   type RenewalFilter,
 } from '../../utils/renewal'
+
+type MemberSortOption =
+  | 'registered_desc'
+  | 'registered_asc'
+  | 'name_asc'
+  | 'name_desc'
+  | 'remaining_asc'
+  | 'remaining_desc'
+
+const SORT_OPTIONS: { value: MemberSortOption; label: string }[] = [
+  { value: 'registered_desc', label: '등록순 (최신)' },
+  { value: 'registered_asc', label: '등록순 (오래된)' },
+  { value: 'name_asc', label: '이름순 (가나다)' },
+  { value: 'name_desc', label: '이름순 (역순)' },
+  { value: 'remaining_asc', label: '잔여횟수 (적은)' },
+  { value: 'remaining_desc', label: '잔여횟수 (많은)' },
+]
+
+function sortMembers(members: Member[], sort: MemberSortOption): Member[] {
+  const copy = [...members]
+  switch (sort) {
+    case 'name_asc':
+      return copy.sort((a, b) => a.name.localeCompare(b.name, 'ko'))
+    case 'name_desc':
+      return copy.sort((a, b) => b.name.localeCompare(a.name, 'ko'))
+    case 'registered_asc':
+      return copy.sort((a, b) => a.registered_at.localeCompare(b.registered_at))
+    case 'remaining_asc':
+      return copy.sort((a, b) => a.remaining_sessions - b.remaining_sessions)
+    case 'remaining_desc':
+      return copy.sort((a, b) => b.remaining_sessions - a.remaining_sessions)
+    case 'registered_desc':
+    default:
+      return copy.sort((a, b) => b.registered_at.localeCompare(a.registered_at))
+  }
+}
 
 export default function MembersPage() {
   const navigate = useNavigate()
@@ -47,6 +84,7 @@ export default function MembersPage() {
   >(null)
   const [searchLoading, setSearchLoading] = useState(false)
   const [renewalFilter, setRenewalFilter] = useState<RenewalFilter>('all')
+  const [sortOption, setSortOption] = useState<MemberSortOption>('registered_desc')
   const [loading, setLoading] = useState(true)
   const [deductingId, setDeductingId] = useState<string | null>(null)
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
@@ -181,11 +219,11 @@ export default function MembersPage() {
 
   const displayMembers = useMemo(() => {
     const term = activeSearch.trim()
-    if (term) {
-      return searchResults ?? filterBySearch(scopedMembers, term)
-    }
-    return applyRenewalFilter(scopedMembers, renewalFilter)
-  }, [scopedMembers, activeSearch, renewalFilter, searchResults])
+    const base = term
+      ? searchResults ?? filterBySearch(scopedMembers, term)
+      : applyRenewalFilter(scopedMembers, renewalFilter)
+    return sortMembers(base, sortOption)
+  }, [scopedMembers, activeSearch, renewalFilter, searchResults, sortOption])
 
   const suggestionMembers = useMemo(() => {
     const term = searchInput.trim()
@@ -282,14 +320,22 @@ export default function MembersPage() {
               : '등록·검색·PT 차감 및 상세 관리'
           }
         />
-        <button
-          type="button"
-          onClick={() => exportMembersExcel(scopedMembers)}
-          disabled={loading || scopedMembers.length === 0}
-          className={`shrink-0 ${btnOutline}`}
-        >
-          엑셀 다운로드
-        </button>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          {!isTrainer && (
+            <MemberImportPanel
+              trainers={trainers}
+              onImported={() => void loadMembers()}
+            />
+          )}
+          <button
+            type="button"
+            onClick={() => exportMembersExcel(sortMembers(scopedMembers, sortOption))}
+            disabled={loading || scopedMembers.length === 0}
+            className={btnOutline}
+          >
+            엑셀 다운로드
+          </button>
+        </div>
       </div>
 
       {toast && (
@@ -315,6 +361,22 @@ export default function MembersPage() {
           onChange={setRenewalFilter}
           counts={filterCounts}
         />
+        <div className="flex flex-wrap gap-2">
+          {SORT_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setSortOption(option.value)}
+              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                sortOption === option.value
+                  ? 'border-charcoal bg-charcoal text-cream'
+                  : 'border-gold/30 bg-white text-charcoal hover:border-gold/60'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
         <MemberSearchCombobox
           value={searchInput}
           suggestions={suggestionMembers}

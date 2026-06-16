@@ -6,13 +6,15 @@ import {
   suspendPlatformCenter,
   type PlatformCenter,
 } from '../../api/platformCenters'
-import { PlatformCenterServicePeriodModal } from '../../components/platform/PlatformCenterServicePeriodModal'
 import { PlatformCenterAccountsModal } from '../../components/platform/PlatformCenterAccountsModal'
+import { PlatformCenterCreditsModal } from '../../components/platform/PlatformCenterCreditsModal'
+import { PlatformCenterServicePeriodModal } from '../../components/platform/PlatformCenterServicePeriodModal'
 import {
   formatServicePeriod,
   getServicePeriodStatus,
   SERVICE_PERIOD_STATUS_LABELS,
 } from '../../types/centerServicePeriod'
+import { exportPlatformCentersExcel } from '../../lib/platformExcelExport'
 import { btnOutline, btnPrimary, cardClass } from '../../styles/theme'
 
 const STATUS_LABELS: Record<string, string> = {
@@ -44,6 +46,7 @@ export default function PlatformHomePage() {
   const [actionId, setActionId] = useState<string | null>(null)
   const [periodCenter, setPeriodCenter] = useState<PlatformCenter | null>(null)
   const [accountsCenter, setAccountsCenter] = useState<PlatformCenter | null>(null)
+  const [creditsOpen, setCreditsOpen] = useState(false)
 
   const loadCenters = useCallback(async () => {
     setLoading(true)
@@ -118,9 +121,26 @@ export default function PlatformHomePage() {
             MotionHub에 등록된 모든 센터를 관리합니다.
           </p>
         </div>
-        <Link to="/platform/centers/new" className={btnPrimary}>
-          + 새 센터 생성
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => exportPlatformCentersExcel(centers)}
+            disabled={loading || centers.length === 0}
+            className={btnOutline}
+          >
+            엑셀 다운로드
+          </button>
+          <button
+            type="button"
+            onClick={() => setCreditsOpen(true)}
+            className={btnOutline}
+          >
+            메시지 크레딧
+          </button>
+          <Link to="/platform/centers/new" className={btnPrimary}>
+            + 새 센터 생성
+          </Link>
+        </div>
       </div>
 
       {error && (
@@ -256,6 +276,11 @@ export default function PlatformHomePage() {
           onSaved={() => void loadCenters()}
         />
       )}
+
+      <PlatformCenterCreditsModal
+        open={creditsOpen}
+        onClose={() => setCreditsOpen(false)}
+      />
     </div>
   )
 }

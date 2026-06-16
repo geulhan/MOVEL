@@ -130,6 +130,29 @@ async function loadRecognitionInputs(centerId: string) {
     status: p.status,
   }))
 
+  const facilityRefundInputs: PeriodPassRefundInput[] = (
+    facilityRes.data ?? []
+  ).map((p) => {
+    const totalDays = Math.max(
+      1,
+      Math.round(
+        (new Date(`${p.ends_at}T12:00:00`).getTime() -
+          new Date(`${p.starts_at}T12:00:00`).getTime()) /
+          86_400_000,
+      ) + 1,
+    )
+
+    return {
+      id: p.id,
+      startsAt: p.starts_at,
+      endsAt: p.ends_at,
+      amount: Number(p.amount ?? 0),
+      status: p.status,
+      paidAt: p.starts_at,
+      durationDays: totalDays,
+    }
+  })
+
   const periodPasses = [...centerPasses, ...facilityPasses]
 
   const ptPayments: PtPayment[] = (paymentsRes.data ?? [])
@@ -159,6 +182,7 @@ async function loadRecognitionInputs(centerId: string) {
     periodPasses,
     facilityPasses,
     centerPassRefundInputs,
+    facilityRefundInputs,
     ptPayments,
     sessionLogs,
     memberTrainers,
@@ -303,7 +327,11 @@ function buildSnapshotForMonth(
     daysPerSession,
     today,
   )
-  const facilityPrepaid = centerPassPrepaidBalance(inputs.facilityPasses, today)
+  const facilitySplit = splitCenterPassPrepaidByRefundWindow(
+    inputs.facilityRefundInputs,
+    daysPerSession,
+    today,
+  )
   const ptSplit = splitPtPrepaidByRefundWindow(
     inputs.ptPayments,
     inputs.sessionLogs,
@@ -311,8 +339,8 @@ function buildSnapshotForMonth(
     today,
   )
 
-  const centerPassRefundRisk = centerPassSplit.refundable + facilityPrepaid
-  const centerPassRefundExpired = centerPassSplit.expired
+  const centerPassRefundRisk = centerPassSplit.refundable + facilitySplit.refundable
+  const centerPassRefundExpired = centerPassSplit.expired + facilitySplit.expired
   const ptRefundRisk = ptSplit.refundable
   const ptRefundExpired = ptSplit.expired
   const totalRefundRisk = centerPassRefundRisk + ptRefundRisk

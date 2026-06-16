@@ -1,5 +1,14 @@
-솔라피 + MOVEL 알림 연동 가이드
+솔라피 + MotionHub 알림 연동 가이드
 ================================
+
+[센터별 채널 — 권장 운영 방식]
+1) MotionHub 플랫폼: Supabase Secrets에 공용 SOLAPI_API_KEY/SECRET + MESSAGING_ENABLED=true
+2) 각 센터 관리자: 관리자 → 메시지 발송 → 「알림톡·문자 채널 설정」
+   - 카카오 pfId, 발신번호, 템플릿 ID (센터별)
+   - 「이 센터 메시지 발송 사용」 체크
+3) 센터별 솔라피 계정이 따로 있으면 「MotionHub 공용 API 키 사용」 해제 후 전용 키 입력
+
+DB: migration_064_center_messaging_config.sql 실행 필수
 
 [검수 전에 할 일]
 1) Supabase SQL 실행 (아직 안 했다면 순서대로)
@@ -25,22 +34,22 @@
    - 솔라피 콘솔 → 카카오 채널 연동
    - pfId(프로필 ID) 메모
 
-3) 알림톡 템플릿 등록 및 심사 (변수명은 아래와 동일하게)
+3) 알림톡 템플릿 등록 및 심사 (변수명은 아래와 동일하게, 센터마다 별도 등록)
    [환영] welcome
-     #{name}님 MOVEL 가입을 환영합니다.
+     #{name}님 #{centerName} 가입을 환영합니다.
      회원 포털: #{portalUrl}
      초기 비밀번호는 휴대폰 뒤 4자리입니다.
 
    [결제] payment_done
-     #{name}님 #{amount} 결제가 완료되었습니다. (PT #{sessions}회)
+     #{name}님 #{centerName} — #{amount} 결제가 완료되었습니다. (PT #{sessions}회)
      회원 포털: #{portalUrl}
 
    [갱신] renewal
-     #{name}님 회원권 만료가 #{daysLeft}일 남았습니다. (만료일 #{expiresAt})
+     #{name}님 #{centerName} 회원권 만료가 #{daysLeft}일 남았습니다. (만료일 #{expiresAt})
      잔여 PT #{remainingSessions}회 · #{portalUrl}
 
    [PT 리마인더] pt_reminder
-     #{name}님 PT 수업이 내일 예정되어 있습니다.
+     #{name}님 #{centerName} PT 수업이 내일 예정되어 있습니다.
      일시: #{scheduledAt}
      담당: #{trainerName}
      회원 포털: #{portalUrl}

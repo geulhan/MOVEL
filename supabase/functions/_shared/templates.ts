@@ -39,7 +39,7 @@ export function formatScheduledAtKst(iso: string): string {
 export function buildTemplateVariables(
   templateKey: TemplateKey,
   member: MemberRow,
-  config: { siteUrl: string },
+  config: { siteUrl: string; centerSlug?: string; centerName?: string },
   extra: {
     amount?: number
     sessions?: number
@@ -50,18 +50,24 @@ export function buildTemplateVariables(
     trainerName?: string
   } = {},
 ): Record<string, string> {
-  const portalUrl = `${config.siteUrl}/member`
+  const slug = config.centerSlug?.trim().toLowerCase() ?? ''
+  const portalUrl = slug
+    ? `${config.siteUrl}/member?center=${encodeURIComponent(slug)}`
+    : `${config.siteUrl}/member`
+  const centerName = config.centerName?.trim() || '센터'
 
   switch (templateKey) {
     case 'welcome':
       return {
         '#{name}': member.name,
+        '#{centerName}': centerName,
         '#{portalUrl}': portalUrl,
         '#{phone}': member.phone,
       }
     case 'payment_done':
       return {
         '#{name}': member.name,
+        '#{centerName}': centerName,
         '#{amount}': formatCurrency(extra.amount ?? 0),
         '#{sessions}': String(extra.sessions ?? 0),
         '#{portalUrl}': portalUrl,
@@ -69,6 +75,7 @@ export function buildTemplateVariables(
     case 'renewal':
       return {
         '#{name}': member.name,
+        '#{centerName}': centerName,
         '#{expiresAt}': formatKoreanDate(member.expires_at),
         '#{daysLeft}': String(extra.daysLeft ?? 0),
         '#{remainingSessions}': String(member.remaining_sessions),
@@ -77,6 +84,7 @@ export function buildTemplateVariables(
     case 'step_verification_result':
       return {
         '#{name}': member.name,
+        '#{centerName}': centerName,
         '#{result}': extra.approved ? '승인' : '반려',
         '#{reason}': extra.reason?.trim() || (extra.approved ? '인증 완료' : '-'),
         '#{portalUrl}': portalUrl,
@@ -84,6 +92,7 @@ export function buildTemplateVariables(
     case 'pt_reminder':
       return {
         '#{name}': member.name,
+        '#{centerName}': centerName,
         '#{scheduledAt}': extra.scheduledAt ?? '-',
         '#{trainerName}': extra.trainerName?.trim() || '담당 트레이너',
         '#{portalUrl}': portalUrl,

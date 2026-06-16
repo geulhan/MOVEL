@@ -30,7 +30,10 @@ export function getSolapiConfig(): SolapiConfig {
   }
 }
 
-export function isSolapiReady(config: SolapiConfig, templateKey: string): string | null {
+export function isSolapiReady(
+  config: SolapiConfig,
+  templateKey: string,
+): string | null {
   if (!config.enabled) return 'MESSAGING_ENABLED is false'
   if (!config.apiKey || !config.apiSecret) return 'SOLAPI API keys missing'
   if (!config.pfId) return 'SOLAPI_PF_ID missing'
@@ -39,6 +42,13 @@ export function isSolapiReady(config: SolapiConfig, templateKey: string): string
     return `Template ID missing for ${templateKey}`
   }
   return null
+}
+
+export function isCenterMessagingReady(
+  context: { config: SolapiConfig },
+  templateKey: string,
+): string | null {
+  return isSolapiReady(context.config, templateKey)
 }
 
 async function createAuthorizationHeader(

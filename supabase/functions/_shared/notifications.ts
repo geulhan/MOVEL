@@ -1,4 +1,9 @@
-import { getSolapiConfig, isSolapiReady, sendAlimtalk } from './solapi.ts'
+import { loadCenterMessagingContext } from './centerMessaging.ts'
+import {
+  creditsForChannel,
+  tryConsumeMessageCredits,
+} from './messageCredits.ts'
+import { isCenterMessagingReady, sendAlimtalk } from './solapi.ts'
 import { getSupabaseAdmin } from './supabaseAdmin.ts'
 import {
   buildTemplateVariables,
@@ -119,7 +124,6 @@ export async function sendMemberNotification(
   input: SendNotificationInput,
 ): Promise<SendNotificationResult> {
   const supabase = getSupabaseAdmin()
-  const config = getSolapiConfig()
   const metadata: Record<string, string | number> = {
     ...(input.metadata ?? {}),
   }
@@ -159,6 +163,41 @@ export async function sendMemberNotification(
     }
   }
 
+  const messagingContext = await loadCenterMessagingContext(supabase, centerId)
+  if (!messagingContext) {
+    return {
+      ok: false,
+      status: 'failed',
+      error: '센터 정보를 불러올 수 없습니다.',
+    }
+  }
+
+  const config = messagingContext.config
+
+  if (!config.enabled) {
+    return {
+      ok: true,
+      status: 'skipped',
+      skippedReason: 'notifications_disabled',
+      error: '알림톡 사용이 꺼져 있습니다.',
+    }
+  }
+
+  const { data: summary } = await supabase.rpc('get_message_credit_summary', {
+    p_center_id: centerId,
+  })
+  const balance =
+    summary && typeof summary === 'object' && !Array.isArray(summary)
+      ? Number((summary as Record<string, unknown>).balance ?? 0)
+      : 0
+  if (balance <= 0) {
+    return {
+      ok: false,
+      status: 'failed',
+      error: '메시지 크레딧이 부족합니다.',
+    }
+  }
+
   if (await hasDuplicate(input.templateKey, input.memberId, metadata)) {
     return {
       ok: true,
@@ -186,7 +225,11 @@ export async function sendMemberNotification(
     buildTemplateVariables(
       input.templateKey,
       member as MemberRow,
-      config,
+      {
+        siteUrl: config.siteUrl,
+        centerSlug: messagingContext.centerSlug,
+        centerName: messagingContext.centerName,
+      },
       {
         amount,
         sessions,
@@ -198,7 +241,7 @@ export async function sendMemberNotification(
       },
     )
 
-  const readiness = isSolapiReady(config, input.templateKey)
+  const readiness = isCenterMessagingReady(messagingContext, input.templateKey)
   const now = new Date().toISOString()
 
   if (readiness) {
@@ -288,6 +331,30 @@ export async function sendMemberNotification(
       sent_at: now,
     })
     .eq('id', pendingLog.id)
+
+  const sentChannel = (sendResult.channel ?? 'alimtalk') as 'alimtalk' | 'sms'
+  const creditAmount = creditsForChannel(sentChannel)
+  const consumeResult = await tryConsumeMessageCredits(
+    supabase,
+    centerId,
+    creditAmount,
+    `발송: ${input.templateKey}`,
+    {
+      message_log_id: pendingLog.id,
+      template_key: input.templateKey,
+      channel: sentChannel,
+      member_id: input.memberId,
+    },
+  )
+
+  if (!consumeResult.ok) {
+    return {
+      ok: true,
+      status: 'sent',
+      logId: pendingLog.id,
+      error: consumeResult.message ?? '발송 후 크레딧 차감 실패',
+    }
+  }
 
   return { ok: true, status: 'sent', logId: pendingLog.id }
 }
