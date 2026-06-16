@@ -126,13 +126,28 @@ export default function CenterSettingsPage() {
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const pendingLogoFile = useRef<File | null>(null)
+  const logoPreviewBlob = useRef<string | null>(null)
+  const logoInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     setTheme(branding.theme)
     setLogoPreview(branding.logoUrl)
     setClearLogo(false)
     pendingLogoFile.current = null
+    if (logoPreviewBlob.current) {
+      URL.revokeObjectURL(logoPreviewBlob.current)
+      logoPreviewBlob.current = null
+    }
   }, [branding])
+
+  function setPreviewFromFile(file: File) {
+    if (logoPreviewBlob.current) {
+      URL.revokeObjectURL(logoPreviewBlob.current)
+    }
+    const blobUrl = URL.createObjectURL(file)
+    logoPreviewBlob.current = blobUrl
+    setLogoPreview(blobUrl)
+  }
 
   function applyPreset(preset: ThemePreset) {
     setSelectedPreset(preset.id)
@@ -141,16 +156,24 @@ export default function CenterSettingsPage() {
 
   function handleLogoChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
+    event.target.value = ''
     if (!file) return
     pendingLogoFile.current = file
     setClearLogo(false)
-    setLogoPreview(URL.createObjectURL(file))
+    setPreviewFromFile(file)
   }
 
   function handleRemoveLogo() {
     pendingLogoFile.current = null
+    if (logoPreviewBlob.current) {
+      URL.revokeObjectURL(logoPreviewBlob.current)
+      logoPreviewBlob.current = null
+    }
     setLogoPreview(null)
     setClearLogo(true)
+    if (logoInputRef.current) {
+      logoInputRef.current.value = ''
+    }
   }
 
   async function handleSave() {
@@ -174,7 +197,15 @@ export default function CenterSettingsPage() {
 
       applyLocal(saved)
       pendingLogoFile.current = null
+      if (logoPreviewBlob.current) {
+        URL.revokeObjectURL(logoPreviewBlob.current)
+        logoPreviewBlob.current = null
+      }
+      setLogoPreview(saved.logoUrl)
       setClearLogo(false)
+      if (logoInputRef.current) {
+        logoInputRef.current.value = ''
+      }
       setMessage('센터 설정이 저장되었습니다.')
     } catch (err) {
       setError(err instanceof Error ? err.message : '저장에 실패했습니다.')
@@ -236,6 +267,7 @@ export default function CenterSettingsPage() {
           <div className="flex h-20 min-w-[12rem] items-center justify-center rounded-xl border border-dashed border-gold/35 bg-cream/40 px-4">
             {logoPreview && !clearLogo ? (
               <img
+                key={logoPreview}
                 src={logoPreview}
                 alt="로고 미리보기"
                 className="max-h-16 max-w-[16rem] object-contain"
@@ -248,6 +280,7 @@ export default function CenterSettingsPage() {
             <label className={`cursor-pointer ${btnOutline}`}>
               로고 업로드
               <input
+                ref={logoInputRef}
                 type="file"
                 accept="image/png,image/jpeg,image/webp,image/svg+xml"
                 className="hidden"
@@ -332,9 +365,16 @@ export default function CenterSettingsPage() {
             disabled={saving}
             onClick={() => {
               setTheme(branding.theme)
+              if (logoPreviewBlob.current) {
+                URL.revokeObjectURL(logoPreviewBlob.current)
+                logoPreviewBlob.current = null
+              }
               setLogoPreview(branding.logoUrl)
               setClearLogo(false)
               pendingLogoFile.current = null
+              if (logoInputRef.current) {
+                logoInputRef.current.value = ''
+              }
               setSelectedPreset(null)
             }}
           >

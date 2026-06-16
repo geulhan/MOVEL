@@ -16,6 +16,7 @@ export function CenterBrandMark({
 
   const content = branding.logoUrl ? (
     <img
+      key={branding.logoUrl}
       src={branding.logoUrl}
       alt={`${branding.centerName} 로고`}
       className={

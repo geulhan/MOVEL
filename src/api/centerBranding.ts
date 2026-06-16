@@ -11,6 +11,20 @@ import type { Json } from '../types/database'
 
 const LOGO_BUCKET = 'center-logos'
 const MAX_LOGO_BYTES = 2 * 1024 * 1024
+const LOGO_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'svg'] as const
+
+function withCacheBuster(publicUrl: string): string {
+  const base = publicUrl.split('?')[0]
+  return `${base}?v=${Date.now()}`
+}
+
+async function removeExistingCenterLogos(centerId: string): Promise<void> {
+  const paths = LOGO_EXTENSIONS.map((ext) => `${centerId}/logo.${ext}`)
+  const { error } = await supabase.storage.from(LOGO_BUCKET).remove(paths)
+  if (error) {
+    console.warn('기존 로고 파일 삭제 실패:', error.message)
+  }
+}
 
 export async function fetchCenterBranding(
   centerId?: string,
@@ -58,16 +72,22 @@ export async function uploadCenterLogo(
   const ext = file.name.split('.').pop()?.toLowerCase() || 'png'
   const imagePath = `${centerId}/logo.${ext}`
 
+  await removeExistingCenterLogos(centerId)
+
   const { error: uploadError } = await supabase.storage
     .from(LOGO_BUCKET)
-    .upload(imagePath, file, { cacheControl: '3600', upsert: true })
+    .upload(imagePath, file, {
+      cacheControl: '60',
+      upsert: true,
+      contentType: file.type || undefined,
+    })
 
   if (uploadError) {
     throw new Error(`로고 업로드 실패: ${uploadError.message}`)
   }
 
   const { data: urlData } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(imagePath)
-  return urlData.publicUrl
+  return withCacheBuster(urlData.publicUrl)
 }
 
 export async function saveCenterBranding(input: {
