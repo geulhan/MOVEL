@@ -1,8 +1,14 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "redirects": [
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/sitemap",
+      "permanent": false
+    }
+  ],
   "rewrites": [
-    { "source": "/sitemap.xml", "destination": "/api/sitemap" },
     {
       "source": "/",
       "has": [{ "type": "host", "value": "motionhub.kr" }],
