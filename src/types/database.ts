@@ -286,6 +286,7 @@ export type InbodyCreatedBy = 'member' | 'trainer' | 'admin'
 export type InbodyRecord = {
   id: string
   member_id: string
+  center_id?: string
   measured_at: string
   weight_kg: number
   skeletal_muscle_kg: number
@@ -793,6 +794,7 @@ export type Database = {
         InbodyRecord,
         {
           member_id: string
+          center_id?: string
           measured_at: string
           weight_kg: number
           skeletal_muscle_kg: number

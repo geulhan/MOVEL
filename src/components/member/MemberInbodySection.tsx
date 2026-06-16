@@ -96,7 +96,7 @@ export function MemberInbodySection({
     setDeletingId(recordId)
     setError(null)
     try {
-      await deleteInbodyRecord(recordId)
+      await deleteInbodyRecord(recordId, memberId)
       await load()
     } catch (err) {
       setError(formatSupabaseError(err))

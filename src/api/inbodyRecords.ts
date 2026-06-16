@@ -1,3 +1,4 @@
+import { resolveCenterIdForMember } from '../lib/center'
 import { supabase } from '../lib/supabase'
 
 export type InbodyCreatedBy = 'member' | 'trainer' | 'admin'
@@ -5,6 +6,7 @@ export type InbodyCreatedBy = 'member' | 'trainer' | 'admin'
 export type InbodyRecord = {
   id: string
   member_id: string
+  center_id?: string
   measured_at: string
   weight_kg: number
   skeletal_muscle_kg: number
@@ -37,10 +39,12 @@ function normalize(row: InbodyRecord): InbodyRecord {
 export async function fetchInbodyRecords(
   memberId: string,
 ): Promise<InbodyRecord[]> {
+  const centerId = await resolveCenterIdForMember(memberId)
   const { data, error } = await supabase
     .from('member_inbody_records')
     .select('*')
     .eq('member_id', memberId)
+    .eq('center_id', centerId)
     .order('measured_at', { ascending: false })
     .order('created_at', { ascending: false })
 
@@ -52,9 +56,11 @@ export async function createInbodyRecord(
   memberId: string,
   input: InbodyInput,
 ): Promise<InbodyRecord> {
+  const centerId = await resolveCenterIdForMember(memberId)
   const { data, error } = await supabase
     .from('member_inbody_records')
     .insert({
+      center_id: centerId,
       member_id: memberId,
       measured_at: input.measured_at,
       weight_kg: input.weight_kg,
@@ -69,11 +75,17 @@ export async function createInbodyRecord(
   return normalize(data as InbodyRecord)
 }
 
-export async function deleteInbodyRecord(recordId: string): Promise<void> {
+export async function deleteInbodyRecord(
+  recordId: string,
+  memberId: string,
+): Promise<void> {
+  const centerId = await resolveCenterIdForMember(memberId)
   const { error } = await supabase
     .from('member_inbody_records')
     .delete()
     .eq('id', recordId)
+    .eq('member_id', memberId)
+    .eq('center_id', centerId)
 
   if (error) throw error
 }
