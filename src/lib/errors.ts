@@ -31,6 +31,8 @@ export function formatSupabaseError(err: unknown): string {
   if (
     msg.includes('classes') ||
     msg.includes('class_schedules') ||
+    msg.includes('class_reservations') ||
+    msg.includes('class_attendance') ||
     msg.includes('facility_checkins') ||
     msg.includes('locker_assignments') ||
     msg.includes('towel_rentals') ||
@@ -42,11 +44,18 @@ export function formatSupabaseError(err: unknown): string {
     )
   }
 
+  if (msg.includes('trainers') && (msg.includes('column') || msg.includes('display_name'))) {
+    return (
+      '트레이너 정보 조회 오류입니다. 앱이 최신 버전으로 배포되었는지 확인해 주세요. ' +
+      '계속되면 Supabase SQL Editor에서 supabase/migration_069_motionhub_saas_expansion.sql 적용 여부를 확인해 주세요.'
+    )
+  }
+
   if (
     msg.includes('trainers') ||
     msg.includes('trainer_id') ||
     msg.includes('period_extensions') ||
-    e.code === '42P01'
+    (e.code === '42P01' && !msg.includes('class'))
   ) {
     return (
       '데이터베이스 설정이 완료되지 않았습니다. ' +

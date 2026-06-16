@@ -91,18 +91,18 @@ export async function fetchClasses(): Promise<FitnessClass[]> {
   const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('classes')
-    .select('*, trainers(display_name)')
+    .select('*, trainers(name)')
     .eq('center_id', centerId)
     .order('name')
 
   if (error) throw error
 
   return (data ?? []).map((row) => {
-    const trainers = row.trainers as { display_name?: string } | null
+    const trainers = row.trainers as { name?: string } | null
     const { trainers: _t, ...rest } = row
     return {
       ...(rest as FitnessClass),
-      trainer_name: trainers?.display_name ?? undefined,
+      trainer_name: trainers?.name ?? undefined,
     }
   })
 }
@@ -161,7 +161,7 @@ export async function fetchClassSchedulesInRange(
   const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('class_schedules')
-    .select('*, classes(name, class_type, color, trainers(display_name))')
+    .select('*, classes(name, class_type, color, trainers(name))')
     .eq('center_id', centerId)
     .gte('starts_at', startIso)
     .lte('starts_at', endIso)
@@ -175,7 +175,7 @@ export async function fetchClassSchedulesInRange(
       name?: string
       class_type?: ClassType
       color?: string
-      trainers?: { display_name?: string } | null
+      trainers?: { name?: string } | null
     } | null
     const { classes: _c, ...rest } = row
     return {
@@ -183,7 +183,7 @@ export async function fetchClassSchedulesInRange(
       class_name: cls?.name,
       class_type: cls?.class_type,
       class_color: cls?.color,
-      trainer_name: cls?.trainers?.display_name ?? undefined,
+      trainer_name: cls?.trainers?.name ?? undefined,
     }
   })
 
