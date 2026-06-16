@@ -11,6 +11,7 @@ import {
   fetchClasses,
   fetchScheduleReservations,
   reserveClassForMember,
+  updateClass,
   updateReservationStatus,
   type ClassReservation,
   type ClassSchedule,
@@ -18,7 +19,7 @@ import {
   type FitnessClass,
   type ReservationStatus,
 } from '../../api/classes'
-import { fetchMembers, todayDateString } from '../../api/members'
+import { fetchMembers, formatPhone, todayDateString } from '../../api/members'
 import { fetchTrainers } from '../../api/trainers'
 import { getAdminSession } from '../../lib/adminSession'
 import { getErrorMessage } from '../../lib/errors'
@@ -37,7 +38,7 @@ import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/them
 import type { Member } from '../../types/database'
 import type { Trainer } from '../../types/database'
 
-type ModalKind = 'class' | 'schedule' | null
+type ModalKind = 'class' | 'edit-class' | 'schedule' | null
 
 export default function ClassesPage() {
   const session = getAdminSession()
@@ -57,6 +58,7 @@ export default function ClassesPage() {
   const [newClassType, setNewClassType] = useState<ClassType>('pilates')
   const [newClassCapacity, setNewClassCapacity] = useState(8)
   const [newClassTrainerId, setNewClassTrainerId] = useState('')
+  const [editingClassId, setEditingClassId] = useState<string | null>(null)
   const [newScheduleClassId, setNewScheduleClassId] = useState('')
   const [newScheduleDate, setNewScheduleDate] = useState(todayDateString())
   const [newScheduleTime, setNewScheduleTime] = useState('10:00')
@@ -108,14 +110,34 @@ export default function ClassesPage() {
     return map
   }, [schedules, weekStart])
 
-  const reserveSuggestions = useMemo(
-    () => filterBySearch(members, reserveQuery),
-    [members, reserveQuery],
+  const activeMembers = useMemo(
+    () => members.filter((m) => m.status === 'active'),
+    [members],
   )
 
+  const reservedMemberIds = useMemo(
+    () =>
+      new Set(
+        reservations.filter((r) => r.status !== 'cancelled').map((r) => r.member_id),
+      ),
+    [reservations],
+  )
+
+  const reserveSuggestions = useMemo(
+    () => filterBySearch(activeMembers, reserveQuery),
+    [activeMembers, reserveQuery],
+  )
+
+  const reservePickList = useMemo(() => {
+    const pool = reserveQuery.trim()
+      ? reserveSuggestions
+      : activeMembers
+    return pool.filter((m) => !reservedMemberIds.has(m.id)).slice(0, 12)
+  }, [reserveQuery, reserveSuggestions, activeMembers, reservedMemberIds])
+
   const reserveTargetMember = useMemo(
-    () => resolveMemberFromSearch(members, reserveQuery, reserveMember),
-    [members, reserveQuery, reserveMember],
+    () => resolveMemberFromSearch(activeMembers, reserveQuery, reserveMember),
+    [activeMembers, reserveQuery, reserveMember],
   )
 
   const reserveAmbiguous =
@@ -150,11 +172,26 @@ export default function ClassesPage() {
   }
 
   function openClassModal() {
+    setEditingClassId(null)
     setNewClassName('')
     setNewClassType('pilates')
     setNewClassCapacity(8)
     setNewClassTrainerId('')
     setModal('class')
+  }
+
+  function openEditClassModal(cls: FitnessClass) {
+    setEditingClassId(cls.id)
+    setNewClassName(cls.name)
+    setNewClassType(cls.class_type)
+    setNewClassCapacity(cls.capacity)
+    setNewClassTrainerId(cls.trainer_id ?? '')
+    setModal('edit-class')
+  }
+
+  function closeClassModal() {
+    setModal(null)
+    setEditingClassId(null)
   }
 
   function openScheduleModal() {
@@ -189,11 +226,35 @@ export default function ClassesPage() {
         trainer_id: newClassTrainerId || null,
       })
       setModal(null)
+      setEditingClassId(null)
       setNewClassName('')
       setNewClassTrainerId('')
       setNewClassCapacity(8)
       await load()
     }, '클래스가 등록되었습니다.')
+  }
+
+  async function handleUpdateClass() {
+    if (!editingClassId) return
+    if (!newClassName.trim()) {
+      setError('클래스 이름을 입력해 주세요.')
+      return
+    }
+    if (newClassCapacity < 1) {
+      setError('정원은 1명 이상이어야 합니다.')
+      return
+    }
+    await runAction(async () => {
+      await updateClass(editingClassId, {
+        name: newClassName.trim(),
+        class_type: newClassType,
+        pass_type: newClassType,
+        capacity: newClassCapacity,
+        trainer_id: newClassTrainerId || null,
+      })
+      closeClassModal()
+      await load()
+    }, '클래스가 수정되었습니다.')
   }
 
   async function handleDeleteClass(cls: FitnessClass) {
@@ -387,14 +448,24 @@ export default function ClassesPage() {
                     {cls.trainer_name ? ` · ${cls.trainer_name}` : ' · 선생님 미지정'}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  disabled={actionLoading}
-                  className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50"
-                  onClick={() => void handleDeleteClass(cls)}
-                >
-                  삭제
-                </button>
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={actionLoading}
+                    className={btnOutline}
+                    onClick={() => openEditClassModal(cls)}
+                  >
+                    수정
+                  </button>
+                  <button
+                    type="button"
+                    disabled={actionLoading}
+                    className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50"
+                    onClick={() => void handleDeleteClass(cls)}
+                  >
+                    삭제
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
@@ -509,6 +580,9 @@ export default function ClassesPage() {
 
               <div className="space-y-2 rounded-xl border border-gold/20 bg-cream/40 p-3">
                 <p className="text-xs font-semibold text-charcoal">예약 추가</p>
+                <p className="text-xs text-muted">
+                  아래 회원을 눌러 선택한 뒤 예약하세요. 이름·전화번호로 검색할 수도 있습니다.
+                </p>
                 <MemberSearchCombobox
                   elevated
                   value={reserveQuery}
@@ -523,9 +597,48 @@ export default function ClassesPage() {
                   }}
                   onClear={() => setReserveMember(null)}
                 />
+                {reservePickList.length > 0 ? (
+                  <ul className="max-h-44 overflow-y-auto rounded-xl border border-gold/25 bg-white divide-y divide-gold/15">
+                    {reservePickList.map((member) => {
+                      const selected = reserveTargetMember?.id === member.id
+                      return (
+                        <li key={member.id}>
+                          <button
+                            type="button"
+                            className={`flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm transition ${
+                              selected
+                                ? 'bg-gold/20 font-semibold text-charcoal'
+                                : 'text-charcoal hover:bg-cream/80'
+                            }`}
+                            onClick={() => {
+                              setReserveMember(member)
+                              setReserveQuery(member.name)
+                            }}
+                          >
+                            <span>{member.name}</span>
+                            <span className="text-xs text-muted">
+                              {formatPhone(member.phone)}
+                            </span>
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-muted">
+                    {reserveQuery.trim()
+                      ? '검색 결과가 없거나 이미 예약된 회원입니다.'
+                      : '예약 가능한 회원이 없습니다.'}
+                  </p>
+                )}
                 {reserveAmbiguous && (
                   <p className="text-xs text-amber-800">
-                    검색 결과가 여러 명입니다. 아래 목록에서 회원을 클릭해 선택하세요.
+                    검색 결과가 여러 명입니다. 목록에서 회원을 눌러 선택하세요.
+                  </p>
+                )}
+                {reserveTargetMember && (
+                  <p className="text-xs font-medium text-emerald-800">
+                    선택됨: {reserveTargetMember.name}
                   </p>
                 )}
                 <button
@@ -536,7 +649,7 @@ export default function ClassesPage() {
                 >
                   {reserveTargetMember
                     ? `${reserveTargetMember.name} 님 예약`
-                    : '회원 검색 후 예약'}
+                    : '회원을 선택해 주세요'}
                 </button>
               </div>
 
@@ -604,9 +717,11 @@ export default function ClassesPage() {
       {modal && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-charcoal/45 p-4 sm:items-center">
           <div className={`${cardClass} w-full max-w-md space-y-4 p-5 shadow-xl`}>
-            {modal === 'class' ? (
+            {modal === 'class' || modal === 'edit-class' ? (
               <>
-                <h3 className="text-lg font-semibold">클래스 등록</h3>
+                <h3 className="text-lg font-semibold">
+                  {modal === 'edit-class' ? '클래스 수정' : '클래스 등록'}
+                </h3>
                 <input
                   className={inputClass}
                   placeholder="클래스 이름"
@@ -655,15 +770,13 @@ export default function ClassesPage() {
                     type="button"
                     className={btnPrimary}
                     disabled={actionLoading}
-                    onClick={() => void handleCreateClass()}
+                    onClick={() =>
+                      void (modal === 'edit-class' ? handleUpdateClass() : handleCreateClass())
+                    }
                   >
-                    등록
+                    {modal === 'edit-class' ? '저장' : '등록'}
                   </button>
-                  <button
-                    type="button"
-                    className={btnOutline}
-                    onClick={() => setModal(null)}
-                  >
+                  <button type="button" className={btnOutline} onClick={closeClassModal}>
                     닫기
                   </button>
                 </div>
