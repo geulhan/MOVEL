@@ -266,6 +266,32 @@ export async function saveRewardEarnRules(rules: RewardEarnRules): Promise<void>
   if (error) throw error
 }
 
+async function sumLedgerBalance(
+  memberId: string,
+  currency: RewardCurrency,
+): Promise<number> {
+  const { data, error } = await supabase
+    .from('reward_transactions')
+    .select('amount')
+    .eq('member_id', memberId)
+    .eq('currency', currency)
+
+  if (error) throw error
+  return (data ?? []).reduce((sum, row) => sum + Number(row.amount), 0)
+}
+
+/** 거래 원장 기준으로 reward_balances 캐시를 맞춥니다. */
+export async function reconcileRewardBalance(memberId: string): Promise<{
+  move_score: number
+  move_mile: number
+}> {
+  const move_score = Math.max(0, await sumLedgerBalance(memberId, 'move_score'))
+  const move_mile = Math.max(0, await sumLedgerBalance(memberId, 'move_mile'))
+
+  await updateBalance(memberId, move_score, move_mile)
+  return { move_score, move_mile }
+}
+
 async function ensureBalance(memberId: string): Promise<{
   move_score: number
   move_mile: number
@@ -277,33 +303,34 @@ async function ensureBalance(memberId: string): Promise<{
     .maybeSingle()
 
   if (error) throw error
-  if (data) {
-    return {
-      move_score: Number(data.move_score),
-      move_mile: Number(data.move_mile),
-    }
+  if (!data) {
+    const { error: upsertError } = await supabase
+      .from('reward_balances')
+      .upsert(
+        {
+          member_id: memberId,
+          center_id: await getCurrentCenterId(memberId),
+          move_score: 0,
+          move_mile: 0,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'member_id' },
+      )
+
+    if (upsertError) throw upsertError
+    return reconcileRewardBalance(memberId)
   }
 
-  const { data: created, error: upsertError } = await supabase
-    .from('reward_balances')
-    .upsert(
-      {
-        member_id: memberId,
-        center_id: await getCurrentCenterId(memberId),
-        move_score: 0,
-        move_mile: 0,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'member_id' },
-    )
-    .select('move_score, move_mile')
-    .single()
+  const cachedScore = Number(data.move_score)
+  const cachedMile = Number(data.move_mile)
+  const ledgerScore = await sumLedgerBalance(memberId, 'move_score')
+  const ledgerMile = await sumLedgerBalance(memberId, 'move_mile')
 
-  if (upsertError) throw upsertError
-  return {
-    move_score: Number(created.move_score),
-    move_mile: Number(created.move_mile),
+  if (cachedScore !== ledgerScore || cachedMile !== ledgerMile) {
+    return reconcileRewardBalance(memberId)
   }
+
+  return { move_score: cachedScore, move_mile: cachedMile }
 }
 
 function addMonths(iso: string, months: number): string {
@@ -1115,6 +1142,8 @@ export async function fetchAllRewardBalances(): Promise<MemberRewardSummary[]> {
 
   const memberIds = ((members ?? []) as { id: string }[]).map((m) => m.id)
   if (memberIds.length === 0) return []
+
+  await Promise.all(memberIds.map((id) => reconcileRewardBalance(id)))
 
   const { data: balances, error: balError } = await supabase
     .from('reward_balances')
