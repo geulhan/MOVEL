@@ -59,6 +59,7 @@ export type Center = {
   settings?: Json | null
   service_starts_at?: string | null
   service_ends_at?: string | null
+  operational_type?: string
   created_at: string
   updated_at: string
 }
@@ -1147,6 +1148,42 @@ export type Database = {
         { member_id: string; password_hash: string },
         { password_hash?: string; updated_at?: string }
       >
+      classes: TableDef<Record<string, unknown>, Record<string, unknown>, Record<string, unknown>>
+      class_schedules: TableDef<
+        Record<string, unknown>,
+        Record<string, unknown>,
+        Record<string, unknown>
+      >
+      class_reservations: TableDef<
+        Record<string, unknown>,
+        Record<string, unknown>,
+        Record<string, unknown>
+      >
+      class_attendance: TableDef<
+        Record<string, unknown>,
+        Record<string, unknown>,
+        Record<string, unknown>
+      >
+      member_session_passes: TableDef<
+        Record<string, unknown>,
+        Record<string, unknown>,
+        Record<string, unknown>
+      >
+      locker_assignments: TableDef<
+        Record<string, unknown>,
+        Record<string, unknown>,
+        Record<string, unknown>
+      >
+      towel_rentals: TableDef<
+        Record<string, unknown>,
+        Record<string, unknown>,
+        Record<string, unknown>
+      >
+      facility_checkins: TableDef<
+        Record<string, unknown>,
+        Record<string, unknown>,
+        Record<string, unknown>
+      >
     }
     Views: Record<string, never>
     Functions: {
@@ -1187,6 +1224,14 @@ export type Database = {
           p_contact_phone?: string | null
           p_service_starts_at?: string | null
           p_service_ends_at?: string | null
+          p_operational_type?: string | null
+        }
+        Returns: Json
+      }
+      update_center_operational_features: {
+        Args: {
+          p_session_token: string
+          p_features: Json
         }
         Returns: Json
       }

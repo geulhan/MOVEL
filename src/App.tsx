@@ -20,6 +20,8 @@ import MessagesPage from './pages/admin/MessagesPage'
 import PaymentsPage from './pages/admin/PaymentsPage'
 import CenterSettingsPage from './pages/admin/CenterSettingsPage'
 import BusinessAnalyticsPage from './pages/admin/BusinessAnalyticsPage'
+import ClassesPage from './pages/admin/ClassesPage'
+import FacilityOpsPage from './pages/admin/FacilityOpsPage'
 import MemberPortalPage from './pages/MemberPortalPage'
 import { RootPage } from './pages/RootPage'
 import LoginPage from './pages/LoginPage'
@@ -68,6 +70,7 @@ export default function App() {
               element={<MemberDetailLegacyRedirect />}
             />
             <Route path="schedule" element={<SchedulePage />} />
+            <Route path="classes" element={<ClassesPage />} />
             <Route path="attendance" element={<AttendancePage />} />
             <Route path="trainers" element={<TrainersPage />} />
             <Route path="rewards" element={<RewardsPage />} />
@@ -75,10 +78,7 @@ export default function App() {
             <Route path="payments" element={<PaymentsPage />} />
             <Route path="analytics" element={<BusinessAnalyticsPage />} />
             <Route path="settings" element={<CenterSettingsPage />} />
-            <Route
-              path="facility"
-              element={<Navigate to="/admin/payments?category=center_pass" replace />}
-            />
+            <Route path="facility" element={<FacilityOpsPage />} />
           </Route>
         </Route>
         <Route path="/member/:memberId" element={<MemberAdminDetailRedirect />} />

@@ -46,6 +46,7 @@ import { MemberPaymentSection } from '../components/member/MemberPaymentSection'
 import { MemberRewardsSection } from '../components/MemberRewardsSection'
 import { PullToRefresh } from '../components/PullToRefresh'
 import { MemberScheduleSection } from '../components/MemberScheduleSection'
+import { MemberClassBookingSection } from '../components/member/MemberClassBookingSection'
 import { MemberJournalPortalSection } from '../components/member/MemberJournalPortalSection'
 import { MemberInbodySection } from '../components/member/MemberInbodySection'
 import { MemberPortalNav } from '../components/member/MemberPortalNav'
@@ -598,7 +599,9 @@ export default function MemberPortalPage() {
       )}
 
       {tab === 'schedule' && member && (
-        <MemberScheduleSection
+        <>
+          <MemberClassBookingSection memberId={member.id} />
+          <MemberScheduleSection
           memberId={member.id}
           checkIn={{
             todayAttendance,
@@ -610,6 +613,7 @@ export default function MemberPortalPage() {
             memberExpired,
           }}
         />
+        </>
       )}
 
         {tab === 'payment' && member && (

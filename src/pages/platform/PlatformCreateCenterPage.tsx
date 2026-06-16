@@ -2,6 +2,8 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { createPlatformCenter } from '../../api/platformCenters'
 import { formatPhone, todayDateString } from '../../api/members'
+import type { CenterOperationalType } from '../../types/centerFeatures'
+import { OPERATIONAL_TYPE_LABELS } from '../../types/centerFeatures'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/theme'
 
 function addDays(dateStr: string, days: number): string {
@@ -34,6 +36,7 @@ export default function PlatformCreateCenterPage() {
   const [contactPhone, setContactPhone] = useState('')
   const [serviceStartsAt, setServiceStartsAt] = useState(todayDateString())
   const [serviceEndsAt, setServiceEndsAt] = useState(addDays(todayDateString(), 14))
+  const [operationalType, setOperationalType] = useState<CenterOperationalType>('pt')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<{
@@ -80,6 +83,7 @@ export default function PlatformCreateCenterPage() {
         contactPhone: phoneDigits || undefined,
         serviceStartsAt: serviceStartsAt || undefined,
         serviceEndsAt: serviceEndsAt || undefined,
+        operationalType,
       })
       setResult({
         centerName: created.centerName,
@@ -194,6 +198,27 @@ export default function PlatformCreateCenterPage() {
             />
             <p className="mt-1 text-xs text-cream/50">
               로그인 시 센터 코드로 사용됩니다. 영문 소문자·숫자·하이픈만 가능합니다.
+            </p>
+          </label>
+
+          <label className="block text-sm">
+            <span className="mb-1.5 block font-medium text-cream">센터 유형</span>
+            <select
+              className={inputClass}
+              value={operationalType}
+              onChange={(e) => setOperationalType(e.target.value as CenterOperationalType)}
+              disabled={loading}
+            >
+              {(Object.entries(OPERATIONAL_TYPE_LABELS) as [CenterOperationalType, string][]).map(
+                ([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ),
+              )}
+            </select>
+            <p className="mt-1 text-xs text-cream/50">
+              유형에 따라 회원·PT·클래스·시설 등 기본 기능이 자동 설정됩니다.
             </p>
           </label>
 

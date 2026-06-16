@@ -5,6 +5,7 @@ import { useCenterBranding } from '../../hooks/useCenterBranding'
 import { CenterBrandMark } from '../../components/brand/CenterBrandMark'
 import { PageHeader } from '../../components/admin/PageHeader'
 import { SiteUrlCopy } from '../../components/SiteUrlCopy'
+import { CenterFeatureManagementPanel } from '../../components/admin/CenterFeatureManagementPanel'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/theme'
 import { getMemberPortalUrl } from '../../lib/siteUrl'
 import { THEME_PRESETS, type CenterTheme, type ThemePreset } from '../../types/centerBranding'
@@ -382,6 +383,8 @@ export default function CenterSettingsPage() {
           </button>
         </div>
       </section>
+
+      <CenterFeatureManagementPanel />
     </div>
   )
 }

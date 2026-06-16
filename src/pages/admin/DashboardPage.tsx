@@ -1,5 +1,6 @@
 import { SalesDashboard } from '../../components/admin/SalesDashboard'
 import { OperationalKpiSidebar } from '../../components/admin/OperationalKpiSidebar'
+import { ClassDashboardKpi } from '../../components/admin/ClassDashboardKpi'
 import { PageHeader } from '../../components/admin/PageHeader'
 import { RenewalDashboard } from '../../components/RenewalDashboard'
 import { fetchMembers } from '../../api/members'
@@ -43,6 +44,7 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_15.5rem]">
         <div className="min-w-0 space-y-6">
+          <ClassDashboardKpi />
           <SalesDashboard />
           <RenewalDashboard
             stats={stats}

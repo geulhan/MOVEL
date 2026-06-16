@@ -2,6 +2,7 @@ import { NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-rout
 import { formatPhone } from '../../api/members'
 import { getMemberDetailTabs } from '../../lib/adminPermissions'
 import { getAdminSession } from '../../lib/adminSession'
+import { useCenterFeatures } from '../../hooks/useCenterFeatures'
 import { btnLinkSm, btnNavBack } from '../../styles/theme'
 import { PtAlertBadge } from '../PtAlertBadge'
 import { StatusBadge } from '../StatusBadge'
@@ -19,7 +20,8 @@ function MemberDetailShellInner() {
     : location.pathname.endsWith('/journal')
       ? '운동일지'
       : null
-  const mainTabs = getMemberDetailTabs(getAdminSession())
+  const { features } = useCenterFeatures()
+  const mainTabs = getMemberDetailTabs(getAdminSession(), features)
 
   if (loading && !member) {
     return <p className="py-16 text-center text-sm text-muted">불러오는 중…</p>

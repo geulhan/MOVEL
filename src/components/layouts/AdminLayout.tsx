@@ -4,6 +4,7 @@ import { clearAdminAuth, getAdminSession } from '../../lib/adminSession'
 import { resetCenterIdCache } from '../../lib/center'
 import { buildAdminLoginPath } from '../../lib/centerSlug'
 import { getMemberPortalUrl } from '../../lib/siteUrl'
+import { useCenterFeatures } from '../../hooks/useCenterFeatures'
 import { CenterBrandMark } from '../brand/CenterBrandMark'
 import { SetupBanner } from '../SetupBanner'
 import {
@@ -43,7 +44,8 @@ function AdminLayoutInner() {
   const { branding } = useCenterBranding()
   const themeVars = useCenterThemeVars(branding.theme)
   useApplyCenterTheme(branding.theme, branding.centerName)
-  const navItems = navItemsForSession(session)
+  const { features } = useCenterFeatures()
+  const navItems = navItemsForSession(session, features)
   const roleLabel = session?.role === 'trainer' ? '트레이너' : '관리자'
 
   function handleLogout() {

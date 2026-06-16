@@ -6,6 +6,8 @@ import {
   type CenterServicePeriod,
 } from '../types/centerServicePeriod'
 
+import type { CenterOperationalType } from '../types/centerFeatures'
+
 export type PlatformCenter = {
   id: string
   name: string
@@ -32,6 +34,7 @@ export type CreateCenterInput = {
   contactPhone?: string
   serviceStartsAt?: string
   serviceEndsAt?: string
+  operationalType?: CenterOperationalType
 }
 
 export type CreateCenterResult = {
@@ -115,6 +118,7 @@ export async function createPlatformCenter(
     p_contact_phone: input.contactPhone?.trim() || null,
     p_service_starts_at: input.serviceStartsAt || null,
     p_service_ends_at: input.serviceEndsAt || null,
+    p_operational_type: input.operationalType ?? 'pt',
   })
 
   if (error) throw error
