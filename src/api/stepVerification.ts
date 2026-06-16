@@ -87,12 +87,10 @@ export async function fetchMemberStepVerifications(
   memberId: string,
   limit = 20,
 ): Promise<StepVerification[]> {
-  const centerId = await getCurrentCenterId(memberId)
   const { data, error } = await supabase
     .from('step_verifications')
     .select('*')
     .eq('member_id', memberId)
-    .eq('center_id', centerId)
     .order('created_at', { ascending: false })
     .limit(limit)
 
@@ -104,12 +102,10 @@ export async function fetchTodayVerificationStatus(
   memberId: string,
 ): Promise<StepVerification | null> {
   const today = todayDateString()
-  const centerId = await getCurrentCenterId(memberId)
   const { data, error } = await supabase
     .from('step_verifications')
     .select('*')
     .eq('member_id', memberId)
-    .eq('center_id', centerId)
     .eq('verification_date', today)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -337,18 +333,36 @@ export async function fetchStepVerifications(options?: {
   limit?: number
 }): Promise<StepVerification[]> {
   const centerId = await getCurrentCenterId()
-  let query = supabase
+
+  if (options?.memberId) {
+    const { data, error } = await supabase
+      .from('step_verifications')
+      .select('*')
+      .eq('member_id', options.memberId)
+      .order('created_at', { ascending: false })
+      .limit(options?.limit ?? 50)
+
+    if (error) throw error
+    return (data ?? []) as StepVerification[]
+  }
+
+  const { data: members, error: membersError } = await supabase
+    .from('members')
+    .select('id')
+    .eq('center_id', centerId)
+
+  if (membersError) throw membersError
+
+  const memberIds = ((members ?? []) as { id: string }[]).map((row) => row.id)
+  if (memberIds.length === 0) return []
+
+  const { data, error } = await supabase
     .from('step_verifications')
     .select('*')
-    .eq('center_id', centerId)
+    .in('member_id', memberIds)
     .order('created_at', { ascending: false })
     .limit(options?.limit ?? 50)
 
-  if (options?.memberId) {
-    query = query.eq('member_id', options.memberId)
-  }
-
-  const { data, error } = await query
   if (error) throw error
   return (data ?? []) as StepVerification[]
 }

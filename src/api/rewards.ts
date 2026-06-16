@@ -384,6 +384,7 @@ async function updateBalance(
     .upsert(
       {
         member_id: memberId,
+        center_id: await getCurrentCenterId(memberId),
         move_score,
         move_mile,
         updated_at: new Date().toISOString(),
@@ -451,12 +452,10 @@ export async function fetchRewardTransactions(
   memberId: string,
   options?: { currency?: RewardCurrency; limit?: number },
 ): Promise<RewardTransaction[]> {
-  const centerId = await getCurrentCenterId(memberId)
   let query = supabase
     .from('reward_transactions')
     .select('*')
     .eq('member_id', memberId)
-    .eq('center_id', centerId)
     .order('created_at', { ascending: false })
     .limit(options?.limit ?? 100)
 
@@ -685,12 +684,10 @@ export async function hasApprovedStepsToday(
   memberId: string,
   date: string = todayDateString(),
 ): Promise<boolean> {
-  const centerId = await getCurrentCenterId(memberId)
   const { data, error } = await supabase
     .from('step_verifications')
     .select('id')
     .eq('member_id', memberId)
-    .eq('center_id', centerId)
     .eq('verification_date', date)
     .eq('status', 'approved')
     .maybeSingle()
@@ -1122,7 +1119,6 @@ export async function fetchAllRewardBalances(): Promise<MemberRewardSummary[]> {
   const { data: balances, error: balError } = await supabase
     .from('reward_balances')
     .select('member_id, move_score, move_mile')
-    .eq('center_id', centerId)
     .in('member_id', memberIds)
 
   if (balError) throw balError

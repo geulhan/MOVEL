@@ -134,8 +134,10 @@ export async function fetchKpiDashboard(): Promise<KpiDashboardData> {
   const since7Iso = isoDaysAgo(7)
   const trendDates = last30DateKeys()
 
+  const members = await fetchMembers()
+  const memberIds = members.map((member) => member.id)
+
   const [
-    members,
     loginRowsResult,
     stepRowsResult,
     journalRowsResult,
@@ -143,18 +145,19 @@ export async function fetchKpiDashboard(): Promise<KpiDashboardData> {
     messageRowsResult,
     attendanceRowsResult,
   ] = await Promise.all([
-    fetchMembers(),
     supabase
       .from('member_login_logs')
       .select('member_id, login_at')
       .eq('center_id', centerId)
       .gte('login_at', since30Iso),
-    supabase
-      .from('step_verifications')
-      .select('member_id, created_at')
-      .eq('center_id', centerId)
-      .eq('status', 'approved')
-      .gte('created_at', since30Iso),
+    memberIds.length > 0
+      ? supabase
+          .from('step_verifications')
+          .select('member_id, created_at')
+          .in('member_id', memberIds)
+          .eq('status', 'approved')
+          .gte('created_at', since30Iso)
+      : Promise.resolve({ data: [], error: null }),
     supabase
       .from('exercise_journals')
       .select('member_id, created_at')

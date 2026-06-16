@@ -46,11 +46,20 @@ function resolveSlugFromContext(): string | null {
 
 /**
  * insert/update에 사용할 center_id.
- * 관리자 세션 → 회원 세션 slug → 기본 센터 순으로 해석합니다.
+ * 회원 ID가 있으면 DB 소속 센터를 최우선으로 사용합니다.
+ * (slug·관리자 세션과 불일치하면 인증·마일리지가 다른 센터로 저장·조회됨)
  */
 export async function resolveCenterIdForMember(
   memberId?: string,
 ): Promise<string> {
+  if (memberId) {
+    const fromMember = await fetchMemberCenterId(memberId)
+    if (fromMember) {
+      cachedCenterId = fromMember
+      return fromMember
+    }
+  }
+
   const admin = getAdminSession()
   if (admin?.centerId) return admin.centerId
 
@@ -76,14 +85,6 @@ export async function resolveCenterIdForMember(
       }
     } catch (centersErr) {
       if (!memberId) throw centersErr
-    }
-  }
-
-  if (memberId) {
-    const fromMember = await fetchMemberCenterId(memberId)
-    if (fromMember) {
-      cachedCenterId = fromMember
-      return cachedCenterId
     }
   }
 
