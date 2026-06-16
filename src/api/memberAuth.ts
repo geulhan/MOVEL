@@ -204,7 +204,7 @@ export async function loginMember(
     throw new Error('비밀번호를 입력해 주세요.')
   }
 
-  const slug = centerSlug?.trim().toLowerCase() || undefined
+  const slug = centerSlug?.trim().toLowerCase() || null
   const { data, error } = await supabase.rpc('verify_member_login', {
     p_phone: digits,
     p_password: password,

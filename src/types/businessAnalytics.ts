@@ -56,6 +56,10 @@ export type BusinessAnalyticsSnapshot = {
   centerPassRefundRisk: number
   ptRefundRisk: number
   totalRefundRisk: number
+  centerPassRefundExpired: number
+  ptRefundExpired: number
+  totalRefundExpired: number
+  ptRefundDaysPerSession: number
   trainerPayroll: number
   centerPtShare: number
   averageSessionPrice: number

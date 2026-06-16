@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { createPlatformCenter } from '../../api/platformCenters'
+import { formatPhone } from '../../api/members'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/theme'
 
 function slugify(value: string): string {
@@ -21,12 +22,14 @@ export default function PlatformCreateCenterPage() {
   const [adminUsername, setAdminUsername] = useState('admin')
   const [adminPassword, setAdminPassword] = useState('')
   const [contactEmail, setContactEmail] = useState('')
+  const [contactPhone, setContactPhone] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<{
     centerName: string
     centerSlug: string
     adminUsername: string
+    contactPhone?: string
   } | null>(null)
 
   function handleNameChange(value: string) {
@@ -40,6 +43,13 @@ export default function PlatformCreateCenterPage() {
     event.preventDefault()
     setError(null)
     setResult(null)
+
+    const phoneDigits = contactPhone.replace(/\D/g, '')
+    if (phoneDigits && (phoneDigits.length !== 11 || !phoneDigits.startsWith('010'))) {
+      setError('연락처는 010으로 시작하는 11자리 숫자로 입력해 주세요.')
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -49,11 +59,13 @@ export default function PlatformCreateCenterPage() {
         adminUsername,
         adminPassword,
         contactEmail: contactEmail || undefined,
+        contactPhone: phoneDigits || undefined,
       })
       setResult({
         centerName: created.centerName,
         centerSlug: created.centerSlug,
         adminUsername: created.adminUsername,
+        contactPhone: phoneDigits || undefined,
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : '센터 생성에 실패했습니다.')
@@ -80,6 +92,12 @@ export default function PlatformCreateCenterPage() {
               <dt>관리자 아이디</dt>
               <dd className="font-mono">{result.adminUsername}</dd>
             </div>
+            {result.contactPhone && (
+              <div className="flex justify-between gap-4">
+                <dt>연락처</dt>
+                <dd className="font-mono">{formatPhone(result.contactPhone)}</dd>
+              </div>
+            )}
           </dl>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
@@ -181,6 +199,24 @@ export default function PlatformCreateCenterPage() {
               className={inputClass}
               disabled={loading}
             />
+          </label>
+
+          <label className="block text-sm">
+            <span className="mb-1.5 block font-medium text-cream">연락처 (선택)</span>
+            <input
+              type="tel"
+              inputMode="numeric"
+              value={contactPhone}
+              onChange={(e) =>
+                setContactPhone(e.target.value.replace(/\D/g, '').slice(0, 11))
+              }
+              className={inputClass}
+              placeholder="01012345678"
+              disabled={loading}
+            />
+            <p className="mt-1 text-xs text-cream/50">
+              센터 담당자 연락처입니다. 010으로 시작하는 11자리 숫자만 입력합니다.
+            </p>
           </label>
 
           <div className="flex flex-wrap gap-3 pt-2">

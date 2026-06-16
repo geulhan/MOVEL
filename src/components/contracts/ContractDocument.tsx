@@ -1,15 +1,18 @@
 import {
-  applyCenterNameToContractTerms,
+  applyContractTerms,
   CONTRACT_TYPE_LABELS,
   type ContractType,
 } from '../../constants/contractTerms'
 import { formatCurrency } from '../../api/members'
 import type { ContractFieldData } from '../../lib/contracts/buildContractFields'
+import { DEFAULT_CONTRACT_SETTINGS } from '../../types/contractSettings'
+import type { ContractSettings } from '../../types/contractSettings'
 
 type Props = {
   contractType: ContractType
   fields: ContractFieldData
   centerName?: string
+  contractSettings?: ContractSettings
   draft?: boolean
   signedAt?: string | null
   signatureUrl?: string | null
@@ -25,6 +28,7 @@ export function ContractDocument({
   contractType,
   fields,
   centerName,
+  contractSettings = DEFAULT_CONTRACT_SETTINGS,
   draft = false,
   signedAt,
   signatureUrl,
@@ -33,7 +37,7 @@ export function ContractDocument({
   const title = CONTRACT_TYPE_LABELS[contractType]
   const sectionClass = compact ? 'space-y-3 text-xs' : 'space-y-4 text-sm'
   const displayCenterName = centerName?.trim() || fields.centerName.trim() || '센터'
-  const termSections = applyCenterNameToContractTerms(displayCenterName)
+  const termSections = applyContractTerms(displayCenterName, contractSettings)
 
   return (
     <article className={`${sectionClass} text-charcoal`}>

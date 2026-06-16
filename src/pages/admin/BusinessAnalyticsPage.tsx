@@ -440,16 +440,27 @@ export default function BusinessAnalyticsPage() {
 
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-charcoal">3. 환불 리스크</h3>
+              <p className="text-xs text-muted">
+                PT 환불 가능 금액만 집계합니다. 결제일 + 등록횟수 ×{' '}
+                {data.ptRefundDaysPerSession}일이 지난 잔여 회차는 제외됩니다.
+              </p>
               <div className="grid gap-3 sm:grid-cols-3">
                 <KpiCard
-                  label="회원권 미소진"
+                  label="회원권 환불 가능"
                   value={formatCurrency(data.centerPassRefundRisk)}
+                  sub={`기한 초과 ${formatCurrency(data.centerPassRefundExpired)}`}
                   danger={refundRisk}
                 />
-                <KpiCard label="PT 미소진" value={formatCurrency(data.ptRefundRisk)} danger={refundRisk} />
+                <KpiCard
+                  label="PT 환불 가능"
+                  value={formatCurrency(data.ptRefundRisk)}
+                  sub={`기한 초과 ${formatCurrency(data.ptRefundExpired)}`}
+                  danger={refundRisk}
+                />
                 <KpiCard
                   label="총 환불 예상"
                   value={formatCurrency(data.totalRefundRisk)}
+                  sub={`선수금 ${formatCurrency(data.totalPrepaid)} · 제외 ${formatCurrency(data.totalRefundExpired)}`}
                   danger={refundRisk}
                 />
               </div>
@@ -562,7 +573,7 @@ export default function BusinessAnalyticsPage() {
               </table>
             </div>
             <p className="text-xs text-muted">
-              기준일 {formatDate(new Date().toISOString())} · 인식매출은 회원권 기간배분 + PT 회차소진(FIFO) 기준입니다.
+              기준일 {formatDate(new Date().toISOString())} · 인식매출은 회원권 기간배분 + PT 회차소진(FIFO) 기준입니다. 환불 리스크는 PT {data.ptRefundDaysPerSession}일/회 기준 환불 기한 내 잔여분만 포함합니다.
             </p>
           </section>
         </>

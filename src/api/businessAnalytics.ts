@@ -19,6 +19,12 @@ import {
   fetchBusinessAnalyticsSettings,
   sumFixedCosts,
 } from './businessAnalyticsSettings'
+import {
+  splitCenterPassPrepaidByRefundWindow,
+  splitPtPrepaidByRefundWindow,
+  type PeriodPassRefundInput,
+} from '../lib/refundEligibility'
+import { fetchContractSettings } from './contractSettings'
 import { isRenewalTarget } from '../utils/renewal'
 import { normalizeMember } from '../lib/memberNormalize'
 import type { Member } from '../types/database'
@@ -44,7 +50,22 @@ async function loadRecognitionInputs(centerId: string) {
         .eq('center_id', centerId),
       supabase
         .from('center_passes')
-        .select('id, member_id, starts_at, ends_at, amount, status')
+        .select(
+          `
+          id,
+          starts_at,
+          ends_at,
+          amount,
+          status,
+          payment_history_id,
+          product_id,
+          center_pass_products(duration_days),
+          payment_history:payment_history_id(
+            paid_at,
+            payment_request:payment_request_id(duration_days)
+          )
+        `,
+        )
         .eq('center_id', centerId),
       supabase
         .from('member_facility_subscriptions')
@@ -73,6 +94,33 @@ async function loadRecognitionInputs(centerId: string) {
     amount: Number(p.amount ?? 0),
     status: p.status,
   }))
+
+  const centerPassRefundInputs: PeriodPassRefundInput[] = (
+    passesRes.data ?? []
+  ).map((p) => {
+    const payment = p.payment_history as
+      | {
+          paid_at: string | null
+          payment_request: { duration_days: number | null } | null
+        }
+      | null
+      | undefined
+    const product = p.center_pass_products as { duration_days: number } | null
+    const durationDays =
+      Number(product?.duration_days) ||
+      Number(payment?.payment_request?.duration_days) ||
+      0
+
+    return {
+      id: p.id,
+      startsAt: p.starts_at,
+      endsAt: p.ends_at,
+      amount: Number(p.amount ?? 0),
+      status: p.status,
+      paidAt: payment?.paid_at ?? null,
+      durationDays,
+    }
+  })
 
   const facilityPasses: PeriodPass[] = (facilityRes.data ?? []).map((p) => ({
     id: p.id,
@@ -109,6 +157,8 @@ async function loadRecognitionInputs(centerId: string) {
   return {
     payments: paymentsRes.data ?? [],
     periodPasses,
+    facilityPasses,
+    centerPassRefundInputs,
     ptPayments,
     sessionLogs,
     memberTrainers,
@@ -224,6 +274,7 @@ function computeHealthScore(input: {
 function buildSnapshotForMonth(
   inputs: Awaited<ReturnType<typeof loadRecognitionInputs>>,
   settings: Awaited<ReturnType<typeof fetchBusinessAnalyticsSettings>>,
+  contractSettings: Awaited<ReturnType<typeof fetchContractSettings>>,
   year: number,
   month: number,
 ): Omit<BusinessAnalyticsSnapshot, 'monthlyReport'> {
@@ -242,9 +293,30 @@ function buildSnapshotForMonth(
   const totalRecognized = centerPassRecognized + ptRecognized
 
   const today = new Date().toISOString().slice(0, 10)
+  const daysPerSession = contractSettings.ptRefundDaysPerSession
   const centerPassPrepaid = centerPassPrepaidBalance(inputs.periodPasses, today)
   const ptPrepaid = ptPrepaidBalance(inputs.ptPayments, inputs.sessionLogs)
   const totalPrepaid = centerPassPrepaid + ptPrepaid
+
+  const centerPassSplit = splitCenterPassPrepaidByRefundWindow(
+    inputs.centerPassRefundInputs,
+    daysPerSession,
+    today,
+  )
+  const facilityPrepaid = centerPassPrepaidBalance(inputs.facilityPasses, today)
+  const ptSplit = splitPtPrepaidByRefundWindow(
+    inputs.ptPayments,
+    inputs.sessionLogs,
+    daysPerSession,
+    today,
+  )
+
+  const centerPassRefundRisk = centerPassSplit.refundable + facilityPrepaid
+  const centerPassRefundExpired = centerPassSplit.expired
+  const ptRefundRisk = ptSplit.refundable
+  const ptRefundExpired = ptSplit.expired
+  const totalRefundRisk = centerPassRefundRisk + ptRefundRisk
+  const totalRefundExpired = centerPassRefundExpired + ptRefundExpired
 
   const trainerPayroll = Math.round(
     ptRecognized * (settings.trainerSettlementRate / 100),
@@ -338,7 +410,7 @@ function buildSnapshotForMonth(
   )
   const refundExposureRate =
     totalHistoricalPayments > 0
-      ? Math.round((totalPrepaid / totalHistoricalPayments) * 100)
+      ? Math.round((totalRefundRisk / totalHistoricalPayments) * 100)
       : 0
 
   const healthScore = computeHealthScore({
@@ -359,9 +431,13 @@ function buildSnapshotForMonth(
     centerPassPrepaid,
     ptPrepaid,
     totalPrepaid,
-    centerPassRefundRisk: centerPassPrepaid,
-    ptRefundRisk: ptPrepaid,
-    totalRefundRisk: totalPrepaid,
+    centerPassRefundRisk,
+    ptRefundRisk,
+    totalRefundRisk,
+    centerPassRefundExpired,
+    ptRefundExpired,
+    totalRefundExpired,
+    ptRefundDaysPerSession: daysPerSession,
     trainerPayroll,
     centerPtShare,
     averageSessionPrice,
@@ -391,14 +467,16 @@ export async function fetchBusinessAnalytics(
   const targetMonth = month ?? now.getMonth() + 1
 
   const centerId = await getCurrentCenterId()
-  const [settings, inputs] = await Promise.all([
+  const [settings, contractSettings, inputs] = await Promise.all([
     fetchBusinessAnalyticsSettings(),
+    fetchContractSettings(),
     loadRecognitionInputs(centerId),
   ])
 
   const snapshot = buildSnapshotForMonth(
     inputs,
     settings,
+    contractSettings,
     targetYear,
     targetMonth,
   )
@@ -406,7 +484,13 @@ export async function fetchBusinessAnalytics(
   const monthlyReport = []
   for (let offset = -5; offset <= 0; offset += 1) {
     const { year: y, month: m } = shiftMonth(targetYear, targetMonth, offset)
-    const monthSnapshot = buildSnapshotForMonth(inputs, settings, y, m)
+    const monthSnapshot = buildSnapshotForMonth(
+      inputs,
+      settings,
+      contractSettings,
+      y,
+      m,
+    )
     const members = inputs.members
     const activeMembers = members.filter((member) => member.status === 'active').length
     const renewalTargets = members.filter((m) => isRenewalTarget(m))
@@ -424,7 +508,7 @@ export async function fetchBusinessAnalytics(
     )
     const refundExposureRate =
       totalHistoricalPayments > 0
-        ? Math.round((monthSnapshot.totalPrepaid / totalHistoricalPayments) * 100)
+        ? Math.round((monthSnapshot.totalRefundRisk / totalHistoricalPayments) * 100)
         : 0
 
     monthlyReport.push({

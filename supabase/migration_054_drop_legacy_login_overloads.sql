@@ -4,3 +4,4 @@
 drop function if exists public.verify_admin_login(text, text);
 
 drop function if exists public.verify_member_login(text, text);
+drop function if exists public.verify_member_login(text, text, text);

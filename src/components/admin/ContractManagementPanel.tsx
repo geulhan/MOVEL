@@ -12,10 +12,11 @@ import {
 import { fetchContracts, type ContractWithMember } from '../../api/contracts'
 import { PAYMENT_CATEGORY_LABELS } from '../../constants/paymentCategories'
 import { useCenterBranding } from '../../hooks/useCenterBranding'
+import { ContractRefundSettingsPanel } from './ContractRefundSettingsPanel'
 import { ContractDraftPreviewModal } from '../contracts/ContractDraftPreviewModal'
 import { ContractViewModal } from '../contracts/ContractViewModal'
 
-type ManagementTab = 'issued' | 'drafts'
+type ManagementTab = 'issued' | 'drafts' | 'settings'
 
 const STATUS_FILTERS: Array<{ id: 'all' | ContractStatus; label: string }> = [
   { id: 'all', label: '전체' },
@@ -114,9 +115,20 @@ export function ContractManagementPanel() {
         >
           계약서 초안
         </button>
+        <button
+          type="button"
+          onClick={() => setPanelTab('settings')}
+          className={`chip ${
+            panelTab === 'settings' ? 'chip-active' : 'chip-inactive'
+          }`}
+        >
+          환불 기준
+        </button>
       </nav>
 
-      {panelTab === 'drafts' ? (
+      {panelTab === 'settings' ? (
+        <ContractRefundSettingsPanel />
+      ) : panelTab === 'drafts' ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {CONTRACT_TEMPLATES.map((template) => (
             <article

@@ -1,3 +1,8 @@
+import {
+  DEFAULT_CONTRACT_SETTINGS,
+  type ContractSettings,
+} from '../types/contractSettings'
+
 /** MOVEL 기본 계약 약관 (센터별 커스터마이즈 전까지 공통 사용) */
 
 export type ContractTermSection = {
@@ -30,6 +35,7 @@ export const CONTRACT_TERM_SECTIONS: ContractTermSection[] = [
       '본 환불 약관은 전자상거래 등에서의 소비자보호에 관한 법률 및 관련 지침을 준수합니다.',
       '회원이 결제한 상품·서비스에 대해 환불을 요청하는 경우, 미사용 잔여분에 대해 환불이 가능합니다. 이미 제공·이용된 회차·기간에 해당하는 금액은 환불 대상에서 제외됩니다.',
       'PT 회원권 환불: 총 결제 금액에서 (1) 이미 진행된 PT 횟수에 해당하는 금액, (2) 위약금(총 결제 금액의 10%), (3) 기타 실비(카드 수수료 등)를 공제한 금액을 환불합니다. 1회당 단가는 총 결제 금액을 총 횟수로 나눈 금액을 기준으로 합니다.',
+      'PT 환불 기한: 결제일 기준으로 등록 PT 횟수 × {{ptRefundDaysPerSession}}일이 경과한 잔여 회차는 환불 대상에서 제외됩니다. 이용 만료일 연장·기간 연장과 무관하게 환불 기한은 결제일과 최초 등록 횟수로만 산정합니다. (예: 5월 1일 결제 5회 등록, {{ptRefundDaysPerSession}}일 기준 → 5월 21일까지 환불 가능, 이후 잔여 회차는 환불 제외)',
       '센터 이용권·라커·수건 등 기간형 상품 환불: 이용 개시 전 전액 환불이 가능합니다. 이용 개시 후에는 (1) 이용 일수에 해당하는 금액, (2) 위약금(잔여 금액의 10%, 단 최대 10만 원)을 공제한 잔액을 환불합니다. 1일 단가는 총 결제 금액을 총 이용 일수로 나눈 금액을 기준으로 합니다.',
       '할인·프로모션·패키지 결합 상품은 환불 시 실제 납부 금액과 적용된 할인 조건을 기준으로 산정하며, 무상 제공된 혜택이 있는 경우 해당 혜택 상당액이 공제될 수 있습니다.',
       '환불 신청은 센터 운영 시간 내 대면·전화·앱 문의를 통해 접수하며, 회원 본인 확인 후 처리합니다.',
@@ -139,24 +145,45 @@ export const CONTRACT_STATUS_LABELS = {
 
 export type ContractStatus = keyof typeof CONTRACT_STATUS_LABELS
 
+function applyContractTermPlaceholders(
+  paragraph: string,
+  centerName: string,
+  settings: ContractSettings,
+): string {
+  const name = centerName.trim() || '센터'
+  const days = String(settings.ptRefundDaysPerSession)
+  return paragraph
+    .replaceAll('{{centerName}}', name)
+    .replaceAll('{{ptRefundDaysPerSession}}', days)
+}
+
+export function applyContractTerms(
+  centerName: string,
+  settings: ContractSettings = DEFAULT_CONTRACT_SETTINGS,
+  sections: ContractTermSection[] = CONTRACT_TERM_SECTIONS,
+): ContractTermSection[] {
+  return sections.map((section) => ({
+    ...section,
+    paragraphs: section.paragraphs.map((paragraph) =>
+      applyContractTermPlaceholders(paragraph, centerName, settings),
+    ),
+  }))
+}
+
+/** @deprecated applyContractTerms 사용 */
 export function applyCenterNameToContractTerms(
   centerName: string,
   sections: ContractTermSection[] = CONTRACT_TERM_SECTIONS,
 ): ContractTermSection[] {
-  const name = centerName.trim() || '센터'
-  return sections.map((section) => ({
-    ...section,
-    paragraphs: section.paragraphs.map((paragraph) =>
-      paragraph.replaceAll('{{centerName}}', name),
-    ),
-  }))
+  return applyContractTerms(centerName, DEFAULT_CONTRACT_SETTINGS, sections)
 }
 
 export function applyCenterNameToTransferTerms(
   centerName: string,
 ): ContractTermSection[] {
-  return applyCenterNameToContractTerms(
+  return applyContractTerms(
     centerName,
+    DEFAULT_CONTRACT_SETTINGS,
     PT_MEMBERSHIP_TRANSFER_SECTIONS,
   )
 }

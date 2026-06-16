@@ -4,7 +4,7 @@ import {
   buildSamplePurchaseFields,
   buildSampleTransferFields,
 } from '../../lib/contracts/contractSampleData'
-import { btnOutline, btnPrimary } from '../../styles/theme'
+import { useContractSettings } from '../../hooks/useContractSettings'
 import { ContractDocument } from './ContractDocument'
 import { PtMembershipTransferDocument } from './PtMembershipTransferDocument'
 
@@ -21,6 +21,7 @@ export function ContractDraftPreviewModal({
   centerName,
   onClose,
 }: Props) {
+  const { settings: contractSettings } = useContractSettings()
   if (!open || !templateKey) return null
 
   const title = CONTRACT_TEMPLATE_LABELS[templateKey]
@@ -64,6 +65,7 @@ export function ContractDraftPreviewModal({
               contractType={templateKey}
               fields={buildSamplePurchaseFields(centerName, templateKey)}
               centerName={centerName}
+              contractSettings={contractSettings}
               draft
               compact
             />

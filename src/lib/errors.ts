@@ -1,5 +1,5 @@
 const AUTH_MIGRATION_HINT =
-  'Supabase SQL Editor에서 migration_043 → 050 → 051(관리자) / 052(회원) 순서로 실행한 뒤 migration_054_drop_legacy_login_overloads.sql 도 실행해 주세요.'
+  'Supabase SQL Editor에서 migration_052_member_auth_global.sql 적용 후 migration_060_drop_member_login_three_arg.sql 을 실행해 주세요. (이미 migration_043~054를 적용했다면 060만 실행하면 됩니다.)'
 
 function authRpcSetupMessage(kind: 'admin' | 'member', detail: string): string {
   const target = kind === 'admin' ? '관리자' : '회원'

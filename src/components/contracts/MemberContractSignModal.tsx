@@ -10,6 +10,7 @@ import {
 } from '../../api/contracts'
 import { btnGold, btnOutline } from '../../styles/theme'
 import { useContractCenterName } from '../../hooks/useContractCenterName'
+import { useContractSettings } from '../../hooks/useContractSettings'
 import { ContractDocument } from './ContractDocument'
 import { SignaturePad } from './SignaturePad'
 
@@ -33,6 +34,7 @@ export function MemberContractSignModal({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const centerName = useContractCenterName(contract)
+  const { settings: contractSettings } = useContractSettings()
 
   useEffect(() => {
     if (!open) return
@@ -96,6 +98,7 @@ export function MemberContractSignModal({
             contractType={contract.contract_type}
             fields={contract.field_data}
             centerName={centerName}
+            contractSettings={contractSettings}
             signedAt={contract.signed_at}
             signatureUrl={signatureUrl}
             compact
