@@ -5,6 +5,7 @@ import { btnPrimary, cardClass, inputClass } from '../styles/theme'
 
 import type { CenterTheme } from '../types/centerBranding'
 import { MemberThemeSettings } from './member/MemberThemeSettings'
+import { MemberPaymentHistorySection } from './member/MemberPaymentHistorySection'
 
 type Props = {
   phone: string
@@ -47,6 +48,9 @@ export function MemberMyPageSection({ phone, memberId, onThemeChange }: Props) {
   }
 
   return (
+    <div className="space-y-6">
+      <MemberPaymentHistorySection memberId={memberId} />
+
     <section className={`${cardClass} p-6`}>
       <h3 className="text-lg font-semibold text-charcoal">마이페이지</h3>
       <p className="mt-1 text-sm text-muted">계정 정보 및 비밀번호를 관리합니다.</p>
@@ -123,5 +127,6 @@ export function MemberMyPageSection({ phone, memberId, onThemeChange }: Props) {
 
       <MemberThemeSettings memberId={memberId} onThemeChange={onThemeChange} />
     </section>
+    </div>
   )
 }

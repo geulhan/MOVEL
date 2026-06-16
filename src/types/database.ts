@@ -343,6 +343,7 @@ export type Branch = {
 export type RewardSetting = {
   id: string
   branch_id: string | null
+  center_id?: string
   setting_key: string
   setting_value: Json
   description: string | null
@@ -470,6 +471,7 @@ export type CenterPassProduct = {
 export type CenterPass = {
   id: string
   member_id: string
+  center_id?: string
   product_id: string | null
   label: string
   starts_at: string
@@ -507,6 +509,7 @@ export type FacilitySubscriptionStatus =
 export type MemberFacilitySubscription = {
   id: string
   member_id: string
+  center_id?: string
   product_id: string | null
   label: string
   sub_type: FacilitySubType
@@ -871,6 +874,7 @@ export type Database = {
         RewardSetting,
         {
           branch_id?: string | null
+          center_id?: string
           setting_key: string
           setting_value: Json
           description?: string | null

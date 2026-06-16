@@ -6,7 +6,7 @@ import {
 import { resolveCenterIdForMember } from '../lib/center'
 import { normalizeMember } from '../lib/memberNormalize'
 import { supabase } from '../lib/supabase'
-import type { Member } from '../types/database'
+import type { Member, PaymentHistory } from '../types/database'
 import {
   checkInMember,
   fetchTodayAttendanceForMember,
@@ -68,6 +68,22 @@ export async function fetchRecentAttendance(
     .eq('center_id', centerId)
     .order('checked_in_at', { ascending: false })
     .limit(limit)
+
+  if (error) throw error
+  return data ?? []
+}
+
+export async function fetchMemberPaymentHistory(
+  memberId: string,
+): Promise<PaymentHistory[]> {
+  const centerId = await resolveCenterIdForMember(memberId)
+  const { data, error } = await supabase
+    .from('payment_history')
+    .select('*')
+    .eq('member_id', memberId)
+    .eq('center_id', centerId)
+    .order('paid_at', { ascending: false })
+    .limit(100)
 
   if (error) throw error
   return data ?? []

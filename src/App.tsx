@@ -19,6 +19,7 @@ import RewardsPage from './pages/admin/RewardsPage'
 import MessagesPage from './pages/admin/MessagesPage'
 import PaymentsPage from './pages/admin/PaymentsPage'
 import CenterSettingsPage from './pages/admin/CenterSettingsPage'
+import BusinessAnalyticsPage from './pages/admin/BusinessAnalyticsPage'
 import MemberPortalPage from './pages/MemberPortalPage'
 import { RootPage } from './pages/RootPage'
 import LoginPage from './pages/LoginPage'
@@ -70,6 +71,7 @@ export default function App() {
             <Route path="rewards" element={<RewardsPage />} />
             <Route path="messages" element={<MessagesPage />} />
             <Route path="payments" element={<PaymentsPage />} />
+            <Route path="analytics" element={<BusinessAnalyticsPage />} />
             <Route path="settings" element={<CenterSettingsPage />} />
             <Route
               path="facility"

@@ -18,6 +18,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { to: '/admin/trainers', end: false, label: '트레이너', icon: '★', roles: ['admin'] },
   { to: '/admin/rewards', end: false, label: '마일리지 관리', icon: '◆', roles: ['admin'] },
   { to: '/admin/payments', end: false, label: '결제 관리', icon: '₩', roles: ['admin'] },
+  { to: '/admin/analytics', end: false, label: '경영분석', icon: '◉', roles: ['admin'] },
   { to: '/admin/messages', end: false, label: '메시지 발송', icon: '✉', roles: ['admin'] },
   { to: '/admin/settings', end: false, label: '센터 설정', icon: '⚙', roles: ['admin'] },
 ]
