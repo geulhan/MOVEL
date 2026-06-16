@@ -24,12 +24,12 @@ export const MOTIONHUB_SUB_MESSAGE_LINES = [
 ] as const
 
 export const MOTIONHUB_SEO = {
-  title: MOTIONHUB_BRAND_KO,
+  title: '모션허브 MotionHub | 운동센터 운영 플랫폼',
   description:
-    '회원이 운동을 지속하게 만드는 운동센터 운영 플랫폼. 회원관리, 재등록 관리, 운동일지, 출석관리, 마일리지, 알림톡을 하나로 연결합니다.',
-  ogTitle: MOTIONHUB_BRAND_KO,
+    '모션허브(MotionHub)는 회원이 운동을 지속하게 만드는 운동센터 운영 플랫폼입니다. PT샵·필라테스 센터의 회원관리, 재등록 관리, 운동일지, 출석관리, 마일리지, 알림톡을 하나로 연결합니다.',
+  ogTitle: '모션허브 MotionHub | 운동센터 운영 플랫폼',
   ogDescription:
-    '회원이 운동을 지속하게 만드는 운동센터 운영 플랫폼. 회원관리부터 재등록 관리까지 한 번에 관리할 수 있습니다.',
+    '모션허브(MotionHub) — 회원이 운동을 지속하게 만드는 운동센터 운영 플랫폼. 회원관리부터 재등록 관리까지 한 번에.',
   siteName: MOTIONHUB_BRAND_KO,
   applicationName: MOTIONHUB_BRAND_KO,
   ogType: 'website',

@@ -75,7 +75,10 @@ export async function submitCenterPhoto(
   memberId: string,
   file: File,
 ): Promise<CenterPhotoSubmission> {
-  if (!file.type.startsWith('image/')) {
+  const isImage =
+    file.type.startsWith('image/') ||
+    /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name)
+  if (!isImage) {
     throw new Error('이미지 파일만 업로드할 수 있습니다.')
   }
   if (file.size > 10 * 1024 * 1024) {
@@ -95,7 +98,11 @@ export async function submitCenterPhoto(
 
   const { error: uploadError } = await supabase.storage
     .from('center-photos')
-    .upload(imagePath, file, { cacheControl: '3600', upsert: false })
+    .upload(imagePath, file, {
+      cacheControl: '3600',
+      upsert: false,
+      contentType: file.type || 'image/jpeg',
+    })
 
   if (uploadError) {
     throw new Error(`이미지 업로드 실패: ${uploadError.message}`)
@@ -123,10 +130,13 @@ export async function submitCenterPhoto(
     .single()
 
   if (error) {
+    await supabase.storage.from('center-photos').remove([imagePath])
     if (error.code === '23505') {
       throw new Error('오늘은 이미 센터 사진 인증이 완료되었습니다.')
     }
-    throw error
+    throw new Error(
+      `센터 사진 제출 등록 실패: ${error.message}. 잠시 후 다시 시도해 주세요.`,
+    )
   }
 
   return data as CenterPhotoSubmission
@@ -210,16 +220,57 @@ export async function fetchCenterPhotoSubmissions(options?: {
   limit?: number
 }): Promise<CenterPhotoSubmissionWithMember[]> {
   const centerId = await getCurrentCenterId()
+
+  if (options?.memberId) {
+    let query = supabase
+      .from('center_photo_submissions')
+      .select('*')
+      .eq('member_id', options.memberId)
+      .order('created_at', { ascending: false })
+      .limit(options?.limit ?? 50)
+
+    if (options?.status) {
+      query = query.eq('status', options.status)
+    }
+
+    const { data, error } = await query
+    if (error) throw error
+    const rows = (data ?? []) as CenterPhotoSubmission[]
+    if (rows.length === 0) return []
+
+    const { data: members, error: membersError } = await supabase
+      .from('members')
+      .select('id, name')
+      .eq('id', options.memberId)
+      .maybeSingle()
+
+    if (membersError) throw membersError
+    const memberName = members?.name ?? null
+
+    return rows.map((row) => ({
+      ...row,
+      member_name: memberName,
+    }))
+  }
+
+  const { data: members, error: membersError } = await supabase
+    .from('members')
+    .select('id, name')
+    .eq('center_id', centerId)
+
+  if (membersError) throw membersError
+
+  const memberRows = (members ?? []) as { id: string; name: string }[]
+  const memberIds = memberRows.map((row) => row.id)
+  if (memberIds.length === 0) return []
+
   let query = supabase
     .from('center_photo_submissions')
     .select('*')
-    .eq('center_id', centerId)
+    .in('member_id', memberIds)
     .order('created_at', { ascending: false })
     .limit(options?.limit ?? 50)
 
-  if (options?.memberId) {
-    query = query.eq('member_id', options.memberId)
-  }
   if (options?.status) {
     query = query.eq('status', options.status)
   }
@@ -229,14 +280,7 @@ export async function fetchCenterPhotoSubmissions(options?: {
   const rows = (data ?? []) as CenterPhotoSubmission[]
   if (rows.length === 0) return []
 
-  const memberIds = [...new Set(rows.map((row) => row.member_id))]
-  const { data: members, error: membersError } = await supabase
-    .from('members')
-    .select('id, name')
-    .in('id', memberIds)
-
-  if (membersError) throw membersError
-  const nameMap = new Map((members ?? []).map((member) => [member.id, member.name]))
+  const nameMap = new Map(memberRows.map((member) => [member.id, member.name]))
 
   return rows.map((row) => ({
     ...row,
@@ -246,10 +290,20 @@ export async function fetchCenterPhotoSubmissions(options?: {
 
 export async function countPendingCenterPhotoSubmissions(): Promise<number> {
   const centerId = await getCurrentCenterId()
+  const { data: members, error: membersError } = await supabase
+    .from('members')
+    .select('id')
+    .eq('center_id', centerId)
+
+  if (membersError) throw membersError
+
+  const memberIds = ((members ?? []) as { id: string }[]).map((row) => row.id)
+  if (memberIds.length === 0) return 0
+
   const { count, error } = await supabase
     .from('center_photo_submissions')
     .select('id', { count: 'exact', head: true })
-    .eq('center_id', centerId)
+    .in('member_id', memberIds)
     .eq('status', 'pending')
 
   if (error) throw error
