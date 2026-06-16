@@ -1,5 +1,5 @@
 import { getAdminSession } from './adminSession'
-import { getMemberCenterSlug } from '../api/memberPortal'
+import { getMemberCenterId, getMemberCenterSlug } from '../api/memberPortal'
 import { supabase } from './supabase'
 import { LEGACY_MOVEL_SLUG, isMovelDedicatedHost } from './centerSlug'
 
@@ -54,6 +54,12 @@ export async function resolveCenterIdForMember(
   const admin = getAdminSession()
   if (admin?.centerId) return admin.centerId
 
+  const persistedMemberCenterId = getMemberCenterId()
+  if (persistedMemberCenterId) {
+    cachedCenterId = persistedMemberCenterId
+    return persistedMemberCenterId
+  }
+
   const slug = resolveSlugFromContext()
 
   if (cachedCenterId && slug && cachedCenterSlug === slug) {
@@ -92,9 +98,10 @@ export async function getDefaultCenterId(): Promise<string> {
 
 /**
  * 현재 요청 컨텍스트의 센터 ID.
+ * 회원 포털 API는 memberId를 넘기면 DB에서 센터를 조회합니다.
  */
-export async function getCurrentCenterId(): Promise<string> {
-  return resolveCenterIdForMember()
+export async function getCurrentCenterId(memberId?: string): Promise<string> {
+  return resolveCenterIdForMember(memberId)
 }
 
 export function getCurrentCenterSlug(): string | null {

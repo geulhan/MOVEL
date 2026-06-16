@@ -98,6 +98,7 @@ export type Member = {
 export type PeriodExtension = {
   id: string
   member_id: string
+  center_id?: string
   days_added: number
   note: string | null
   created_at: string
@@ -379,6 +380,7 @@ export type RewardTransaction = {
 export type RewardMileLot = {
   id: string
   member_id: string
+  center_id?: string
   source_transaction_id: string | null
   earned_amount: number
   remaining_amount: number
@@ -388,6 +390,7 @@ export type RewardMileLot = {
 
 export type MemberDailyActivity = {
   member_id: string
+  center_id?: string
   activity_date: string
   step_count: number
   step_source: string
@@ -439,6 +442,7 @@ export type CenterPhotoStatus = 'pending' | 'approved' | 'rejected'
 export type CenterPhotoSubmission = {
   id: string
   member_id: string
+  center_id?: string
   submission_date: string
   image_url: string
   image_path: string | null
@@ -593,7 +597,12 @@ export type Database = {
       >
       period_extensions: TableDef<
         PeriodExtension,
-        { member_id: string; days_added: number; note?: string | null },
+        {
+          member_id: string
+          center_id: string
+          days_added: number
+          note?: string | null
+        },
         never
       >
       session_logs: TableDef<
@@ -913,6 +922,7 @@ export type Database = {
         RewardMileLot,
         {
           member_id: string
+          center_id: string
           source_transaction_id?: string | null
           earned_amount: number
           remaining_amount: number
@@ -924,6 +934,7 @@ export type Database = {
         MemberDailyActivity,
         {
           member_id: string
+          center_id: string
           activity_date: string
           step_count?: number
           step_source?: string
@@ -990,6 +1001,7 @@ export type Database = {
         CenterPhotoSubmission,
         {
           member_id: string
+          center_id: string
           submission_date?: string
           image_url: string
           image_path?: string | null

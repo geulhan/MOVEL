@@ -87,7 +87,7 @@ export async function fetchMemberStepVerifications(
   memberId: string,
   limit = 20,
 ): Promise<StepVerification[]> {
-  const centerId = await getCurrentCenterId()
+  const centerId = await getCurrentCenterId(memberId)
   const { data, error } = await supabase
     .from('step_verifications')
     .select('*')
@@ -104,7 +104,7 @@ export async function fetchTodayVerificationStatus(
   memberId: string,
 ): Promise<StepVerification | null> {
   const today = todayDateString()
-  const centerId = await getCurrentCenterId()
+  const centerId = await getCurrentCenterId(memberId)
   const { data, error } = await supabase
     .from('step_verifications')
     .select('*')
@@ -257,7 +257,7 @@ export async function submitStepVerification(
   const { data, error } = await supabase
     .from('step_verifications')
     .insert({
-      center_id: await getCurrentCenterId(),
+      center_id: await getCurrentCenterId(memberId),
       member_id: memberId,
       verification_date: today,
       image_url: urlData.publicUrl,

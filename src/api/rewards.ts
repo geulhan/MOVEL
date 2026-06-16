@@ -289,7 +289,7 @@ async function ensureBalance(memberId: string): Promise<{
     .upsert(
       {
         member_id: memberId,
-        center_id: await getCurrentCenterId(),
+        center_id: await getCurrentCenterId(memberId),
         move_score: 0,
         move_mile: 0,
         updated_at: new Date().toISOString(),
@@ -326,7 +326,7 @@ async function insertTransaction(input: {
   metadata?: Record<string, unknown>
   created_by?: string
 }): Promise<RewardTransaction> {
-  const centerId = await getCurrentCenterId()
+  const centerId = await getCurrentCenterId(input.member_id)
   const { data, error } = await supabase
     .from('reward_transactions')
     .insert({
@@ -364,6 +364,7 @@ async function createMileLot(
 ): Promise<void> {
   const { error } = await supabase.from('reward_mile_lots').insert({
     member_id: memberId,
+    center_id: await getCurrentCenterId(memberId),
     source_transaction_id: sourceTransactionId,
     earned_amount: amount,
     remaining_amount: amount,
@@ -450,7 +451,7 @@ export async function fetchRewardTransactions(
   memberId: string,
   options?: { currency?: RewardCurrency; limit?: number },
 ): Promise<RewardTransaction[]> {
-  const centerId = await getCurrentCenterId()
+  const centerId = await getCurrentCenterId(memberId)
   let query = supabase
     .from('reward_transactions')
     .select('*')
@@ -644,6 +645,7 @@ async function upsertDailyActivity(
   date: string,
   patch: Partial<DailyActivity & { step_count: number; step_source: string }>,
 ): Promise<DailyActivity> {
+  const centerId = await getCurrentCenterId(memberId)
   const { data: existing } = await supabase
     .from('member_daily_activity')
     .select('step_count, has_pt_attendance, has_journal')
@@ -653,6 +655,7 @@ async function upsertDailyActivity(
 
   const row = {
     member_id: memberId,
+    center_id: centerId,
     activity_date: date,
     step_count: patch.step_count ?? (existing as DailyActivity | null)?.step_count ?? 0,
     has_pt_attendance:
@@ -682,7 +685,7 @@ export async function hasApprovedStepsToday(
   memberId: string,
   date: string = todayDateString(),
 ): Promise<boolean> {
-  const centerId = await getCurrentCenterId()
+  const centerId = await getCurrentCenterId(memberId)
   const { data, error } = await supabase
     .from('step_verifications')
     .select('id')

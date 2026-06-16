@@ -1,4 +1,4 @@
-import { getCurrentCenterId } from '../lib/center'
+import { getCurrentCenterId, resolveCenterIdForMember } from '../lib/center'
 import { normalizeMember } from '../lib/memberNormalize'
 import { supabase } from '../lib/supabase'
 import type { Member, PeriodExtension } from '../types/database'
@@ -72,10 +72,12 @@ export async function recalcMemberExpiry(memberId: string): Promise<string | nul
 }
 
 export async function getTotalExtensionDays(memberId: string): Promise<number> {
+  const centerId = await resolveCenterIdForMember(memberId)
   const { data, error } = await supabase
     .from('period_extensions')
     .select('days_added')
     .eq('member_id', memberId)
+    .eq('center_id', centerId)
 
   if (error) throw error
   return (data ?? []).reduce((sum, row) => sum + row.days_added, 0)
@@ -84,10 +86,12 @@ export async function getTotalExtensionDays(memberId: string): Promise<number> {
 export async function fetchPeriodExtensions(
   memberId: string,
 ): Promise<PeriodExtension[]> {
+  const centerId = await resolveCenterIdForMember(memberId)
   const { data, error } = await supabase
     .from('period_extensions')
     .select('*')
     .eq('member_id', memberId)
+    .eq('center_id', centerId)
     .order('created_at', { ascending: false })
 
   if (error) throw error
@@ -103,10 +107,14 @@ export async function extendMemberPeriod(
     throw new Error('연장 일수는 1일 이상이어야 합니다.')
   }
 
+  const centerId =
+    member.center_id ?? (await resolveCenterIdForMember(member.id))
+
   const { error: insertError } = await supabase
     .from('period_extensions')
     .insert({
       member_id: member.id,
+      center_id: centerId,
       days_added: daysAdded,
       note: note?.trim() || null,
     })

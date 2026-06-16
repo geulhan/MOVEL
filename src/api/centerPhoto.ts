@@ -1,3 +1,4 @@
+import { getCurrentCenterId } from '../lib/center'
 import { supabase } from '../lib/supabase'
 import { todayDateString } from './members'
 import { awardCenterPhoto } from './rewards'
@@ -104,10 +105,13 @@ export async function submitCenterPhoto(
     .from('center-photos')
     .getPublicUrl(imagePath)
 
+  const centerId = await getCurrentCenterId(memberId)
+
   const { data, error } = await supabase
     .from('center_photo_submissions')
     .insert({
       member_id: memberId,
+      center_id: centerId,
       submission_date: today,
       image_url: urlData.publicUrl,
       image_path: imagePath,
@@ -205,9 +209,11 @@ export async function fetchCenterPhotoSubmissions(options?: {
   status?: CenterPhotoStatus
   limit?: number
 }): Promise<CenterPhotoSubmissionWithMember[]> {
+  const centerId = await getCurrentCenterId()
   let query = supabase
     .from('center_photo_submissions')
     .select('*')
+    .eq('center_id', centerId)
     .order('created_at', { ascending: false })
     .limit(options?.limit ?? 50)
 
@@ -239,9 +245,11 @@ export async function fetchCenterPhotoSubmissions(options?: {
 }
 
 export async function countPendingCenterPhotoSubmissions(): Promise<number> {
+  const centerId = await getCurrentCenterId()
   const { count, error } = await supabase
     .from('center_photo_submissions')
     .select('id', { count: 'exact', head: true })
+    .eq('center_id', centerId)
     .eq('status', 'pending')
 
   if (error) throw error
