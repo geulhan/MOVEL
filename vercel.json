@@ -1,23 +1,18 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "routes": [
-    { "handle": "filesystem" },
-    { "src": "/robots.txt", "dest": "/robots.txt" },
-    { "src": "/sitemap.xml", "dest": "/sitemap.xml" },
-    { "src": "/naver0522ab9ffeda3b6f45ad8b42c55aea27.html", "dest": "/naver0522ab9ffeda3b6f45ad8b42c55aea27.html" },
-    { "src": "/googleb2b1fd8f1c6b2237.html", "dest": "/googleb2b1fd8f1c6b2237.html" },
+  "rewrites": [
     {
-      "src": "/",
+      "source": "/",
       "has": [{ "type": "host", "value": "motionhub.kr" }],
-      "dest": "/motionhub.html"
+      "destination": "/motionhub.html"
     },
     {
-      "src": "/",
+      "source": "/",
       "has": [{ "type": "host", "value": "www.motionhub.kr" }],
-      "dest": "/motionhub.html"
+      "destination": "/motionhub.html"
     },
-    { "src": "/(.*)", "dest": "/index.html" }
+    { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
     {
@@ -35,6 +30,10 @@
         {
           "key": "Cache-Control",
           "value": "public, max-age=3600"
+        },
+        {
+          "key": "Content-Type",
+          "value": "application/xml; charset=utf-8"
         }
       ]
     },
