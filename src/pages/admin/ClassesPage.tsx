@@ -5,6 +5,7 @@ import {
   cancelClassReservation,
   createClass,
   createClassSchedule,
+  deleteClass,
   fetchClassSchedulesInRange,
   fetchClasses,
   fetchScheduleReservations,
@@ -17,6 +18,7 @@ import {
   type ReservationStatus,
 } from '../../api/classes'
 import { fetchMembers, todayDateString } from '../../api/members'
+import { fetchTrainers } from '../../api/trainers'
 import { getAdminSession } from '../../lib/adminSession'
 import { getErrorMessage } from '../../lib/errors'
 import { filterBySearch } from '../../utils/renewal'
@@ -32,6 +34,7 @@ import { AdminToast, useAdminToast } from '../../components/admin/AdminToast'
 import { MemberSearchCombobox } from '../../components/admin/MemberSearchCombobox'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/theme'
 import type { Member } from '../../types/database'
+import type { Trainer } from '../../types/database'
 
 type ModalKind = 'class' | 'schedule' | null
 
@@ -42,6 +45,7 @@ export default function ClassesPage() {
   const [classes, setClasses] = useState<FitnessClass[]>([])
   const [schedules, setSchedules] = useState<ClassSchedule[]>([])
   const [members, setMembers] = useState<Member[]>([])
+  const [trainers, setTrainers] = useState<Trainer[]>([])
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -50,9 +54,12 @@ export default function ClassesPage() {
   const [modal, setModal] = useState<ModalKind>(null)
   const [newClassName, setNewClassName] = useState('')
   const [newClassType, setNewClassType] = useState<ClassType>('pilates')
+  const [newClassCapacity, setNewClassCapacity] = useState(8)
+  const [newClassTrainerId, setNewClassTrainerId] = useState('')
   const [newScheduleClassId, setNewScheduleClassId] = useState('')
   const [newScheduleDate, setNewScheduleDate] = useState(todayDateString())
   const [newScheduleTime, setNewScheduleTime] = useState('10:00')
+  const [newScheduleCapacity, setNewScheduleCapacity] = useState(8)
   const [reserveQuery, setReserveQuery] = useState('')
   const [reserveMember, setReserveMember] = useState<Member | null>(null)
 
@@ -63,14 +70,16 @@ export default function ClassesPage() {
     setLoading(true)
     setError(null)
     try {
-      const [cls, sched, mem] = await Promise.all([
+      const [cls, sched, mem, trainerRows] = await Promise.all([
         fetchClasses(),
         fetchClassSchedulesInRange(`${weekStart}T00:00:00`, `${weekEnd}T23:59:59`),
         fetchMembers(),
+        fetchTrainers(),
       ])
       setClasses(cls.filter((c) => c.status === 'active'))
       setSchedules(sched)
       setMembers(mem)
+      setTrainers(trainerRows)
     } catch (err) {
       setError(getErrorMessage(err))
     } finally {
@@ -128,22 +137,78 @@ export default function ClassesPage() {
     }
   }
 
+  function openClassModal() {
+    setNewClassName('')
+    setNewClassType('pilates')
+    setNewClassCapacity(8)
+    setNewClassTrainerId('')
+    setModal('class')
+  }
+
+  function openScheduleModal() {
+    const firstClass = classes[0]
+    setNewScheduleClassId(firstClass?.id ?? '')
+    setNewScheduleDate(todayDateString())
+    setNewScheduleTime('10:00')
+    setNewScheduleCapacity(firstClass?.capacity ?? 8)
+    setModal('schedule')
+  }
+
+  function handleScheduleClassChange(classId: string) {
+    setNewScheduleClassId(classId)
+    const cls = classes.find((c) => c.id === classId)
+    if (cls) setNewScheduleCapacity(cls.capacity)
+  }
+
   async function handleCreateClass() {
     if (!newClassName.trim()) {
       setError('클래스 이름을 입력해 주세요.')
       return
     }
+    if (newClassCapacity < 1) {
+      setError('정원은 1명 이상이어야 합니다.')
+      return
+    }
     await runAction(async () => {
-      await createClass({ name: newClassName.trim(), class_type: newClassType })
+      await createClass({
+        name: newClassName.trim(),
+        class_type: newClassType,
+        capacity: newClassCapacity,
+        trainer_id: newClassTrainerId || null,
+      })
       setModal(null)
       setNewClassName('')
+      setNewClassTrainerId('')
+      setNewClassCapacity(8)
       await load()
     }, '클래스가 등록되었습니다.')
+  }
+
+  async function handleDeleteClass(cls: FitnessClass) {
+    if (
+      !window.confirm(
+        `"${cls.name}" 클래스를 삭제할까요?\n새 일정 등록 목록에서 제외되며, 기존 일정은 유지됩니다.`,
+      )
+    ) {
+      return
+    }
+    await runAction(async () => {
+      await deleteClass(cls.id)
+      if (selectedSchedule?.class_id === cls.id) {
+        setSelectedSchedule(null)
+        setReservations([])
+      }
+      await load()
+    }, `"${cls.name}" 클래스가 삭제되었습니다.`)
   }
 
   async function handleCreateSchedule() {
     if (!newScheduleClassId) {
       setError('클래스를 선택해 주세요.')
+      return
+    }
+    if (newScheduleCapacity < 1) {
+      setError('정원은 1명 이상이어야 합니다.')
       return
     }
     const cls = classes.find((c) => c.id === newScheduleClassId)
@@ -155,6 +220,7 @@ export default function ClassesPage() {
         class_id: newScheduleClassId,
         starts_at: starts.toISOString(),
         ends_at: ends.toISOString(),
+        capacity: newScheduleCapacity,
       })
       setModal(null)
       await load()
@@ -246,7 +312,7 @@ export default function ClassesPage() {
             type="button"
             className={btnOutline}
             disabled={actionLoading}
-            onClick={() => setModal('class')}
+            onClick={openClassModal}
           >
             + 클래스
           </button>
@@ -254,15 +320,46 @@ export default function ClassesPage() {
             type="button"
             className={btnPrimary}
             disabled={actionLoading || classes.length === 0}
-            onClick={() => {
-              setNewScheduleDate(todayDateString())
-              setModal('schedule')
-            }}
+            onClick={openScheduleModal}
           >
             + 일정
           </button>
         </div>
       </div>
+
+      <section className={`${cardClass} card-pad`}>
+        <h2 className="mb-3 text-sm font-semibold text-charcoal">등록된 클래스</h2>
+        {loading ? (
+          <p className="text-sm text-muted">불러오는 중…</p>
+        ) : classes.length === 0 ? (
+          <p className="text-sm text-muted">등록된 클래스가 없습니다. + 클래스로 추가하세요.</p>
+        ) : (
+          <ul className="space-y-2">
+            {classes.map((cls) => (
+              <li
+                key={cls.id}
+                className="flex flex-wrap items-center gap-3 rounded-xl border border-gold/20 bg-white px-3 py-3"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-charcoal">{cls.name}</p>
+                  <p className="text-xs text-muted">
+                    {CLASS_TYPE_LABELS[cls.class_type]} · 정원 {cls.capacity}명
+                    {cls.trainer_name ? ` · ${cls.trainer_name}` : ' · 선생님 미지정'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={actionLoading}
+                  className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50"
+                  onClick={() => void handleDeleteClass(cls)}
+                >
+                  삭제
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <section className={`${cardClass} card-pad min-h-[20rem]`}>
@@ -307,6 +404,11 @@ export default function ClassesPage() {
                                 </span>
                                 <span className="min-w-0 flex-1 truncate font-medium">
                                   {s.class_name}
+                                  {s.trainer_name ? (
+                                    <span className="ml-1 font-normal text-muted">
+                                      · {s.trainer_name}
+                                    </span>
+                                  ) : null}
                                 </span>
                                 <span
                                   className={`shrink-0 text-xs ${
@@ -346,8 +448,12 @@ export default function ClassesPage() {
                 <p className="mt-0.5 text-sm text-muted">
                   {formatDayHeading(selectedSchedule.starts_at.slice(0, 10))}{' '}
                   {formatTime(selectedSchedule.starts_at)} ·{' '}
-                  {CLASS_TYPE_LABELS[selectedSchedule.class_type ?? 'pilates']} · 예약{' '}
-                  {selectedSchedule.reserved_count ?? 0}/{selectedSchedule.capacity ?? 8}
+                  {CLASS_TYPE_LABELS[selectedSchedule.class_type ?? 'pilates']}
+                  {selectedSchedule.trainer_name
+                    ? ` · ${selectedSchedule.trainer_name}`
+                    : ''}{' '}
+                  · 예약 {selectedSchedule.reserved_count ?? 0}/
+                  {selectedSchedule.capacity ?? 8}
                 </p>
               </div>
 
@@ -457,6 +563,32 @@ export default function ClassesPage() {
                     </option>
                   ))}
                 </select>
+                <label className="block text-sm">
+                  <span className="mb-1 block font-medium text-charcoal/70">담당 선생님</span>
+                  <select
+                    className={inputClass}
+                    value={newClassTrainerId}
+                    onChange={(e) => setNewClassTrainerId(e.target.value)}
+                  >
+                    <option value="">미지정</option>
+                    {trainers.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block text-sm">
+                  <span className="mb-1 block font-medium text-charcoal/70">기본 정원</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={99}
+                    className={inputClass}
+                    value={newClassCapacity}
+                    onChange={(e) => setNewClassCapacity(Number(e.target.value) || 1)}
+                  />
+                </label>
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -481,15 +613,27 @@ export default function ClassesPage() {
                 <select
                   className={inputClass}
                   value={newScheduleClassId}
-                  onChange={(e) => setNewScheduleClassId(e.target.value)}
+                  onChange={(e) => handleScheduleClassChange(e.target.value)}
                 >
                   <option value="">클래스 선택</option>
                   {classes.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
+                      {c.trainer_name ? ` (${c.trainer_name})` : ''}
                     </option>
                   ))}
                 </select>
+                <label className="block text-sm">
+                  <span className="mb-1 block font-medium text-charcoal/70">정원</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={99}
+                    className={inputClass}
+                    value={newScheduleCapacity}
+                    onChange={(e) => setNewScheduleCapacity(Number(e.target.value) || 1)}
+                  />
+                </label>
                 <input
                   type="date"
                   className={inputClass}

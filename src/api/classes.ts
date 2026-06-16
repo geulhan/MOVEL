@@ -154,6 +154,11 @@ export async function updateClass(
   return data as FitnessClass
 }
 
+export async function deleteClass(id: string): Promise<void> {
+  const { error } = await supabase.from('classes').update({ status: 'inactive' }).eq('id', id)
+  if (error) throw error
+}
+
 export async function fetchClassSchedulesInRange(
   startIso: string,
   endIso: string,
@@ -161,7 +166,7 @@ export async function fetchClassSchedulesInRange(
   const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('class_schedules')
-    .select('*, classes(name, class_type, color, trainers(name))')
+    .select('*, classes(name, class_type, color, capacity, trainers(name))')
     .eq('center_id', centerId)
     .gte('starts_at', startIso)
     .lte('starts_at', endIso)
@@ -175,11 +180,14 @@ export async function fetchClassSchedulesInRange(
       name?: string
       class_type?: ClassType
       color?: string
+      capacity?: number
       trainers?: { name?: string } | null
     } | null
     const { classes: _c, ...rest } = row
+    const schedule = rest as ClassSchedule
     return {
-      ...(rest as ClassSchedule),
+      ...schedule,
+      capacity: schedule.capacity ?? cls?.capacity ?? 8,
       class_name: cls?.name,
       class_type: cls?.class_type,
       class_color: cls?.color,
