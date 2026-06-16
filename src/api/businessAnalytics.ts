@@ -21,6 +21,7 @@ import {
 } from './businessAnalyticsSettings'
 import { isRenewalTarget } from '../utils/renewal'
 import { normalizeMember } from '../lib/memberNormalize'
+import type { Member } from '../types/database'
 
 function periodLabel(year: number, month: number): string {
   return `${year}년 ${month}월`
@@ -115,6 +116,34 @@ async function loadRecognitionInputs(centerId: string) {
   }
 }
 
+function computeAverageSessionPrice(members: Member[]): {
+  averageSessionPrice: number
+  totalPayment: number
+  totalSessions: number
+  memberCount: number
+} {
+  const registered = members.filter(
+    (member) => member.status !== 'terminated' && member.total_sessions > 0,
+  )
+  const totalPayment = registered.reduce(
+    (sum, member) => sum + Number(member.payment_amount),
+    0,
+  )
+  const totalSessions = registered.reduce(
+    (sum, member) => sum + Number(member.total_sessions),
+    0,
+  )
+  const averageSessionPrice =
+    totalSessions > 0 ? Math.round(totalPayment / totalSessions) : 0
+
+  return {
+    averageSessionPrice,
+    totalPayment,
+    totalSessions,
+    memberCount: registered.length,
+  }
+}
+
 function cashRevenueForMonth(
   payments: Array<{ amount: number; paid_at: string }>,
   year: number,
@@ -190,6 +219,14 @@ function buildSnapshotForMonth(
   )
   const centerPtShare = ptRecognized - trainerPayroll
 
+  const members = inputs.members
+  const {
+    averageSessionPrice,
+    totalPayment: registeredPtTotalAmount,
+    totalSessions: registeredPtTotalSessions,
+    memberCount: registeredMemberCount,
+  } = computeAverageSessionPrice(members)
+
   const ownerMemberIds = settings.ownerTrainerId
     ? new Set(
         inputs.memberTrainers
@@ -206,7 +243,7 @@ function buildSnapshotForMonth(
         month,
       )
     : 0
-  const ownerPayroll = ownerSessions * settings.ownerSessionRate
+  const ownerPayroll = ownerSessions * averageSessionPrice
 
   const ownerPtRecognized = settings.ownerTrainerId
     ? ptRecognizedByTrainer(
@@ -248,7 +285,6 @@ function buildSnapshotForMonth(
       ? Math.round((fixedCostsTotal / totalRecognized) * 100)
       : 0
 
-  const members = inputs.members
   const renewalTargets = members.filter((m) => isRenewalTarget(m))
   const activeMembers = members.filter((m) => m.status === 'active').length
   const renewalRate =
@@ -296,6 +332,10 @@ function buildSnapshotForMonth(
     totalRefundRisk: totalPrepaid,
     trainerPayroll,
     centerPtShare,
+    averageSessionPrice,
+    registeredPtTotalAmount,
+    registeredPtTotalSessions,
+    registeredMemberCount,
     ownerSessions,
     ownerPayroll,
     fixedCostsTotal,

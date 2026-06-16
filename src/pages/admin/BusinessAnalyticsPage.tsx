@@ -87,10 +87,18 @@ function BarChart({
 function SettingsPanel({
   settings,
   trainers,
+  averageSessionPrice,
+  registeredPtTotalAmount,
+  registeredPtTotalSessions,
+  registeredMemberCount,
   onSave,
 }: {
   settings: BusinessAnalyticsSettings
   trainers: Trainer[]
+  averageSessionPrice: number
+  registeredPtTotalAmount: number
+  registeredPtTotalSessions: number
+  registeredMemberCount: number
   onSave: (next: BusinessAnalyticsSettings) => Promise<void>
 }) {
   const [draft, setDraft] = useState(settings)
@@ -119,7 +127,20 @@ function SettingsPanel({
       <div>
         <h3 className="text-sm font-semibold text-charcoal">경영 설정</h3>
         <p className="mt-1 text-xs text-muted">
-          트레이너 정산율, 대표 인건비, 고정비, 충당금 비율을 설정합니다.
+          트레이너 정산율, 대표 트레이너, 고정비, 충당금 비율을 설정합니다. 평균 세션 단가는
+          등록 회원의 총 결제금액 ÷ 총 등록 세션으로 자동 계산됩니다.
+        </p>
+      </div>
+
+      <div className="rounded-xl border border-gold/25 bg-cream/40 p-4 text-sm">
+        <p className="font-semibold text-charcoal">평균 세션 단가 (자동)</p>
+        <p className="mt-1 text-2xl font-bold tabular-nums text-charcoal">
+          {formatCurrency(averageSessionPrice)}
+        </p>
+        <p className="mt-1 text-xs text-muted">
+          등록 회원 {registeredMemberCount}명 · 총 결제{' '}
+          {formatCurrency(registeredPtTotalAmount)} ÷ 총 세션{' '}
+          {registeredPtTotalSessions.toLocaleString()}회
         </p>
       </div>
 
@@ -160,23 +181,6 @@ function SettingsPanel({
               </option>
             ))}
           </select>
-        </label>
-
-        <label className="block text-sm">
-          <span className="mb-1.5 block font-medium">대표 세션 단가 (원)</span>
-          <input
-            type="number"
-            min={0}
-            step={1000}
-            value={draft.ownerSessionRate}
-            onChange={(e) =>
-              setDraft((prev) => ({
-                ...prev,
-                ownerSessionRate: Number(e.target.value),
-              }))
-            }
-            className={inputClass}
-          />
         </label>
 
         <label className="block text-sm">
@@ -362,6 +366,10 @@ export default function BusinessAnalyticsPage() {
         <SettingsPanel
           settings={settings}
           trainers={trainers}
+          averageSessionPrice={data?.averageSessionPrice ?? 0}
+          registeredPtTotalAmount={data?.registeredPtTotalAmount ?? 0}
+          registeredPtTotalSessions={data?.registeredPtTotalSessions ?? 0}
+          registeredMemberCount={data?.registeredMemberCount ?? 0}
           onSave={async (next) => {
             await saveBusinessAnalyticsSettings(next)
             setSettings(next)
@@ -461,9 +469,14 @@ export default function BusinessAnalyticsPage() {
                 sub="PT 인식매출 − 트레이너"
               />
               <KpiCard
+                label="평균 세션 단가"
+                value={formatCurrency(data.averageSessionPrice)}
+                sub={`등록 회원 ${data.registeredMemberCount}명 · ${formatCurrency(data.registeredPtTotalAmount)} ÷ ${data.registeredPtTotalSessions.toLocaleString()}회`}
+              />
+              <KpiCard
                 label="대표 인건비"
                 value={formatCurrency(data.ownerPayroll)}
-                sub={`이번 달 ${data.ownerSessions}회 × ${formatCurrency(settings.ownerSessionRate)}`}
+                sub={`이번 달 ${data.ownerSessions}회 × 평균 ${formatCurrency(data.averageSessionPrice)}`}
               />
               <KpiCard label="고정비" value={formatCurrency(data.fixedCostsTotal)} />
               <KpiCard

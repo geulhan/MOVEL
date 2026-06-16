@@ -9,7 +9,6 @@ export type FixedCosts = {
 export type BusinessAnalyticsSettings = {
   trainerSettlementRate: number
   ownerTrainerId: string | null
-  ownerSessionRate: number
   fixedCosts: FixedCosts
   taxReserveRate: number
   facilityReserveRate: number
@@ -26,7 +25,6 @@ export const DEFAULT_FIXED_COSTS: FixedCosts = {
 export const DEFAULT_BUSINESS_ANALYTICS_SETTINGS: BusinessAnalyticsSettings = {
   trainerSettlementRate: 50,
   ownerTrainerId: null,
-  ownerSessionRate: 50_000,
   fixedCosts: { ...DEFAULT_FIXED_COSTS },
   taxReserveRate: 10,
   facilityReserveRate: 5,
@@ -60,6 +58,10 @@ export type BusinessAnalyticsSnapshot = {
   totalRefundRisk: number
   trainerPayroll: number
   centerPtShare: number
+  averageSessionPrice: number
+  registeredPtTotalAmount: number
+  registeredPtTotalSessions: number
+  registeredMemberCount: number
   ownerSessions: number
   ownerPayroll: number
   fixedCostsTotal: number

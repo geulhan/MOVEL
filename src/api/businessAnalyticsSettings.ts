@@ -50,7 +50,6 @@ function normalizeSettings(raw: unknown): BusinessAnalyticsSettings {
       row.ownerTrainerId != null && String(row.ownerTrainerId).trim()
         ? String(row.ownerTrainerId)
         : null,
-    ownerSessionRate: clampMoney(row.ownerSessionRate) || 50_000,
     fixedCosts: normalizeFixedCosts(row.fixedCosts),
     taxReserveRate: clampPercent(
       row.taxReserveRate,
