@@ -18,6 +18,7 @@ export type Trainer = {
   id: string
   name: string
   is_active: boolean
+  settlement_rate: number | null
   center_id?: string
   created_at: string
 }
@@ -596,8 +597,8 @@ export type Database = {
       >
       trainers: TableDef<
         Trainer,
-        { name: string; is_active?: boolean; center_id?: string },
-        { name?: string; is_active?: boolean; center_id?: string }
+        { name: string; is_active?: boolean; center_id?: string; settlement_rate?: number | null },
+        { name?: string; is_active?: boolean; center_id?: string; settlement_rate?: number | null }
       >
       period_extensions: TableDef<
         PeriodExtension,

@@ -1,5 +1,9 @@
-import type { Member } from '../types/database'
+import type { Member, Trainer } from '../types/database'
 import type { PtSchedule } from '../api/schedule'
+import {
+  resolveTrainerIdByName,
+  resolveTrainerSettlementRate,
+} from './trainerSettlement'
 
 function isSameCalendarDay(a: string, b: string): boolean {
   const da = new Date(a)
@@ -19,7 +23,9 @@ export function memberSessionUnitPrice(member: Member): number {
 }
 
 export type TrainerPayrollSummaryRow = {
+  trainerId: string | null
   trainerName: string
+  settlementRate: number
   sessionCount: number
   grossAmount: number
   trainerPay: number
@@ -27,7 +33,7 @@ export type TrainerPayrollSummaryRow = {
 }
 
 export type AttendancePayrollSummary = {
-  settlementRate: number
+  defaultSettlementRate: number
   totalSessions: number
   totalGross: number
   totalTrainerPay: number
@@ -40,12 +46,18 @@ export type AttendancePayrollLog = {
   checked_in_at: string
 }
 
+type TrainerResolution = {
+  trainerId: string | null
+  trainerName: string
+}
+
 function resolveTrainerForAttendance(
   log: AttendancePayrollLog,
   member: Member | undefined,
   schedules: PtSchedule[],
-  trainerNamesById: Map<string, string>,
-): string {
+  trainers: Trainer[],
+): TrainerResolution {
+  const trainerNamesById = new Map(trainers.map((trainer) => [trainer.id, trainer.name]))
   const daySchedules = schedules.filter(
     (schedule) =>
       schedule.member_id === log.member_id &&
@@ -64,50 +76,90 @@ function resolveTrainerForAttendance(
         ),
     )[0]
 
-    if (nearest.trainer_name?.trim()) return nearest.trainer_name.trim()
     if (nearest.trainer_id) {
-      return (
-        trainerNamesById.get(nearest.trainer_id) ??
-        member?.trainer_name?.trim() ??
-        '미지정'
-      )
+      return {
+        trainerId: nearest.trainer_id,
+        trainerName:
+          nearest.trainer_name ??
+          trainerNamesById.get(nearest.trainer_id) ??
+          member?.trainer_name?.trim() ??
+          '미지정',
+      }
+    }
+
+    if (nearest.trainer_name?.trim()) {
+      return {
+        trainerId: resolveTrainerIdByName(nearest.trainer_name, trainers),
+        trainerName: nearest.trainer_name.trim(),
+      }
     }
   }
 
-  return member?.trainer_name?.trim() || '미지정'
+  const memberTrainerId =
+    member?.trainer_id ??
+    resolveTrainerIdByName(member?.trainer_name, trainers)
+
+  return {
+    trainerId: memberTrainerId,
+    trainerName: member?.trainer_name?.trim() || '미지정',
+  }
+}
+
+function trainerBucketKey(trainerId: string | null, trainerName: string): string {
+  return trainerId ?? `name:${trainerName}`
 }
 
 export function buildAttendancePayrollSummary(
   logs: AttendancePayrollLog[],
   members: Member[],
   schedules: PtSchedule[],
-  trainerNamesById: Map<string, string>,
-  settlementRate: number,
+  trainers: Trainer[],
+  defaultSettlementRate: number,
 ): AttendancePayrollSummary {
   const memberById = new Map(members.map((member) => [member.id, member]))
-  const byTrainer = new Map<string, { count: number; gross: number }>()
+  const byTrainer = new Map<
+    string,
+    {
+      trainerId: string | null
+      trainerName: string
+      count: number
+      gross: number
+    }
+  >()
 
   for (const log of logs) {
     const member = memberById.get(log.member_id)
-    const trainerName = resolveTrainerForAttendance(
+    const { trainerId, trainerName } = resolveTrainerForAttendance(
       log,
       member,
       schedules,
-      trainerNamesById,
+      trainers,
     )
+    const bucketKey = trainerBucketKey(trainerId, trainerName)
     const unitPrice = member ? memberSessionUnitPrice(member) : 0
-    const bucket = byTrainer.get(trainerName) ?? { count: 0, gross: 0 }
+    const bucket = byTrainer.get(bucketKey) ?? {
+      trainerId,
+      trainerName,
+      count: 0,
+      gross: 0,
+    }
     bucket.count += 1
     bucket.gross += unitPrice
-    byTrainer.set(trainerName, bucket)
+    byTrainer.set(bucketKey, bucket)
   }
 
-  const rate = Math.min(100, Math.max(0, settlementRate))
-  const byTrainerRows = [...byTrainer.entries()]
-    .map(([trainerName, stats]) => {
-      const trainerPay = Math.round(stats.gross * (rate / 100))
+  const byTrainerRows = [...byTrainer.values()]
+    .map((stats) => {
+      const settlementRate = resolveTrainerSettlementRate(
+        stats.trainerId,
+        trainers,
+        defaultSettlementRate,
+      )
+      const trainerPay = Math.round(stats.gross * (settlementRate / 100))
       return {
-        trainerName,
+        trainerId: stats.trainerId,
+        trainerName: stats.trainerName,
+        settlementRate,
         sessionCount: stats.count,
         grossAmount: stats.gross,
         trainerPay,
@@ -125,7 +177,7 @@ export function buildAttendancePayrollSummary(
   const totalTrainerPay = byTrainerRows.reduce((sum, row) => sum + row.trainerPay, 0)
 
   return {
-    settlementRate: rate,
+    defaultSettlementRate,
     totalSessions: logs.length,
     totalGross,
     totalTrainerPay,

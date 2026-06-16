@@ -147,7 +147,7 @@ export function CenterAttendanceBoard() {
           fetchCenterAttendanceBoard(monthRef),
           fetchMembers(),
           fetchBusinessAnalyticsSettings(),
-          fetchTrainers(),
+          fetchTrainers({ activeOnly: false }),
           fetchMonthAttendanceLogs(monthRef),
           fetchSchedulesInRange(startIso, endIso),
         ])
@@ -156,15 +156,12 @@ export function CenterAttendanceBoard() {
       setSummary(board.summary)
       setMembers(memberList)
 
-      const trainerNamesById = new Map(
-        trainers.map((trainer) => [trainer.id, trainer.name]),
-      )
       setPayrollSummary(
         buildAttendancePayrollSummary(
           monthLogs,
           memberList,
           monthSchedules as PtSchedule[],
-          trainerNamesById,
+          trainers,
           settings.trainerSettlementRate,
         ),
       )

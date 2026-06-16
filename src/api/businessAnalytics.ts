@@ -27,7 +27,8 @@ import {
 import { fetchContractSettings } from './contractSettings'
 import { isRenewalTarget } from '../utils/renewal'
 import { normalizeMember } from '../lib/memberNormalize'
-import type { Member } from '../types/database'
+import type { Member, Trainer } from '../types/database'
+import { resolveTrainerSettlementRate } from '../lib/trainerSettlement'
 
 type CenterPassAnalyticsRow = {
   id: string
@@ -66,7 +67,7 @@ function shiftMonth(year: number, month: number, offset: number): {
 }
 
 async function loadRecognitionInputs(centerId: string) {
-  const [paymentsRes, passesRes, facilityRes, logsRes, membersRes] =
+  const [paymentsRes, passesRes, facilityRes, logsRes, membersRes, trainersRes] =
     await Promise.all([
       supabase
         .from('payment_history')
@@ -103,6 +104,10 @@ async function loadRecognitionInputs(centerId: string) {
         .from('members')
         .select('*')
         .eq('center_id', centerId),
+      supabase
+        .from('trainers')
+        .select('id, name, settlement_rate, is_active')
+        .eq('center_id', centerId),
     ])
 
   if (paymentsRes.error) throw paymentsRes.error
@@ -110,6 +115,7 @@ async function loadRecognitionInputs(centerId: string) {
   if (facilityRes.error) throw facilityRes.error
   if (logsRes.error) throw logsRes.error
   if (membersRes.error) throw membersRes.error
+  if (trainersRes.error) throw trainersRes.error
 
   const passRows = (passesRes.data ?? []) as CenterPassAnalyticsRow[]
   const facilityRows = (facilityRes.data ?? []) as FacilitySubscriptionRow[]
@@ -200,6 +206,15 @@ async function loadRecognitionInputs(centerId: string) {
     trainerId: m.trainer_id,
   }))
 
+  const trainers: Trainer[] = (trainersRes.data ?? []).map((row) => ({
+    id: row.id,
+    name: row.name,
+    is_active: row.is_active,
+    settlement_rate:
+      row.settlement_rate == null ? null : Number(row.settlement_rate),
+    created_at: '',
+  }))
+
   return {
     payments: paymentsRes.data ?? [],
     periodPasses,
@@ -210,6 +225,7 @@ async function loadRecognitionInputs(centerId: string) {
     sessionLogs,
     memberTrainers,
     members: (membersRes.data ?? []).map((row) => normalizeMember(row)),
+    trainers,
   }
 }
 
@@ -318,6 +334,49 @@ function computeHealthScore(input: {
   )
 }
 
+function computeTrainerPayrollTotal(
+  ptPayments: PtPayment[],
+  sessionLogs: PtSessionLog[],
+  memberTrainers: MemberTrainer[],
+  trainers: Trainer[],
+  defaultRate: number,
+  year: number,
+  month: number,
+  totalPtRecognized: number,
+): number {
+  const trainerIds = new Set(
+    memberTrainers
+      .map((link) => link.trainerId)
+      .filter((trainerId): trainerId is string => Boolean(trainerId)),
+  )
+
+  let assignedRecognized = 0
+  let trainerPayroll = 0
+
+  for (const trainerId of trainerIds) {
+    const recognized = ptRecognizedByTrainer(
+      ptPayments,
+      sessionLogs,
+      memberTrainers,
+      trainerId,
+      year,
+      month,
+    )
+    if (recognized <= 0) continue
+
+    assignedRecognized += recognized
+    const rate = resolveTrainerSettlementRate(trainerId, trainers, defaultRate)
+    trainerPayroll += Math.round(recognized * (rate / 100))
+  }
+
+  const unassignedRecognized = Math.max(0, totalPtRecognized - assignedRecognized)
+  if (unassignedRecognized > 0) {
+    trainerPayroll += Math.round(unassignedRecognized * (defaultRate / 100))
+  }
+
+  return trainerPayroll
+}
+
 function buildSnapshotForMonth(
   inputs: Awaited<ReturnType<typeof loadRecognitionInputs>>,
   settings: Awaited<ReturnType<typeof fetchBusinessAnalyticsSettings>>,
@@ -369,8 +428,15 @@ function buildSnapshotForMonth(
   const totalRefundRisk = centerPassRefundRisk + ptRefundRisk
   const totalRefundExpired = centerPassRefundExpired + ptRefundExpired
 
-  const trainerPayroll = Math.round(
-    ptRecognized * (settings.trainerSettlementRate / 100),
+  const trainerPayroll = computeTrainerPayrollTotal(
+    inputs.ptPayments,
+    inputs.sessionLogs,
+    inputs.memberTrainers,
+    inputs.trainers,
+    settings.trainerSettlementRate,
+    year,
+    month,
+    ptRecognized,
   )
   const centerPtShare = ptRecognized - trainerPayroll
 

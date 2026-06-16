@@ -162,11 +162,20 @@ function SettingsPanel({
             className={inputClass}
           />
           <p className="mt-1 text-xs text-muted">
-            출석부 트레이너별 수업료·경영분석 PT 인식매출 정산에 동일하게 적용됩니다.
+            센터 기본 비율입니다. 트레이너별 개별 비율은 트레이너 메뉴에서 설정하며,
+            출석부·경영분석 PT 정산에 함께 반영됩니다.
           </p>
         </label>
 
-        <label className="block text-sm">
+        <div className="rounded-xl border border-gold/20 bg-cream/30 px-4 py-3 text-sm text-muted">
+          트레이너마다 다른 수업료 비율이 필요하면{' '}
+          <a href="/admin/trainers" className="font-semibold text-charcoal underline">
+            트레이너 → 수업료 비율
+          </a>
+          에서 개별 설정하세요.
+        </div>
+
+        <label className="block text-sm sm:col-span-2 lg:col-span-3">
           <span className="mb-1.5 block font-medium">대표 트레이너</span>
           <select
             value={draft.ownerTrainerId ?? ''}

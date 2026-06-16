@@ -20,17 +20,50 @@ function parseRpcResult(data: unknown): RpcResult {
   return { ok: true }
 }
 
-export async function fetchTrainers(): Promise<Trainer[]> {
+export async function fetchTrainers(options?: {
+  activeOnly?: boolean
+}): Promise<Trainer[]> {
   const centerId = await getCurrentCenterId()
-  const { data, error } = await supabase
+  let query = supabase
     .from('trainers')
     .select('*')
     .eq('center_id', centerId)
-    .eq('is_active', true)
     .order('name')
 
+  if (options?.activeOnly !== false) {
+    query = query.eq('is_active', true)
+  }
+
+  const { data, error } = await query
+
   if (error) throw new Error(formatSupabaseError(error))
-  return data ?? []
+  return (data ?? []).map((row) => ({
+    ...row,
+    settlement_rate:
+      row.settlement_rate == null ? null : Number(row.settlement_rate),
+  }))
+}
+
+export async function updateTrainerSettlementRate(
+  trainerId: string,
+  settlementRate: number | null,
+): Promise<Trainer> {
+  const value =
+    settlementRate == null ? null : Math.min(100, Math.max(0, Math.round(settlementRate)))
+
+  const { data, error } = await supabase
+    .from('trainers')
+    .update({ settlement_rate: value })
+    .eq('id', trainerId)
+    .select('*')
+    .single()
+
+  if (error) throw new Error(formatSupabaseError(error))
+  return {
+    ...data,
+    settlement_rate:
+      data.settlement_rate == null ? null : Number(data.settlement_rate),
+  }
 }
 
 export async function createTrainer(name: string): Promise<Trainer> {

@@ -25,12 +25,15 @@ export function TrainerAttendancePayrollPanel({
             트레이너별 수업·수업료
           </h3>
           <p className="mt-1 text-xs text-muted">
-            {monthLabel} 출석 기준 · 회원 단가(결제금액 ÷ 총 PT) × 출석 횟수로
-            소진 매출을 계산하고, 트레이너 수업료 비율을 적용합니다.
+            {monthLabel} 출석 기준 · 회원 단가 × 출석 횟수로 소진 매출을 계산하고,
+            트레이너별 수업료 비율을 적용합니다.
+            {summary
+              ? ` (기본 ${summary.defaultSettlementRate}%, 개별 설정 우선)`
+              : ''}
           </p>
         </div>
-        <Link to="/admin/analytics" className={`${btnOutline} text-xs`}>
-          수업료 비율 설정
+        <Link to="/admin/trainers" className={`${btnOutline} text-xs`}>
+          트레이너별 비율 설정
         </Link>
       </div>
 
@@ -56,9 +59,7 @@ export function TrainerAttendancePayrollPanel({
               </p>
             </div>
             <div>
-              <p className="text-xs text-muted">
-                트레이너 수업료 ({summary.settlementRate}%)
-              </p>
+              <p className="text-xs text-muted">트레이너 수업료 합계</p>
               <p className="mt-1 text-xl font-bold tabular-nums text-emerald-700">
                 {formatCurrency(summary.totalTrainerPay)}
               </p>
@@ -72,10 +73,11 @@ export function TrainerAttendancePayrollPanel({
           </div>
 
           <div className="table-scroll">
-            <table className="w-full min-w-[640px] text-left text-sm">
+            <table className="w-full min-w-[720px] text-left text-sm">
               <thead className="table-head">
                 <tr>
                   <th className="px-4 py-2.5">트레이너</th>
+                  <th className="px-4 py-2.5">비율</th>
                   <th className="px-4 py-2.5">수업 횟수</th>
                   <th className="px-4 py-2.5">소진 매출</th>
                   <th className="px-4 py-2.5">트레이너 수업료</th>
@@ -84,9 +86,15 @@ export function TrainerAttendancePayrollPanel({
               </thead>
               <tbody className="divide-y divide-gold/15">
                 {summary.byTrainer.map((row) => (
-                  <tr key={row.trainerName} className="hover:bg-cream/40">
+                  <tr
+                    key={row.trainerId ?? row.trainerName}
+                    className="hover:bg-cream/40"
+                  >
                     <td className="px-4 py-3 font-medium text-charcoal">
                       {row.trainerName}
+                    </td>
+                    <td className="px-4 py-3 tabular-nums text-charcoal/70">
+                      {row.settlementRate}%
                     </td>
                     <td className="px-4 py-3 tabular-nums">{row.sessionCount}회</td>
                     <td className="px-4 py-3 tabular-nums">
