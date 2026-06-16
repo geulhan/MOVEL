@@ -29,6 +29,30 @@ import { isRenewalTarget } from '../utils/renewal'
 import { normalizeMember } from '../lib/memberNormalize'
 import type { Member } from '../types/database'
 
+type CenterPassAnalyticsRow = {
+  id: string
+  starts_at: string
+  ends_at: string
+  amount: number | null
+  status: string
+  payment_history?:
+    | {
+        paid_at: string | null
+        payment_request: { duration_days: number | null } | null
+      }
+    | null
+  center_pass_products?: { duration_days: number } | null
+}
+
+type FacilitySubscriptionRow = {
+  id: string
+  member_id: string
+  starts_at: string
+  ends_at: string
+  amount: number | null
+  status: string
+}
+
 function periodLabel(year: number, month: number): string {
   return `${year}년 ${month}월`
 }
@@ -87,7 +111,10 @@ async function loadRecognitionInputs(centerId: string) {
   if (logsRes.error) throw logsRes.error
   if (membersRes.error) throw membersRes.error
 
-  const centerPasses: PeriodPass[] = (passesRes.data ?? []).map((p) => ({
+  const passRows = (passesRes.data ?? []) as CenterPassAnalyticsRow[]
+  const facilityRows = (facilityRes.data ?? []) as FacilitySubscriptionRow[]
+
+  const centerPasses: PeriodPass[] = passRows.map((p) => ({
     id: p.id,
     startsAt: p.starts_at,
     endsAt: p.ends_at,
@@ -95,9 +122,7 @@ async function loadRecognitionInputs(centerId: string) {
     status: p.status,
   }))
 
-  const centerPassRefundInputs: PeriodPassRefundInput[] = (
-    passesRes.data ?? []
-  ).map((p) => {
+  const centerPassRefundInputs: PeriodPassRefundInput[] = passRows.map((p) => {
     const payment = p.payment_history as
       | {
           paid_at: string | null
@@ -122,7 +147,7 @@ async function loadRecognitionInputs(centerId: string) {
     }
   })
 
-  const facilityPasses: PeriodPass[] = (facilityRes.data ?? []).map((p) => ({
+  const facilityPasses: PeriodPass[] = facilityRows.map((p) => ({
     id: p.id,
     startsAt: p.starts_at,
     endsAt: p.ends_at,
@@ -130,9 +155,7 @@ async function loadRecognitionInputs(centerId: string) {
     status: p.status,
   }))
 
-  const facilityRefundInputs: PeriodPassRefundInput[] = (
-    facilityRes.data ?? []
-  ).map((p) => {
+  const facilityRefundInputs: PeriodPassRefundInput[] = facilityRows.map((p) => {
     const totalDays = Math.max(
       1,
       Math.round(

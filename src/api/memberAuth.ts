@@ -155,7 +155,7 @@ export async function registerMember(
     p_phone: digits,
     p_password: password,
     p_device_type: detectDeviceType(),
-    p_center_slug: slug,
+    p_center_slug: slug ?? undefined,
     p_agree_age: consents.agreeAge,
     p_agree_terms: consents.agreeTerms,
     p_agree_privacy: consents.agreePrivacy,
@@ -209,7 +209,7 @@ export async function loginMember(
     p_phone: digits,
     p_password: password,
     p_device_type: detectDeviceType(),
-    p_center_slug: slug,
+    p_center_slug: slug ?? undefined,
   })
 
   if (error) {

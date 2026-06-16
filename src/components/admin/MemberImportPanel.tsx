@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { createMember } from '../api/members'
-import { formatSupabaseError } from '../lib/errors'
+import { createMember } from '../../api/members'
+import { formatSupabaseError } from '../../lib/errors'
 import {
   CRM_PRESET_LABELS,
   exportImportTemplateExcel,
@@ -12,9 +12,9 @@ import {
   type CrmPresetId,
   type ImportFieldKey,
   type ParsedSheet,
-} from '../lib/memberImport'
-import { btnOutline, btnPrimary, cardClass, inputClass } from '../styles/theme'
-import type { Trainer } from '../types/database'
+} from '../../lib/memberImport'
+import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/theme'
+import type { Trainer } from '../../types/database'
 
 type Props = {
   trainers: Trainer[]

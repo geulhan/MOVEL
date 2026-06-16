@@ -5,6 +5,7 @@ import {
   buildSampleTransferFields,
 } from '../../lib/contracts/contractSampleData'
 import { useContractSettings } from '../../hooks/useContractSettings'
+import { btnOutline, btnPrimary } from '../../styles/theme'
 import { ContractDocument } from './ContractDocument'
 import { PtMembershipTransferDocument } from './PtMembershipTransferDocument'
 
