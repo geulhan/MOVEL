@@ -147,7 +147,7 @@ function SettingsPanel({
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <label className="block text-sm">
-          <span className="mb-1.5 block font-medium">트레이너 정산율 (%)</span>
+          <span className="mb-1.5 block font-medium">트레이너 수업료 비율 (%)</span>
           <input
             type="number"
             min={0}
@@ -161,6 +161,9 @@ function SettingsPanel({
             }
             className={inputClass}
           />
+          <p className="mt-1 text-xs text-muted">
+            출석부 트레이너별 수업료·경영분석 PT 인식매출 정산에 동일하게 적용됩니다.
+          </p>
         </label>
 
         <label className="block text-sm">

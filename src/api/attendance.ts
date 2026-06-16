@@ -485,17 +485,25 @@ function deriveDisplayStatus(input: {
 export async function fetchMonthAttendanceTotal(
   monthRef: MonthRef,
 ): Promise<number> {
+  const logs = await fetchMonthAttendanceLogs(monthRef)
+  return logs.length
+}
+
+export async function fetchMonthAttendanceLogs(
+  monthRef: MonthRef,
+): Promise<Array<{ member_id: string; checked_in_at: string }>> {
   const centerId = await getCurrentCenterId()
   const { startIso, endIso } = monthRangeIso(monthRef)
-  const { count, error } = await supabase
+  const { data, error } = await supabase
     .from('attendance_logs')
-    .select('id', { count: 'exact', head: true })
+    .select('member_id, checked_in_at')
     .eq('center_id', centerId)
     .gte('checked_in_at', startIso)
     .lte('checked_in_at', endIso)
+    .order('checked_in_at', { ascending: true })
 
   if (error) throw error
-  return count ?? 0
+  return (data ?? []) as Array<{ member_id: string; checked_in_at: string }>
 }
 
 /** 선택 월: 예약됐으나 출석 처리되지 않은 수업 */

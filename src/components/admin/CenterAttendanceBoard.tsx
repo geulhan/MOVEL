@@ -5,16 +5,30 @@ import {
   centerAttendanceStatusLabel,
   checkInMember,
   fetchCenterAttendanceBoard,
+  fetchMonthAttendanceLogs,
   formatMonthLabel,
+  monthRangeIso,
   type CenterAttendanceDisplayStatus,
   type CenterAttendanceRow,
   type MonthRef,
 } from '../../api/attendance'
-import { fetchMembers, formatPhone, isExpired } from '../../api/members'
-import { updateScheduleStatus } from '../../api/schedule'
+import { fetchBusinessAnalyticsSettings } from '../../api/businessAnalyticsSettings'
+import { fetchMembers, formatCurrency, formatPhone, isExpired } from '../../api/members'
+import {
+  fetchSchedulesInRange,
+  updateScheduleStatus,
+  type PtSchedule,
+} from '../../api/schedule'
+import { fetchTrainers } from '../../api/trainers'
 import { isSameLocalDay } from '../../utils/date'
 import { formatSupabaseError, getErrorMessage } from '../../lib/errors'
+import {
+  buildAttendancePayrollSummary,
+  memberSessionUnitPrice,
+  type AttendancePayrollSummary,
+} from '../../lib/attendancePayroll'
 import { SearchBar } from '../SearchBar'
+import { TrainerAttendancePayrollPanel } from './TrainerAttendancePayrollPanel'
 import type { Member } from '../../types/database'
 import { btnGold, btnOutline, cardClass } from '../../styles/theme'
 
@@ -109,6 +123,10 @@ export function CenterAttendanceBoard() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [searchInput, setSearchInput] = useState('')
   const [activeSearch, setActiveSearch] = useState('')
+  const [payrollSummary, setPayrollSummary] = useState<AttendancePayrollSummary | null>(
+    null,
+  )
+  const [payrollLoading, setPayrollLoading] = useState(true)
 
   const monthLabel = formatMonthLabel(monthRef)
   const isMonthView = statusFilter === 'scheduled'
@@ -120,20 +138,42 @@ export function CenterAttendanceBoard() {
 
   const load = useCallback(async () => {
     setLoading(true)
+    setPayrollLoading(true)
     setError(null)
     try {
-      const [board, memberList] = await Promise.all([
-        fetchCenterAttendanceBoard(monthRef),
-        fetchMembers(),
-      ])
+      const { startIso, endIso } = monthRangeIso(monthRef)
+      const [board, memberList, settings, trainers, monthLogs, monthSchedules] =
+        await Promise.all([
+          fetchCenterAttendanceBoard(monthRef),
+          fetchMembers(),
+          fetchBusinessAnalyticsSettings(),
+          fetchTrainers(),
+          fetchMonthAttendanceLogs(monthRef),
+          fetchSchedulesInRange(startIso, endIso),
+        ])
       setTodayRows(board.todayRows)
       setMonthScheduledRows(board.monthScheduledRows)
       setSummary(board.summary)
       setMembers(memberList)
+
+      const trainerNamesById = new Map(
+        trainers.map((trainer) => [trainer.id, trainer.name]),
+      )
+      setPayrollSummary(
+        buildAttendancePayrollSummary(
+          monthLogs,
+          memberList,
+          monthSchedules as PtSchedule[],
+          trainerNamesById,
+          settings.trainerSettlementRate,
+        ),
+      )
     } catch (err) {
       setError(formatSupabaseError(err))
+      setPayrollSummary(null)
     } finally {
       setLoading(false)
+      setPayrollLoading(false)
     }
   }, [monthRef])
 
@@ -265,7 +305,7 @@ export function CenterAttendanceBoard() {
       <div>
         <h2 className="page-title">출석부</h2>
         <p className="page-desc">
-          오늘 출석·미출석·노쇼를 확인하고, 월별 예정 수업과 총 출석 횟수를
+          오늘 출석·미출석·노쇼를 확인하고, 월별 예정 수업·트레이너별 수업료를
           조회합니다.
         </p>
       </div>
@@ -369,6 +409,12 @@ export function CenterAttendanceBoard() {
         ))}
       </div>
 
+      <TrainerAttendancePayrollPanel
+        monthRef={monthRef}
+        summary={payrollSummary}
+        loading={payrollLoading}
+      />
+
       <section className={`${cardClass} overflow-hidden`}>
         <div className="card-header">
           <h3 className="text-base font-semibold text-charcoal">{tableTitle}</h3>
@@ -414,6 +460,7 @@ export function CenterAttendanceBoard() {
                 <tr>
                   <th className="px-4 py-2.5">회원</th>
                   <th className="px-4 py-2.5">트레이너</th>
+                  <th className="px-4 py-2.5">회차 단가</th>
                   <th className="px-4 py-2.5">예약</th>
                   <th className="px-4 py-2.5">상태</th>
                   <th className="px-4 py-2.5">출석 시각</th>
@@ -440,6 +487,11 @@ export function CenterAttendanceBoard() {
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-charcoal/70">
                         {row.trainerName ?? '-'}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap tabular-nums text-charcoal/70">
+                        {member && member.total_sessions > 0
+                          ? formatCurrency(memberSessionUnitPrice(member))
+                          : '-'}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap tabular-nums">
                         {row.scheduledAt
