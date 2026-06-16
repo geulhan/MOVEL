@@ -7,11 +7,12 @@ import {
   getActiveFacilityProducts,
 } from '../../api/facilityProducts'
 import { createPaymentRequest } from '../../api/paymentRequests'
-import { fetchPtPricing, getActivePackages } from '../../api/pricing'
+import { fetchSessionPassPricing, getActivePackages } from '../../api/pricing'
 import {
   PAYMENT_CATEGORIES,
   PAYMENT_CATEGORY_LABELS,
   isPeriodPaymentCategory,
+  isSessionPaymentCategory,
   type PaymentCategory,
 } from '../../constants/paymentCategories'
 import type { PtPackage } from '../../constants/pricing'
@@ -23,6 +24,8 @@ type Props = {
   memberName: string
   open: boolean
   initialCategory?: PaymentCategory
+  lockCategory?: boolean
+  availableCategories?: PaymentCategory[]
   onClose: () => void
   onSuccess: () => Promise<void>
   onError: (message: string) => void
@@ -41,6 +44,8 @@ export function PaymentRequestModal({
   memberName,
   open,
   initialCategory = 'pt',
+  lockCategory = false,
+  availableCategories = PAYMENT_CATEGORIES,
   onClose,
   onSuccess,
   onError,
@@ -79,8 +84,8 @@ export function PaymentRequestModal({
     void (async () => {
       try {
         let items: CatalogItem[] = []
-        if (category === 'pt') {
-          const pricing = await fetchPtPricing()
+        if (isSessionPaymentCategory(category)) {
+          const pricing = await fetchSessionPassPricing(category)
           items = getActivePackages(pricing).map((pkg: PtPackage) => ({
             id: pkg.id,
             label: pkg.label,
@@ -175,9 +180,9 @@ export function PaymentRequestModal({
       reportError('결제 요청 제목을 입력해 주세요.')
       return
     }
-    if (category === 'pt') {
+    if (isSessionPaymentCategory(category)) {
       if (!Number.isInteger(parsedSessions) || parsedSessions < 1) {
-        reportError('PT 횟수는 1 이상이어야 합니다.')
+        reportError('수업 횟수는 1 이상이어야 합니다.')
         return
       }
     } else {
@@ -203,8 +208,8 @@ export function PaymentRequestModal({
         category,
         packageId: packageId || null,
         label: label.trim(),
-        sessions: category === 'pt' ? parsedSessions : null,
-        durationDays: category === 'pt' ? null : parsedDuration,
+        sessions: isSessionPaymentCategory(category) ? parsedSessions : null,
+        durationDays: isSessionPaymentCategory(category) ? null : parsedDuration,
         startsAt: isPeriodPaymentCategory(category) ? startsAt : null,
         listAmount: parsedList,
         amount: parsedAmount,
@@ -241,18 +246,20 @@ export function PaymentRequestModal({
           {memberName}님 회원 앱에 결제 요청이 표시됩니다.
         </p>
 
-        <nav className="chip-scroll mt-4 -mx-1 px-1">
-          {PAYMENT_CATEGORIES.map((item) => (
-            <button
-              key={item}
-              type="button"
-              onClick={() => setCategory(item)}
-              className={`chip ${category === item ? 'chip-active' : 'chip-inactive'}`}
-            >
-              {PAYMENT_CATEGORY_LABELS[item]}
-            </button>
-          ))}
-        </nav>
+        {!lockCategory && availableCategories.length > 1 && (
+          <nav className="chip-scroll mt-4 -mx-1 px-1">
+            {availableCategories.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setCategory(item)}
+                className={`chip ${category === item ? 'chip-active' : 'chip-inactive'}`}
+              >
+                {PAYMENT_CATEGORY_LABELS[item]}
+              </button>
+            ))}
+          </nav>
+        )}
 
         {modalError && (
           <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -298,10 +305,10 @@ export function PaymentRequestModal({
           </label>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            {category === 'pt' ? (
+            {isSessionPaymentCategory(category) ? (
               <label className="block">
                 <span className="mb-1 block text-xs font-medium text-charcoal/70">
-                  PT 횟수
+                  수업 횟수
                 </span>
                 <input
                   type="number"

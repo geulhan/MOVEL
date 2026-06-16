@@ -2,6 +2,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { formatCurrency, formatPhone } from '../../api/members'
 import {
+  enabledPaymentCategories,
+  fetchPaymentCategoryFlags,
+} from '../../api/paymentCategorySettings'
+import {
   CONTRACT_STATUS_LABELS,
 } from '../../constants/contractTerms'
 import {
@@ -25,6 +29,7 @@ import {
   PAYMENT_CATEGORY_LABELS,
   type PaymentCategory,
 } from '../../constants/paymentCategories'
+import type { PaymentCategoryFlags } from '../../types/paymentCategorySettings'
 import { PAYMENT_REQUEST_STATUS_LABELS } from '../../constants/pricing'
 import { formatPaymentRequestDetail } from '../../lib/paymentRequestDisplay'
 import type { PaymentRequestStatus } from '../../types/database'
@@ -46,8 +51,8 @@ function formatWhen(iso: string | null): string {
 }
 
 function parsePricingCategory(value: string | null): PaymentCategory {
-  if (value === 'center_pass' || value === 'locker_towel' || value === 'pt') {
-    return value
+  if (value && (PAYMENT_CATEGORIES as readonly string[]).includes(value)) {
+    return value as PaymentCategory
   }
   return 'pt'
 }
@@ -72,6 +77,17 @@ export default function PaymentsPage() {
   const [toast, setToast] = useState<string | null>(null)
   const [completeTarget, setCompleteTarget] =
     useState<PaymentRequestWithMember | null>(null)
+  const [categoryFlags, setCategoryFlags] = useState<PaymentCategoryFlags | null>(
+    null,
+  )
+
+  const visibleCategories = categoryFlags
+    ? enabledPaymentCategories(categoryFlags)
+    : PAYMENT_CATEGORIES
+
+  useEffect(() => {
+    void fetchPaymentCategoryFlags().then(setCategoryFlags).catch(() => {})
+  }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -213,7 +229,7 @@ export default function PaymentsPage() {
                 className="rounded-lg border border-gold/30 bg-white px-3 py-2 text-sm"
               >
                 <option value="all">전체</option>
-                {PAYMENT_CATEGORIES.map((category) => (
+                {visibleCategories.map((category) => (
                   <option key={category} value={category}>
                     {PAYMENT_CATEGORY_LABELS[category]}
                   </option>

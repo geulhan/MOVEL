@@ -108,7 +108,14 @@ export type PeriodExtension = {
 
 export type PaymentHistorySource = 'admin' | 'payment_request' | 'pg'
 
-export type PaymentCategory = 'pt' | 'center_pass' | 'locker_towel'
+export type PaymentCategory =
+  | 'pt'
+  | 'pilates'
+  | 'yoga'
+  | 'gx'
+  | 'group_pt'
+  | 'center_pass'
+  | 'locker_towel'
 
 export type PaymentHistory = {
   id: string

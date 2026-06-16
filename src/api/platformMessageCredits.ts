@@ -20,6 +20,7 @@ function parseSummaryFromCredits(raw: unknown): MessageCreditSummary {
       monthAlimtalk: 0,
       monthSms: 0,
       monthFailed: 0,
+      monthSkipped: 0,
     }
   }
   const row = raw as Record<string, unknown>
@@ -32,6 +33,7 @@ function parseSummaryFromCredits(raw: unknown): MessageCreditSummary {
       monthAlimtalk: 0,
       monthSms: 0,
       monthFailed: 0,
+      monthSkipped: 0,
     }
   }
   return {
@@ -42,6 +44,7 @@ function parseSummaryFromCredits(raw: unknown): MessageCreditSummary {
     monthAlimtalk: Number(row.month_alimtalk ?? 0),
     monthSms: Number(row.month_sms ?? 0),
     monthFailed: Number(row.month_failed ?? 0),
+    monthSkipped: Number(row.month_skipped ?? 0),
   }
 }
 

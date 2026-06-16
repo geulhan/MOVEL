@@ -4,11 +4,17 @@ import {
   INSUFFICIENT_CREDITS_MESSAGE,
   updateCenterNotificationsEnabled,
 } from '../../api/messageCredits'
+import { MESSAGE_TEMPLATE_LABELS, type MessageTemplateKey } from '../../types/database'
 import { cardClass } from '../../styles/theme'
 import type { CenterMessageDashboard } from '../../types/messageCredits'
 
 type Props = {
   onUpdated?: () => void
+}
+
+function formatWhen(iso: string): string {
+  if (!iso) return '-'
+  return new Date(iso).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
 }
 
 export function MessagingCreditPanel({ onUpdated }: Props) {
@@ -59,7 +65,7 @@ export function MessagingCreditPanel({ onUpdated }: Props) {
       <div>
         <h2 className="text-sm font-semibold text-charcoal">메시지 크레딧</h2>
         <p className="mt-1 text-sm text-muted">
-          알림톡·문자는 구독과 별도로 크레딧이 차감됩니다. (발송 1건 = 1크레딧)
+          알림톡·문자는 구독 요금제와 별도로 크레딧이 차감됩니다. (발송 1건 = 1크레딧)
         </p>
       </div>
 
@@ -82,8 +88,8 @@ export function MessagingCreditPanel({ onUpdated }: Props) {
           label="누적 사용"
           value={loading ? '…' : `${credits?.totalUsed.toLocaleString() ?? 0}건`}
           sub={
-            credits && credits.monthFailed > 0
-              ? `이번 달 실패 ${credits.monthFailed}건`
+            credits && (credits.monthFailed > 0 || credits.monthSkipped > 0)
+              ? `이번 달 실패 ${credits.monthFailed} · 스킵 ${credits.monthSkipped}`
               : undefined
           }
         />
@@ -93,7 +99,7 @@ export function MessagingCreditPanel({ onUpdated }: Props) {
         <div>
           <p className="text-sm font-semibold text-charcoal">알림톡 사용</p>
           <p className="mt-0.5 text-xs text-muted">
-            켜면 자동·수동 발송 시 크레딧이 차감됩니다.
+            켜면 자동·수동 발송 시 크레딧이 차감됩니다. 잔여 0건이면 발송되지 않습니다.
           </p>
         </div>
         <input
@@ -105,20 +111,49 @@ export function MessagingCreditPanel({ onUpdated }: Props) {
         />
       </label>
 
-      {dashboard &&
-        !dashboard.notificationsEnabled &&
-        (credits?.balance ?? 0) <= 0 && (
-          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-            {INSUFFICIENT_CREDITS_MESSAGE} MotionHub에 크레딧 지급을 요청해 주세요.
-          </p>
-        )}
+      {(credits?.balance ?? 0) <= 0 && (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          {INSUFFICIENT_CREDITS_MESSAGE} MotionHub에 크레딧 지급을 요청해 주세요.
+        </p>
+      )}
+
+      {dashboard && dashboard.recentIssues.length > 0 && (
+        <div className="rounded-xl border border-gold/20 bg-white px-4 py-3">
+          <p className="text-xs font-semibold text-charcoal">최근 발송 실패 · 스킵</p>
+          <ul className="mt-2 space-y-2">
+            {dashboard.recentIssues.map((issue) => (
+              <li
+                key={issue.id}
+                className="flex flex-wrap items-baseline justify-between gap-2 text-xs"
+              >
+                <span className="text-charcoal">
+                  {MESSAGE_TEMPLATE_LABELS[issue.templateKey as MessageTemplateKey] ??
+                    issue.templateKey}
+                  <span
+                    className={`ml-2 rounded-full px-1.5 py-0.5 ${
+                      issue.status === 'failed'
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-amber-100 text-amber-800'
+                    }`}
+                  >
+                    {issue.status === 'failed' ? '실패' : '스킵'}
+                  </span>
+                </span>
+                <span className="text-muted">{formatWhen(issue.createdAt)}</span>
+                <span className="w-full truncate text-muted">
+                  {issue.errorMessage ?? '-'}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {error && (
         <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}
           <span className="mt-1 block text-xs">
-            Supabase에서 migration_065_message_credit_system.sql을 실행했는지
-            확인하세요.
+            Supabase에서 migration_065, migration_071을 실행했는지 확인하세요.
           </span>
         </p>
       )}

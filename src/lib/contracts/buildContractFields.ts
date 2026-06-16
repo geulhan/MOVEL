@@ -1,5 +1,6 @@
 import type { ContractType } from '../../constants/contractTerms'
 import type { PaymentCategory } from '../../constants/paymentCategories'
+import { isSessionPaymentCategory } from '../../constants/paymentCategories'
 import type { Member, PaymentRequest } from '../../types/database'
 
 export type ContractFieldData = {
@@ -23,7 +24,8 @@ export type ContractFieldData = {
 export function paymentCategoryToContractType(
   category: PaymentCategory,
 ): ContractType {
-  return category === 'pt' ? 'pt_purchase' : 'center_pass_purchase'
+  if (isSessionPaymentCategory(category)) return 'pt_purchase'
+  return 'center_pass_purchase'
 }
 
 function formatPeriodFromDays(days: number | null | undefined): string | null {
@@ -90,7 +92,7 @@ export function buildContractFields(
     facilityDetail: null,
   }
 
-  if (category === 'pt') {
+  if (isSessionPaymentCategory(category)) {
     return {
       ...base,
       ptSessions: request.sessions ?? null,

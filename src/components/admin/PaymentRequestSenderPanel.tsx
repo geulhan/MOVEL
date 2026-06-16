@@ -189,6 +189,8 @@ export function PaymentRequestSenderPanel({
         memberId={selectedMember?.id ?? ''}
         memberName={selectedMember?.name ?? ''}
         initialCategory={initialCategory}
+        lockCategory
+        availableCategories={[initialCategory]}
         open={modalOpen && selectedMember != null}
         onClose={() => setModalOpen(false)}
         onSuccess={handleModalSuccess}

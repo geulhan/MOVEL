@@ -47,6 +47,7 @@ export default function PlatformHomePage() {
   const [periodCenter, setPeriodCenter] = useState<PlatformCenter | null>(null)
   const [accountsCenter, setAccountsCenter] = useState<PlatformCenter | null>(null)
   const [creditsOpen, setCreditsOpen] = useState(false)
+  const [creditsFocusId, setCreditsFocusId] = useState<string | null>(null)
 
   const loadCenters = useCallback(async () => {
     setLoading(true)
@@ -132,7 +133,10 @@ export default function PlatformHomePage() {
           </button>
           <button
             type="button"
-            onClick={() => setCreditsOpen(true)}
+            onClick={() => {
+              setCreditsFocusId(null)
+              setCreditsOpen(true)
+            }}
             className={btnOutline}
           >
             메시지 크레딧
@@ -170,6 +174,7 @@ export default function PlatformHomePage() {
                   <th className="px-4 py-3 font-medium">이용 기간</th>
                   <th className="px-4 py-3 font-medium">회원</th>
                   <th className="px-4 py-3 font-medium">트레이너</th>
+                  <th className="px-4 py-3 font-medium">메시지</th>
                   <th className="px-4 py-3 font-medium">상태</th>
                   <th className="px-4 py-3 font-medium">관리</th>
                 </tr>
@@ -197,6 +202,20 @@ export default function PlatformHomePage() {
                       </td>
                       <td className="px-4 py-3">{center.member_count}</td>
                       <td className="px-4 py-3">{center.trainer_count}</td>
+                      <td className="px-4 py-3">
+                        <div className="space-y-0.5 text-xs">
+                          <p>
+                            <span className="text-cream/50">알림톡 </span>
+                            {center.notificationsEnabled ? 'ON' : 'OFF'}
+                          </p>
+                          <p className="tabular-nums text-emerald-300">
+                            잔여 {center.messageCredits?.balance.toLocaleString() ?? 0}건
+                          </p>
+                          <p className="tabular-nums text-cream/60">
+                            이번 달 {center.messageCredits?.monthUsed.toLocaleString() ?? 0}건
+                          </p>
+                        </div>
+                      </td>
                       <td className="px-4 py-3">
                         <span
                           className={`rounded-full px-2 py-0.5 text-xs ${
@@ -230,6 +249,17 @@ export default function PlatformHomePage() {
                             className="text-xs text-violet-300 hover:underline disabled:opacity-50"
                           >
                             이용 기간
+                          </button>
+                          <button
+                            type="button"
+                            disabled={actionId === center.id}
+                            onClick={() => {
+                              setCreditsFocusId(center.id)
+                              setCreditsOpen(true)
+                            }}
+                            className="text-xs text-emerald-300 hover:underline disabled:opacity-50"
+                          >
+                            크레딧
                           </button>
                           {center.status !== 'suspended' && center.slug !== 'movel' && (
                             <button
@@ -279,7 +309,12 @@ export default function PlatformHomePage() {
 
       <PlatformCenterCreditsModal
         open={creditsOpen}
-        onClose={() => setCreditsOpen(false)}
+        focusCenterId={creditsFocusId}
+        onClose={() => {
+          setCreditsOpen(false)
+          setCreditsFocusId(null)
+          void loadCenters()
+        }}
       />
     </div>
   )

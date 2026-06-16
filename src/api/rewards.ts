@@ -12,7 +12,10 @@ import {
   type RewardEventType,
   type RewardTier,
 } from '../constants/rewards'
-import type { PaymentCategory } from '../constants/paymentCategories'
+import {
+  PAYMENT_CATEGORIES,
+  type PaymentCategory,
+} from '../constants/paymentCategories'
 import { supabase } from '../lib/supabase'
 import type { Json } from '../types/database'
 import { todayDateString } from './members'
@@ -75,7 +78,8 @@ function normalizeCustomRule(
   if (Array.isArray(row.payment_categories)) {
     const categories = row.payment_categories.filter(
       (item): item is PaymentCategory =>
-        item === 'pt' || item === 'center_pass' || item === 'locker_towel',
+        typeof item === 'string' &&
+        (PAYMENT_CATEGORIES as readonly string[]).includes(item),
     )
     payment_categories = categories.length > 0 ? categories : null
   }

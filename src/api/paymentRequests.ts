@@ -1,6 +1,8 @@
 import { getCurrentCenterId } from '../lib/center'
 import { PAYMENT_REQUEST_EXPIRY_DAYS } from '../constants/pricing'
 import type { PaymentCategory } from '../constants/paymentCategories'
+import { isClassSessionPaymentCategory, isSessionPaymentCategory } from '../constants/paymentCategories'
+import { sessionPassTypeFromCategory } from '../constants/paymentCategories'
 import { supabase } from '../lib/supabase'
 import type { Member, PaymentHistory, PaymentRequest } from '../types/database'
 import {
@@ -10,6 +12,7 @@ import {
 } from './contracts'
 import { assignCenterPass } from './centerPasses'
 import { assignFacilitySubscription } from './facilityProducts'
+import { assignSessionPass } from './memberSessionPasses'
 import { createPaymentRecord, syncMemberPaymentTotal } from './payments'
 import { redeemMilesForPayment } from './rewards'
 import { todayDateString } from './members'
@@ -143,9 +146,9 @@ export async function createPaymentRequest(input: {
     throw new Error('결제 금액은 정가보다 클 수 없습니다.')
   }
 
-  if (input.category === 'pt') {
+  if (isSessionPaymentCategory(input.category)) {
     if (!Number.isInteger(input.sessions) || (input.sessions ?? 0) < 1) {
-      throw new Error('PT 횟수는 1 이상이어야 합니다.')
+      throw new Error('수업 횟수는 1 이상이어야 합니다.')
     }
   } else {
     if (!Number.isInteger(input.durationDays) || (input.durationDays ?? 0) < 1) {
@@ -177,10 +180,12 @@ export async function createPaymentRequest(input: {
       status: 'pending',
       package_id: input.packageId ?? null,
       label: input.label.trim(),
-      sessions: input.category === 'pt' ? input.sessions ?? null : null,
+      sessions: isSessionPaymentCategory(input.category) ? input.sessions ?? null : null,
       duration_days:
-        input.category === 'pt' ? null : input.durationDays ?? null,
-      starts_at: input.category === 'pt' ? null : input.startsAt?.trim() ?? null,
+        isSessionPaymentCategory(input.category) ? null : input.durationDays ?? null,
+      starts_at: isSessionPaymentCategory(input.category)
+        ? null
+        : input.startsAt?.trim() ?? null,
       list_amount: Math.round(input.listAmount),
       amount: Math.round(input.amount),
       discount_amount: discountAmount,
@@ -265,7 +270,7 @@ async function fulfillPaymentRequest(
     paid_at: todayDateString(),
     note: noteParts.join(' · '),
     category,
-    sessions: category === 'pt' ? request.sessions ?? 1 : 0,
+    sessions: isSessionPaymentCategory(category) ? request.sessions ?? 1 : 0,
   })
 
   let finalPayment = payment
@@ -330,6 +335,18 @@ async function fulfillPaymentRequest(
       paymentHistoryId: payment.id,
       createdBy: 'payment_request',
     })
+  } else if (isClassSessionPaymentCategory(category)) {
+    const passType = sessionPassTypeFromCategory(category)
+    if (passType) {
+      await assignSessionPass({
+        memberId: request.member_id,
+        passType,
+        label: request.label,
+        sessionsToAdd: request.sessions ?? 1,
+        amount: contractAmount,
+        paymentHistoryId: payment.id,
+      })
+    }
   }
 
   const { error: updateError } = await supabase

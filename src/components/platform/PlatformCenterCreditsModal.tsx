@@ -4,26 +4,38 @@ import {
   grantPlatformCenterCredits,
   type PlatformCenterCreditRow,
 } from '../../api/platformMessageCredits'
-import { btnOutline } from '../../styles/theme'
+import { btnOutline, btnPrimary } from '../../styles/theme'
 
-const GRANT_PRESETS = [100, 500, 1000] as const
+const GRANT_PRESETS = [30, 100, 500] as const
 
 type Props = {
   open: boolean
   onClose: () => void
+  /** 특정 센터만 보여줄 때 */
+  focusCenterId?: string | null
 }
 
-export function PlatformCenterCreditsModal({ open, onClose }: Props) {
+export function PlatformCenterCreditsModal({
+  open,
+  onClose,
+  focusCenterId = null,
+}: Props) {
   const [rows, setRows] = useState<PlatformCenterCreditRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [grantingId, setGrantingId] = useState<string | null>(null)
+  const [customAmount, setCustomAmount] = useState<Record<string, string>>({})
 
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      setRows(await fetchPlatformCenterCredits())
+      const all = await fetchPlatformCenterCredits()
+      setRows(
+        focusCenterId
+          ? all.filter((row) => row.centerId === focusCenterId)
+          : all,
+      )
     } catch (err) {
       setError(
         err instanceof Error ? err.message : '크레딧 목록을 불러올 수 없습니다.',
@@ -31,7 +43,7 @@ export function PlatformCenterCreditsModal({ open, onClose }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [focusCenterId])
 
   useEffect(() => {
     if (open) void load()
@@ -40,10 +52,20 @@ export function PlatformCenterCreditsModal({ open, onClose }: Props) {
   if (!open) return null
 
   async function handleGrant(centerId: string, amount: number) {
+    if (!Number.isInteger(amount) || amount <= 0) {
+      setError('1 이상의 정수를 입력해 주세요.')
+      return
+    }
+
     setGrantingId(centerId)
     setError(null)
     try {
-      await grantPlatformCenterCredits(centerId, amount, `수동 지급 +${amount}건`)
+      await grantPlatformCenterCredits(
+        centerId,
+        amount,
+        `수동 지급 +${amount}건`,
+      )
+      setCustomAmount((prev) => ({ ...prev, [centerId]: '' }))
       await load()
     } catch (err) {
       setError(err instanceof Error ? err.message : '지급에 실패했습니다.')
@@ -58,7 +80,7 @@ export function PlatformCenterCreditsModal({ open, onClose }: Props) {
         <div className="border-b border-white/10 px-5 py-4">
           <h2 className="text-lg font-bold text-white">센터 메시지 크레딧</h2>
           <p className="mt-1 text-sm text-cream/60">
-            센터별 잔여·사용량 조회 및 수동 지급 (+100 / +500 / +1,000)
+            센터별 잔여·사용량 조회 및 수동 지급 (+30 / +100 / +500 또는 직접 입력)
           </p>
         </div>
 
@@ -114,7 +136,7 @@ export function PlatformCenterCreditsModal({ open, onClose }: Props) {
                         {row.credits.totalUsed.toLocaleString()}건
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex flex-wrap items-center gap-1">
                           {GRANT_PRESETS.map((amount) => (
                             <button
                               key={amount}
@@ -126,6 +148,33 @@ export function PlatformCenterCreditsModal({ open, onClose }: Props) {
                               +{amount}
                             </button>
                           ))}
+                          <input
+                            type="number"
+                            min={1}
+                            step={1}
+                            placeholder="직접"
+                            value={customAmount[row.centerId] ?? ''}
+                            onChange={(e) =>
+                              setCustomAmount((prev) => ({
+                                ...prev,
+                                [row.centerId]: e.target.value,
+                              }))
+                            }
+                            className="w-16 rounded-md border border-white/15 bg-transparent px-2 py-1 text-xs text-cream"
+                          />
+                          <button
+                            type="button"
+                            disabled={grantingId === row.centerId}
+                            onClick={() =>
+                              void handleGrant(
+                                row.centerId,
+                                Number(customAmount[row.centerId] ?? 0),
+                              )
+                            }
+                            className={`${btnPrimary} !px-2 !py-1 text-xs`}
+                          >
+                            지급
+                          </button>
                         </div>
                       </td>
                     </tr>

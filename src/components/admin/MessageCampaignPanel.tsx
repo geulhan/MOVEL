@@ -84,9 +84,17 @@ const BULK_DISMISS_LABEL: Record<MessageCampaignKind, string> = {
 function resultLabel(result: SendNotificationResult): string {
   if (result.status === 'sent') return MESSAGE_STATUS_LABELS.sent
   if (result.status === 'skipped') {
-    return result.skippedReason === 'duplicate'
-      ? '이미 발송됨'
-      : (result.skippedReason ?? MESSAGE_STATUS_LABELS.skipped)
+    if (result.skippedReason === 'duplicate') return '이미 발송됨'
+    if (
+      result.skippedReason === 'insufficient_credits' ||
+      result.error?.includes('크레딧')
+    ) {
+      return '메시지 크레딧이 부족합니다'
+    }
+    return result.skippedReason ?? MESSAGE_STATUS_LABELS.skipped
+  }
+  if (result.error?.includes('크레딧')) {
+    return '메시지 크레딧이 부족합니다'
   }
   return result.error ?? MESSAGE_STATUS_LABELS.failed
 }

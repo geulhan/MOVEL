@@ -8,6 +8,24 @@ import {
 
 import type { CenterOperationalType } from '../types/centerFeatures'
 
+import type { MessageCreditSummary } from '../types/messageCredits'
+
+function parseMessageCredits(raw: Json | undefined): MessageCreditSummary | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
+  const row = raw as Record<string, unknown>
+  if (row.ok !== true) return null
+  return {
+    balance: Number(row.balance ?? 0),
+    totalPurchased: Number(row.total_purchased ?? 0),
+    totalUsed: Number(row.total_used ?? 0),
+    monthUsed: Number(row.month_used ?? 0),
+    monthAlimtalk: Number(row.month_alimtalk ?? 0),
+    monthSms: Number(row.month_sms ?? 0),
+    monthFailed: Number(row.month_failed ?? 0),
+    monthSkipped: Number(row.month_skipped ?? 0),
+  }
+}
+
 export type PlatformCenter = {
   id: string
   name: string
@@ -22,6 +40,8 @@ export type PlatformCenter = {
   requestedServiceStartsAt: string | null
   betaTrial: boolean
   created_at: string
+  notificationsEnabled: boolean
+  messageCredits: MessageCreditSummary | null
 }
 
 export type CreateCenterInput = {
@@ -89,6 +109,8 @@ function parseCenterList(data: Json): PlatformCenter[] {
             : null,
         betaTrial: c.beta_trial === true,
         created_at: c.created_at != null ? String(c.created_at) : '',
+        notificationsEnabled: c.notifications_enabled === true,
+        messageCredits: parseMessageCredits(c.message_credits),
       }
     })
     .filter((c): c is PlatformCenter => c !== null)

@@ -190,10 +190,34 @@ export async function sendMemberNotification(
     summary && typeof summary === 'object' && !Array.isArray(summary)
       ? Number((summary as Record<string, unknown>).balance ?? 0)
       : 0
+
   if (balance <= 0) {
+    const now = new Date().toISOString()
+    const { data: logRow, error: logError } = await supabase
+      .from('message_logs')
+      .insert({
+        center_id: centerId,
+        member_id: input.memberId,
+        phone,
+        template_key: input.templateKey,
+        channel: 'skipped',
+        status: 'skipped',
+        error_message: '메시지 크레딧 부족',
+        metadata,
+        sent_at: now,
+      })
+      .select('id')
+      .single()
+
+    if (logError) {
+      return { ok: false, status: 'failed', error: logError.message }
+    }
+
     return {
-      ok: false,
-      status: 'failed',
+      ok: true,
+      status: 'skipped',
+      logId: logRow.id,
+      skippedReason: 'insufficient_credits',
       error: '메시지 크레딧이 부족합니다.',
     }
   }
@@ -304,6 +328,7 @@ export async function sendMemberNotification(
   )
 
   if (!sendResult.ok) {
+    // 실패한 발송은 크레딧을 차감하지 않습니다.
     await supabase
       .from('message_logs')
       .update({
@@ -334,6 +359,7 @@ export async function sendMemberNotification(
 
   const sentChannel = (sendResult.channel ?? 'alimtalk') as 'alimtalk' | 'sms'
   const creditAmount = creditsForChannel(sentChannel)
+  // 성공(sent)한 발송에만 1건 차감. 실패·스킵은 차감하지 않음.
   const consumeResult = await tryConsumeMessageCredits(
     supabase,
     centerId,

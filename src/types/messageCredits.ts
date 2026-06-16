@@ -6,11 +6,21 @@ export type MessageCreditSummary = {
   monthAlimtalk: number
   monthSms: number
   monthFailed: number
+  monthSkipped: number
+}
+
+export type MessageLogIssue = {
+  id: string
+  templateKey: string
+  status: 'failed' | 'skipped'
+  errorMessage: string | null
+  createdAt: string
 }
 
 export type CenterMessageDashboard = {
   notificationsEnabled: boolean
   credits: MessageCreditSummary
+  recentIssues: MessageLogIssue[]
 }
 
 function parseSummary(raw: unknown): MessageCreditSummary {
@@ -27,7 +37,29 @@ function parseSummary(raw: unknown): MessageCreditSummary {
     monthAlimtalk: Number(row.month_alimtalk ?? row.monthAlimtalk ?? 0),
     monthSms: Number(row.month_sms ?? row.monthSms ?? 0),
     monthFailed: Number(row.month_failed ?? row.monthFailed ?? 0),
+    monthSkipped: Number(row.month_skipped ?? row.monthSkipped ?? 0),
   }
+}
+
+function parseRecentIssues(raw: unknown): MessageLogIssue[] {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map((item) => {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) return null
+      const row = item as Record<string, unknown>
+      const id = row.id != null ? String(row.id) : ''
+      if (!id) return null
+      const status = row.status === 'failed' ? 'failed' : 'skipped'
+      return {
+        id,
+        templateKey: String(row.template_key ?? ''),
+        status,
+        errorMessage:
+          row.error_message != null ? String(row.error_message) : null,
+        createdAt: String(row.created_at ?? ''),
+      }
+    })
+    .filter((item): item is MessageLogIssue => item !== null)
 }
 
 export function parseCenterMessageDashboard(data: unknown): CenterMessageDashboard {
@@ -49,5 +81,6 @@ export function parseCenterMessageDashboard(data: unknown): CenterMessageDashboa
   return {
     notificationsEnabled: row.notifications_enabled === true,
     credits: parseSummary(row.credits),
+    recentIssues: parseRecentIssues(row.recent_issues),
   }
 }
