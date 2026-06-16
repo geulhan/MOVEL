@@ -1,7 +1,9 @@
 import * as XLSX from 'xlsx'
 import type { SignupConsentRecord } from '../api/platformAccounts'
 import type { PlatformCenter } from '../api/platformCenters'
+import { BETA_CENTER_TYPE_LABELS } from '../api/platformBetaApplications'
 import { formatPhone } from '../api/members'
+import type { BetaApplication } from '../types/database'
 import {
   formatServicePeriod,
   getServicePeriodStatus,
@@ -64,4 +66,23 @@ export function exportPlatformCentersExcel(centers: PlatformCenter[]): void {
   const workbook = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(workbook, sheet, '센터목록')
   XLSX.writeFile(workbook, `MotionHub_센터목록_${localDateStamp()}.xlsx`)
+}
+
+export function exportBetaApplicationsExcel(applications: BetaApplication[]): void {
+  const rows = applications.map((app) => ({
+    접수일시: app.created_at
+      ? new Date(app.created_at).toLocaleString('ko-KR')
+      : '',
+    센터명: app.center_name,
+    담당자: app.contact_name,
+    연락처: app.phone ? formatPhone(app.phone) : '',
+    이메일: app.email ?? '',
+    센터유형: BETA_CENTER_TYPE_LABELS[app.center_type],
+    문의내용: app.message ?? '',
+  }))
+
+  const sheet = XLSX.utils.json_to_sheet(rows)
+  const workbook = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(workbook, sheet, '베타신청')
+  XLSX.writeFile(workbook, `MotionHub_베타신청_${localDateStamp()}.xlsx`)
 }

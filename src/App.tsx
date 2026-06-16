@@ -29,6 +29,7 @@ import PlatformLoginPage from './pages/platform/PlatformLoginPage'
 import PlatformHomePage from './pages/platform/PlatformHomePage'
 import PlatformCreateCenterPage from './pages/platform/PlatformCreateCenterPage'
 import PlatformConsentsPage from './pages/platform/PlatformConsentsPage'
+import PlatformBetaApplicationsPage from './pages/platform/PlatformBetaApplicationsPage'
 import { PlatformAccessGuard } from './components/PlatformAccessGuard'
 import { PlatformLayout } from './components/layouts/PlatformLayout'
 import NotFoundPage from './pages/NotFoundPage'
@@ -46,6 +47,7 @@ export default function App() {
           <Route element={<PlatformLayout />}>
             <Route index element={<PlatformHomePage />} />
             <Route path="consents" element={<PlatformConsentsPage />} />
+            <Route path="beta-applications" element={<PlatformBetaApplicationsPage />} />
             <Route path="centers/new" element={<PlatformCreateCenterPage />} />
           </Route>
         </Route>

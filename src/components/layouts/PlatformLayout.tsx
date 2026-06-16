@@ -54,6 +54,16 @@ export function PlatformLayout() {
             센터 목록
           </NavLink>
           <NavLink
+            to="/platform/beta-applications"
+            className={({ isActive }) =>
+              `rounded-lg px-3 py-2 text-sm ${
+                isActive ? 'bg-white/10 text-white' : 'text-cream/60 hover:text-cream'
+              }`
+            }
+          >
+            베타 신청
+          </NavLink>
+          <NavLink
             to="/platform/consents"
             className={({ isActive }) =>
               `rounded-lg px-3 py-2 text-sm ${

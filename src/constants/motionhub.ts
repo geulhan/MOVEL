@@ -1,7 +1,7 @@
 /** MotionHub 플랫폼 랜딩 — 외부 링크·설정 */
 
 export const MOTIONHUB_CONTACT = {
-  kakaoUrl: 'https://open.kakao.com/o/motionhub',
+  kakaoUrl: 'https://open.kakao.com/o/sPkR4Rzi',
   instagramUrl: 'https://instagram.com/motionhub.kr',
   instagramHandle: '@motionhub.kr',
 } as const

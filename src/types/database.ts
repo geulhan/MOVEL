@@ -1310,6 +1310,12 @@ export type Database = {
         }
         Returns: Json
       }
+      list_beta_applications_for_platform: {
+        Args: {
+          p_session_token: string
+        }
+        Returns: Json
+      }
       list_trainer_admin_accounts: {
         Args: {
           p_center_id?: string | null
