@@ -127,6 +127,31 @@ export function filterBySearch(members: Member[], term: string): Member[] {
   })
 }
 
+/** 검색어로 회원이 하나로 특정되면 반환 (콤보박스 미클릭 보완) */
+export function resolveMemberFromSearch(
+  members: Member[],
+  term: string,
+  selected: Member | null,
+): Member | null {
+  if (selected) return selected
+  const q = term.trim()
+  if (!q) return null
+
+  const matches = filterBySearch(members, q)
+  if (matches.length === 1) return matches[0]
+
+  const exactName = matches.filter((m) => m.name === q)
+  if (exactName.length === 1) return exactName[0]
+
+  const digits = q.replace(/\D/g, '')
+  if (digits.length >= 10) {
+    const phoneMatches = members.filter((m) => m.phone.replace(/\D/g, '') === digits)
+    if (phoneMatches.length === 1) return phoneMatches[0]
+  }
+
+  return null
+}
+
 export function applyRenewalFilter(
   members: Member[],
   filter: RenewalFilter,

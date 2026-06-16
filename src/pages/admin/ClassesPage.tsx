@@ -5,6 +5,7 @@ import {
   cancelClassReservation,
   createClass,
   createClassSchedule,
+  cancelClassSchedule,
   deleteClass,
   fetchClassSchedulesInRange,
   fetchClasses,
@@ -21,7 +22,7 @@ import { fetchMembers, todayDateString } from '../../api/members'
 import { fetchTrainers } from '../../api/trainers'
 import { getAdminSession } from '../../lib/adminSession'
 import { getErrorMessage } from '../../lib/errors'
-import { filterBySearch } from '../../utils/renewal'
+import { filterBySearch, resolveMemberFromSearch } from '../../utils/renewal'
 import {
   addDays,
   formatDayHeading,
@@ -111,6 +112,17 @@ export default function ClassesPage() {
     () => filterBySearch(members, reserveQuery),
     [members, reserveQuery],
   )
+
+  const reserveTargetMember = useMemo(
+    () => resolveMemberFromSearch(members, reserveQuery, reserveMember),
+    [members, reserveQuery, reserveMember],
+  )
+
+  const reserveAmbiguous =
+    reserveQuery.trim().length > 0 &&
+    !reserveMember &&
+    reserveSuggestions.length > 1 &&
+    !reserveTargetMember
 
   async function openSchedule(schedule: ClassSchedule) {
     setSelectedSchedule(schedule)
@@ -228,17 +240,45 @@ export default function ClassesPage() {
   }
 
   async function handleReserve() {
-    if (!selectedSchedule || !reserveMember) return
+    if (!selectedSchedule) return
+    const member = reserveTargetMember
+    if (!member) {
+      setError(
+        reserveAmbiguous
+          ? '검색 결과가 여러 명입니다. 목록에서 회원을 선택해 주세요.'
+          : '예약할 회원을 검색한 뒤 목록에서 선택해 주세요.',
+      )
+      return
+    }
     await runAction(async () => {
       await reserveClassForMember({
         scheduleId: selectedSchedule.id,
-        memberId: reserveMember.id,
+        memberId: member.id,
       })
       setReserveMember(null)
       setReserveQuery('')
       await openSchedule(selectedSchedule)
       await load()
-    }, `${reserveMember.name} 님 예약 완료`)
+    }, `${member.name} 님 예약 완료`)
+  }
+
+  async function handleDeleteSchedule() {
+    if (!selectedSchedule) return
+    const activeCount = reservations.filter((r) => r.status !== 'cancelled').length
+    const message =
+      activeCount > 0
+        ? `${formatDayHeading(selectedSchedule.starts_at.slice(0, 10))} ${formatTime(selectedSchedule.starts_at)} 일정을 삭제할까요?\n예약 ${activeCount}건도 함께 취소됩니다.`
+        : `${formatDayHeading(selectedSchedule.starts_at.slice(0, 10))} ${formatTime(selectedSchedule.starts_at)} 일정을 삭제할까요?`
+    if (!window.confirm(message)) return
+
+    await runAction(async () => {
+      await cancelClassSchedule(selectedSchedule.id)
+      setSelectedSchedule(null)
+      setReservations([])
+      setReserveMember(null)
+      setReserveQuery('')
+      await load()
+    }, '일정이 삭제되었습니다.')
   }
 
   async function handleStatusChange(reservation: ClassReservation, status: ReservationStatus) {
@@ -441,41 +481,62 @@ export default function ClassesPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              <div>
-                <h2 className="text-lg font-semibold text-charcoal">
-                  {selectedSchedule.class_name}
-                </h2>
-                <p className="mt-0.5 text-sm text-muted">
-                  {formatDayHeading(selectedSchedule.starts_at.slice(0, 10))}{' '}
-                  {formatTime(selectedSchedule.starts_at)} ·{' '}
-                  {CLASS_TYPE_LABELS[selectedSchedule.class_type ?? 'pilates']}
-                  {selectedSchedule.trainer_name
-                    ? ` · ${selectedSchedule.trainer_name}`
-                    : ''}{' '}
-                  · 예약 {selectedSchedule.reserved_count ?? 0}/
-                  {selectedSchedule.capacity ?? 8}
-                </p>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold text-charcoal">
+                    {selectedSchedule.class_name}
+                  </h2>
+                  <p className="mt-0.5 text-sm text-muted">
+                    {formatDayHeading(selectedSchedule.starts_at.slice(0, 10))}{' '}
+                    {formatTime(selectedSchedule.starts_at)} ·{' '}
+                    {CLASS_TYPE_LABELS[selectedSchedule.class_type ?? 'pilates']}
+                    {selectedSchedule.trainer_name
+                      ? ` · ${selectedSchedule.trainer_name}`
+                      : ''}{' '}
+                    · 예약 {selectedSchedule.reserved_count ?? 0}/
+                    {selectedSchedule.capacity ?? 8}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={actionLoading}
+                  className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50"
+                  onClick={() => void handleDeleteSchedule()}
+                >
+                  일정 삭제
+                </button>
               </div>
 
               <div className="space-y-2 rounded-xl border border-gold/20 bg-cream/40 p-3">
                 <p className="text-xs font-semibold text-charcoal">예약 추가</p>
                 <MemberSearchCombobox
+                  elevated
                   value={reserveQuery}
                   suggestions={reserveSuggestions}
-                  onChange={setReserveQuery}
+                  onChange={(value) => {
+                    setReserveQuery(value)
+                    if (!value.trim()) setReserveMember(null)
+                  }}
                   onSelect={(member) => {
                     setReserveMember(member)
                     setReserveQuery(member.name)
                   }}
                   onClear={() => setReserveMember(null)}
                 />
+                {reserveAmbiguous && (
+                  <p className="text-xs text-amber-800">
+                    검색 결과가 여러 명입니다. 아래 목록에서 회원을 클릭해 선택하세요.
+                  </p>
+                )}
                 <button
                   type="button"
                   className={`${btnPrimary} w-full`}
-                  disabled={!reserveMember || actionLoading}
+                  disabled={!reserveTargetMember || actionLoading}
                   onClick={() => void handleReserve()}
                 >
-                  {reserveMember ? `${reserveMember.name} 님 예약` : '회원 검색 후 예약'}
+                  {reserveTargetMember
+                    ? `${reserveTargetMember.name} 님 예약`
+                    : '회원 검색 후 예약'}
                 </button>
               </div>
 

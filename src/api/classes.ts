@@ -249,6 +249,23 @@ export async function createClassSchedule(input: {
   return data as ClassSchedule
 }
 
+export async function cancelClassSchedule(scheduleId: string): Promise<void> {
+  const { error: reservationError } = await supabase
+    .from('class_reservations')
+    .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
+    .eq('schedule_id', scheduleId)
+    .in('status', ['reserved', 'waitlist'])
+
+  if (reservationError) throw reservationError
+
+  const { error } = await supabase
+    .from('class_schedules')
+    .update({ status: 'cancelled' })
+    .eq('id', scheduleId)
+
+  if (error) throw error
+}
+
 export async function fetchScheduleReservations(scheduleId: string): Promise<ClassReservation[]> {
   const { data, error } = await supabase
     .from('class_reservations')
