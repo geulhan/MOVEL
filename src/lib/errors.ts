@@ -29,6 +29,20 @@ export function formatSupabaseError(err: unknown): string {
   }
 
   if (
+    msg.includes('classes') ||
+    msg.includes('class_schedules') ||
+    msg.includes('facility_checkins') ||
+    msg.includes('locker_assignments') ||
+    msg.includes('towel_rentals') ||
+    msg.includes('member_session_passes')
+  ) {
+    return (
+      '클래스·시설 기능 DB가 아직 설정되지 않았습니다. ' +
+      'Supabase SQL Editor에서 supabase/migration_069_motionhub_saas_expansion.sql 을 실행해 주세요.'
+    )
+  }
+
+  if (
     msg.includes('trainers') ||
     msg.includes('trainer_id') ||
     msg.includes('period_extensions') ||
