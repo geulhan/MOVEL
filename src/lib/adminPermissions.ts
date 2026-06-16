@@ -14,7 +14,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { to: '/admin', end: true, label: '대시보드', icon: '◈', roles: ['admin'] },
   { to: '/admin/members', end: false, label: '회원 관리', icon: '◎', roles: ['admin', 'trainer'] },
   { to: '/admin/schedule', end: false, label: 'PT 스케줄', icon: '▦', roles: ['admin', 'trainer'] },
-  { to: '/admin/attendance', end: false, label: '출석부', icon: '✓', roles: ['admin'] },
+  { to: '/admin/attendance', end: false, label: '출석부', icon: '✓', roles: ['admin', 'trainer'] },
   { to: '/admin/trainers', end: false, label: '트레이너', icon: '★', roles: ['admin'] },
   { to: '/admin/rewards', end: false, label: '마일리지 관리', icon: '◆', roles: ['admin'] },
   { to: '/admin/payments', end: false, label: '결제 관리', icon: '₩', roles: ['admin'] },
@@ -27,6 +27,7 @@ const TRAINER_ALLOWED_PREFIXES = [
   '/admin/members',
   '/admin/member/',
   '/admin/schedule',
+  '/admin/attendance',
 ]
 
 export function isFullAdmin(session: AdminSession | null = getAdminSession()): boolean {

@@ -105,6 +105,57 @@ function resolveTrainerForAttendance(
   }
 }
 
+export function scopePayrollSummaryForTrainer(
+  summary: AttendancePayrollSummary,
+  trainerId: string | null,
+  trainerName: string | null,
+): AttendancePayrollSummary {
+  const name = trainerName?.trim()
+  const row = summary.byTrainer.find(
+    (item) =>
+      (trainerId && item.trainerId === trainerId) ||
+      (name && item.trainerName === name),
+  )
+
+  if (!row) {
+    return {
+      defaultSettlementRate: summary.defaultSettlementRate,
+      totalSessions: 0,
+      totalGross: 0,
+      totalTrainerPay: 0,
+      totalCenterShare: 0,
+      byTrainer: [],
+    }
+  }
+
+  return {
+    defaultSettlementRate: summary.defaultSettlementRate,
+    totalSessions: row.sessionCount,
+    totalGross: row.grossAmount,
+    totalTrainerPay: row.trainerPay,
+    totalCenterShare: row.centerShare,
+    byTrainer: [row],
+  }
+}
+
+export function attendanceRowBelongsToTrainer(
+  row: { memberId: string; trainerName: string | null },
+  memberById: Map<string, Member>,
+  trainerId: string | null,
+  trainerName: string | null,
+): boolean {
+  const name = trainerName?.trim()
+  if (!trainerId && !name) return false
+
+  if (name && row.trainerName?.trim() === name) return true
+
+  const member = memberById.get(row.memberId)
+  if (trainerId && member?.trainer_id === trainerId) return true
+  if (name && member?.trainer_name?.trim() === name) return true
+
+  return false
+}
+
 function trainerBucketKey(trainerId: string | null, trainerName: string): string {
   return trainerId ?? `name:${trainerName}`
 }

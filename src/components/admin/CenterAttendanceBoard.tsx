@@ -20,13 +20,18 @@ import {
   type PtSchedule,
 } from '../../api/schedule'
 import { fetchTrainers } from '../../api/trainers'
+import { getAdminSession } from '../../lib/adminSession'
+import { isTrainerStaff } from '../../lib/adminPermissions'
 import { isSameLocalDay } from '../../utils/date'
 import { formatSupabaseError, getErrorMessage } from '../../lib/errors'
 import {
   buildAttendancePayrollSummary,
+  attendanceRowBelongsToTrainer,
   memberSessionUnitPrice,
+  scopePayrollSummaryForTrainer,
   type AttendancePayrollSummary,
 } from '../../lib/attendancePayroll'
+import { DEFAULT_BUSINESS_ANALYTICS_SETTINGS } from '../../types/businessAnalytics'
 import { SearchBar } from '../SearchBar'
 import { TrainerAttendancePayrollPanel } from './TrainerAttendancePayrollPanel'
 import type { Member } from '../../types/database'
@@ -103,6 +108,11 @@ function matchesTodayFilter(
 }
 
 export function CenterAttendanceBoard() {
+  const session = getAdminSession()
+  const isTrainer = isTrainerStaff(session)
+  const trainerId = session?.trainerId ?? null
+  const trainerName = session?.trainerName ?? null
+
   const [todayRows, setTodayRows] = useState<CenterAttendanceRow[]>([])
   const [monthScheduledRows, setMonthScheduledRows] = useState<
     CenterAttendanceRow[]
@@ -142,28 +152,45 @@ export function CenterAttendanceBoard() {
     setError(null)
     try {
       const { startIso, endIso } = monthRangeIso(monthRef)
-      const [board, memberList, settings, trainers, monthLogs, monthSchedules] =
+      const [board, memberList, trainers, monthLogs, monthSchedules] =
         await Promise.all([
           fetchCenterAttendanceBoard(monthRef),
           fetchMembers(),
-          fetchBusinessAnalyticsSettings(),
           fetchTrainers({ activeOnly: false }),
           fetchMonthAttendanceLogs(monthRef),
           fetchSchedulesInRange(startIso, endIso),
         ])
+
+      let defaultSettlementRate =
+        DEFAULT_BUSINESS_ANALYTICS_SETTINGS.trainerSettlementRate
+      if (!isTrainer) {
+        const settings = await fetchBusinessAnalyticsSettings()
+        defaultSettlementRate = settings.trainerSettlementRate
+      } else {
+        try {
+          const settings = await fetchBusinessAnalyticsSettings()
+          defaultSettlementRate = settings.trainerSettlementRate
+        } catch {
+          // 트레이너는 경영 설정 조회가 막혀 있을 수 있음 → 기본값 사용
+        }
+      }
+
       setTodayRows(board.todayRows)
       setMonthScheduledRows(board.monthScheduledRows)
       setSummary(board.summary)
       setMembers(memberList)
 
+      const fullPayroll = buildAttendancePayrollSummary(
+        monthLogs,
+        memberList,
+        monthSchedules as PtSchedule[],
+        trainers,
+        defaultSettlementRate,
+      )
       setPayrollSummary(
-        buildAttendancePayrollSummary(
-          monthLogs,
-          memberList,
-          monthSchedules as PtSchedule[],
-          trainers,
-          settings.trainerSettlementRate,
-        ),
+        isTrainer
+          ? scopePayrollSummaryForTrainer(fullPayroll, trainerId, trainerName)
+          : fullPayroll,
       )
     } catch (err) {
       setError(formatSupabaseError(err))
@@ -172,7 +199,43 @@ export function CenterAttendanceBoard() {
       setLoading(false)
       setPayrollLoading(false)
     }
-  }, [monthRef])
+  }, [monthRef, isTrainer, trainerId, trainerName])
+
+  const scopedTodayRows = useMemo(() => {
+    if (!isTrainer) return todayRows
+    return todayRows.filter((row) =>
+      attendanceRowBelongsToTrainer(row, memberById, trainerId, trainerName),
+    )
+  }, [todayRows, isTrainer, trainerId, trainerName, memberById])
+
+  const scopedMonthScheduledRows = useMemo(() => {
+    if (!isTrainer) return monthScheduledRows
+    return monthScheduledRows.filter((row) =>
+      attendanceRowBelongsToTrainer(row, memberById, trainerId, trainerName),
+    )
+  }, [monthScheduledRows, isTrainer, trainerId, trainerName, memberById])
+
+  const scopedSummary = useMemo(() => {
+    if (!isTrainer) return summary
+    return {
+      attendedToday: scopedTodayRows.filter(
+        (row) =>
+          row.displayStatus === 'attended' || row.displayStatus === 'walk_in',
+      ).length,
+      monthScheduled: scopedMonthScheduledRows.length,
+      absentToday: scopedTodayRows.filter((row) => row.displayStatus === 'absent')
+        .length,
+      noShowToday: scopedTodayRows.filter((row) => row.displayStatus === 'no_show')
+        .length,
+      monthAttendanceTotal: payrollSummary?.totalSessions ?? 0,
+    }
+  }, [
+    summary,
+    isTrainer,
+    scopedTodayRows,
+    scopedMonthScheduledRows,
+    payrollSummary?.totalSessions,
+  ])
 
   useEffect(() => {
     void load()
@@ -184,7 +247,7 @@ export function CenterAttendanceBoard() {
     return () => window.clearTimeout(timer)
   }, [toast])
 
-  const sourceRows = isMonthView ? monthScheduledRows : todayRows
+  const sourceRows = isMonthView ? scopedMonthScheduledRows : scopedTodayRows
 
   const filteredRows = useMemo(() => {
     let list = sourceRows
@@ -302,8 +365,9 @@ export function CenterAttendanceBoard() {
       <div>
         <h2 className="page-title">출석부</h2>
         <p className="page-desc">
-          오늘 출석·미출석·노쇼를 확인하고, 월별 예정 수업·트레이너별 수업료를
-          조회합니다.
+          {isTrainer
+            ? '담당 회원의 출석·예정 수업과 이번 달 수업료를 확인합니다.'
+            : '오늘 출석·미출석·노쇼를 확인하고, 월별 예정 수업·트레이너별 수업료를 조회합니다.'}
         </p>
       </div>
 
@@ -352,35 +416,35 @@ export function CenterAttendanceBoard() {
           {
             label: '출석',
             sub: '오늘',
-            value: summary.attendedToday,
+            value: scopedSummary.attendedToday,
             tone: 'text-emerald-700',
             filter: 'attended' as const,
           },
           {
             label: '예정',
             sub: monthLabel,
-            value: summary.monthScheduled,
+            value: scopedSummary.monthScheduled,
             tone: 'text-charcoal',
             filter: 'scheduled' as const,
           },
           {
             label: '미출석',
             sub: '오늘',
-            value: summary.absentToday,
+            value: scopedSummary.absentToday,
             tone: 'text-orange-700',
             filter: 'absent' as const,
           },
           {
             label: '노쇼',
             sub: '오늘',
-            value: summary.noShowToday,
+            value: scopedSummary.noShowToday,
             tone: 'text-red-700',
             filter: 'no_show' as const,
           },
           {
             label: '총 출석',
             sub: monthLabel,
-            value: summary.monthAttendanceTotal,
+            value: scopedSummary.monthAttendanceTotal,
             tone: 'text-sky-700',
             filter: null,
           },
@@ -410,6 +474,8 @@ export function CenterAttendanceBoard() {
         monthRef={monthRef}
         summary={payrollSummary}
         loading={payrollLoading}
+        trainerView={isTrainer}
+        trainerName={trainerName}
       />
 
       <section className={`${cardClass} overflow-hidden`}>
@@ -461,7 +527,7 @@ export function CenterAttendanceBoard() {
                   <th className="px-4 py-2.5">예약</th>
                   <th className="px-4 py-2.5">상태</th>
                   <th className="px-4 py-2.5">출석 시각</th>
-                  <th className="px-4 py-2.5">처리</th>
+                  {!isTrainer && <th className="px-4 py-2.5">처리</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gold/15">
@@ -518,43 +584,45 @@ export function CenterAttendanceBoard() {
                           '-'
                         )}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="flex flex-wrap gap-2">
-                          {canCheck && (
-                            <button
-                              type="button"
-                              disabled={isActing}
-                              onClick={() => void handleCheckIn(row)}
-                              className={`${btnGold} px-3 py-1.5 text-xs`}
-                            >
-                              출석
-                            </button>
-                          )}
-                          {row.scheduleId &&
-                            isTodaySchedule &&
-                            (row.displayStatus === 'scheduled' ||
-                              row.displayStatus === 'absent') && (
+                      {!isTrainer && (
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="flex flex-wrap gap-2">
+                            {canCheck && (
                               <button
                                 type="button"
                                 disabled={isActing}
-                                onClick={() => void handleNoShow(row)}
-                                className={`${btnOutline} px-3 py-1.5 text-xs text-red-700`}
+                                onClick={() => void handleCheckIn(row)}
+                                className={`${btnGold} px-3 py-1.5 text-xs`}
                               >
-                                노쇼
+                                출석
                               </button>
                             )}
-                          {row.attendanceId && isTodaySchedule && (
-                            <button
-                              type="button"
-                              disabled={isActing}
-                              onClick={() => void handleCancel(row)}
-                              className="text-xs font-semibold text-red-600 hover:underline disabled:opacity-40"
-                            >
-                              출석 취소
-                            </button>
-                          )}
-                        </div>
-                      </td>
+                            {row.scheduleId &&
+                              isTodaySchedule &&
+                              (row.displayStatus === 'scheduled' ||
+                                row.displayStatus === 'absent') && (
+                                <button
+                                  type="button"
+                                  disabled={isActing}
+                                  onClick={() => void handleNoShow(row)}
+                                  className={`${btnOutline} px-3 py-1.5 text-xs text-red-700`}
+                                >
+                                  노쇼
+                                </button>
+                              )}
+                            {row.attendanceId && isTodaySchedule && (
+                              <button
+                                type="button"
+                                disabled={isActing}
+                                onClick={() => void handleCancel(row)}
+                                className="text-xs font-semibold text-red-600 hover:underline disabled:opacity-40"
+                              >
+                                출석 취소
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   )
                 })}
