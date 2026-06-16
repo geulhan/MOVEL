@@ -4,9 +4,10 @@ import {
   grantPlatformCenterCredits,
   type PlatformCenterCreditRow,
 } from '../../api/platformMessageCredits'
+import { PLATFORM_CREDIT_GRANT_PRESETS } from '../../types/creditCommerce'
 import { btnOutline, btnPrimary } from '../../styles/theme'
 
-const GRANT_PRESETS = [30, 100, 500] as const
+const GRANT_PRESETS = PLATFORM_CREDIT_GRANT_PRESETS
 
 type Props = {
   open: boolean
