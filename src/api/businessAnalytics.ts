@@ -116,23 +116,55 @@ async function loadRecognitionInputs(centerId: string) {
   }
 }
 
-function computeAverageSessionPrice(members: Member[]): {
+function isEligibleForAverageSessionPrice(member: Member): boolean {
+  return (
+    member.status !== 'terminated' &&
+    member.total_sessions > 0 &&
+    member.payment_amount > 0 &&
+    member.trainer_id != null &&
+    String(member.trainer_id).trim() !== ''
+  )
+}
+
+function computeAverageSessionPrice(
+  members: Member[],
+  ptPayments: PtPayment[],
+): {
   averageSessionPrice: number
   totalPayment: number
   totalSessions: number
   memberCount: number
 } {
-  const registered = members.filter(
-    (member) => member.status !== 'terminated' && member.total_sessions > 0,
+  const eligibleIds = new Set(
+    members.filter(isEligibleForAverageSessionPrice).map((member) => member.id),
   )
-  const totalPayment = registered.reduce(
-    (sum, member) => sum + Number(member.payment_amount),
-    0,
+
+  const relevantPayments = ptPayments.filter(
+    (payment) =>
+      eligibleIds.has(payment.memberId) &&
+      payment.sessions > 0 &&
+      payment.amount > 0,
   )
-  const totalSessions = registered.reduce(
-    (sum, member) => sum + Number(member.total_sessions),
-    0,
-  )
+
+  let totalPayment = 0
+  let totalSessions = 0
+  const countedMembers = new Set<string>()
+
+  if (relevantPayments.length > 0) {
+    for (const payment of relevantPayments) {
+      totalPayment += payment.amount
+      totalSessions += payment.sessions
+      countedMembers.add(payment.memberId)
+    }
+  } else {
+    for (const member of members) {
+      if (!eligibleIds.has(member.id)) continue
+      totalPayment += Number(member.payment_amount)
+      totalSessions += Number(member.total_sessions)
+      countedMembers.add(member.id)
+    }
+  }
+
   const averageSessionPrice =
     totalSessions > 0 ? Math.round(totalPayment / totalSessions) : 0
 
@@ -140,7 +172,7 @@ function computeAverageSessionPrice(members: Member[]): {
     averageSessionPrice,
     totalPayment,
     totalSessions,
-    memberCount: registered.length,
+    memberCount: countedMembers.size,
   }
 }
 
@@ -225,7 +257,7 @@ function buildSnapshotForMonth(
     totalPayment: registeredPtTotalAmount,
     totalSessions: registeredPtTotalSessions,
     memberCount: registeredMemberCount,
-  } = computeAverageSessionPrice(members)
+  } = computeAverageSessionPrice(members, inputs.ptPayments)
 
   const ownerMemberIds = settings.ownerTrainerId
     ? new Set(

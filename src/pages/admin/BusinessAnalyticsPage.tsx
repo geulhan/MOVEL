@@ -128,7 +128,8 @@ function SettingsPanel({
         <h3 className="text-sm font-semibold text-charcoal">경영 설정</h3>
         <p className="mt-1 text-xs text-muted">
           트레이너 정산율, 대표 트레이너, 고정비, 충당금 비율을 설정합니다. 평균 세션 단가는
-          등록 회원의 총 결제금액 ÷ 총 등록 세션으로 자동 계산됩니다.
+          트레이너가 지정되고 PT 결제가 있는 등록 회원의 실제 결제 내역(총 결제 ÷ 총 세션)으로
+          자동 계산됩니다.
         </p>
       </div>
 
@@ -138,7 +139,7 @@ function SettingsPanel({
           {formatCurrency(averageSessionPrice)}
         </p>
         <p className="mt-1 text-xs text-muted">
-          등록 회원 {registeredMemberCount}명 · 총 결제{' '}
+          트레이너 지정 + PT 결제 회원 {registeredMemberCount}명 · 총 결제{' '}
           {formatCurrency(registeredPtTotalAmount)} ÷ 총 세션{' '}
           {registeredPtTotalSessions.toLocaleString()}회
         </p>
@@ -471,7 +472,7 @@ export default function BusinessAnalyticsPage() {
               <KpiCard
                 label="평균 세션 단가"
                 value={formatCurrency(data.averageSessionPrice)}
-                sub={`등록 회원 ${data.registeredMemberCount}명 · ${formatCurrency(data.registeredPtTotalAmount)} ÷ ${data.registeredPtTotalSessions.toLocaleString()}회`}
+                sub={`트레이너 지정 PT 회원 ${data.registeredMemberCount}명 · ${formatCurrency(data.registeredPtTotalAmount)} ÷ ${data.registeredPtTotalSessions.toLocaleString()}회`}
               />
               <KpiCard
                 label="대표 인건비"
