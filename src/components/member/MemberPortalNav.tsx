@@ -4,7 +4,6 @@ type TabId =
   | 'inbody'
   | 'payment'
   | 'growth'
-  | 'village'
   | 'rewards'
   | 'mypage'
 
@@ -19,7 +18,6 @@ const NAV_ITEMS: { id: TabId; lines: string[] }[] = [
   { id: 'inbody', lines: ['인바디'] },
   { id: 'payment', lines: ['결제'] },
   { id: 'growth', lines: ['성장', '허브'] },
-  { id: 'village', lines: ['마을'] },
   { id: 'rewards', lines: ['리워드'] },
   { id: 'mypage', lines: ['마이', '페이지'] },
 ]
@@ -28,7 +26,7 @@ export function MemberPortalNav({ activeTab, onSelect }: Props) {
   return (
     <nav
       aria-label="회원 메뉴"
-      className="grid grid-cols-8 gap-0.5 rounded-2xl border border-gold/20 bg-white p-1 shadow-sm"
+      className="grid grid-cols-7 gap-1 rounded-2xl border border-gold/20 bg-white p-1.5 shadow-sm"
     >
       {NAV_ITEMS.map((item) => {
         const isActive = activeTab === item.id

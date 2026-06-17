@@ -152,7 +152,7 @@ export function MemberVillageSection({ memberId, refreshToken = 0 }: Props) {
       <section className={`${cardClass} p-4`}>
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h3 className="text-base font-semibold text-charcoal">나의 마을</h3>
+            <h3 className="text-base font-semibold text-charcoal">마을 키우기</h3>
             <p className="mt-0.5 text-xs text-muted">
               운동나무 {state.tree_stage_name} · {width}×{height} · 성장치{' '}
               {state.total_growth.toLocaleString()}

@@ -15,12 +15,7 @@ import {
   type StepVerification,
   type SubmitStepVerificationOptions,
 } from '../api/stepVerification'
-import {
-  getNextTier,
-  REWARD_EVENT_LABELS,
-  TIER_THRESHOLDS,
-  type RewardEventType,
-} from '../constants/rewards'
+import { REWARD_EVENT_LABELS, type RewardEventType } from '../constants/rewards'
 import { formatDate, todayDateString } from '../api/members'
 import { formatSupabaseError } from '../lib/errors'
 import {
@@ -37,6 +32,7 @@ import {
 import { useClientDevice } from '../hooks/useClientDevice'
 import { VerificationCodeFullscreen } from './VerificationCodeFullscreen'
 import { IosStepVerificationUpload } from './IosStepVerificationUpload'
+import { MemberVillageSection } from './member/village/MemberVillageSection'
 import { MemberCenterPhotoSection } from './MemberCenterPhotoSection'
 import { MemberRewardGuideSection } from './MemberRewardGuideSection'
 import { btnGold, btnOutline, cardClass } from '../styles/theme'
@@ -51,19 +47,6 @@ type Props = {
 /** 모바일 갤러리(사진 보관함) 열기용 — capture 속성 없음 */
 const GALLERY_IMAGE_ACCEPT =
   'image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic'
-
-function tierBadgeClass(tier: string): string {
-  switch (tier) {
-    case 'MOVEL ELITE':
-      return 'bg-charcoal text-gold border-gold/60'
-    case 'GOLD':
-      return 'bg-gold/25 text-charcoal border-gold'
-    case 'SILVER':
-      return 'bg-cream-dark text-charcoal border-gold/40'
-    default:
-      return 'bg-cream text-charcoal/70 border-gold/30'
-  }
-}
 
 function formatTxnDate(iso: string): string {
   return new Date(iso).toLocaleString('ko-KR', {
@@ -253,13 +236,10 @@ export function MemberRewardsSection({ memberId, refreshToken }: Props) {
     historyTab === 'earn' ? t.amount > 0 : t.amount < 0,
   )
 
-  const nextTier = balance ? getNextTier(balance.move_score) : null
-  const currentTierInfo = balance
-    ? TIER_THRESHOLDS.find((t) => t.tier === balance.tier)
-    : null
-
   return (
     <div className="space-y-4">
+      <MemberVillageSection memberId={memberId} refreshToken={refreshToken} />
+
       {showCodeFullscreen && todayCode && (
         <VerificationCodeFullscreen
           code={todayCode}
@@ -268,83 +248,22 @@ export function MemberRewardsSection({ memberId, refreshToken }: Props) {
       )}
 
       <section className={`${cardClass} overflow-hidden`}>
-        <div className="border-b border-gold/20 bg-charcoal px-5 py-4 sm:px-6">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-gold">
-            MY REWARDS
-          </p>
-          <h3 className="mt-1 text-lg font-bold text-cream">모벨 리워드</h3>
+        <div className="flex items-center justify-between gap-3 border-b border-gold/20 bg-charcoal px-4 py-3 sm:px-5">
+          <h3 className="text-base font-bold text-cream">모벨 리워드</h3>
+          {loading ? (
+            <span className="text-xs text-cream/60">불러오는 중…</span>
+          ) : balance ? (
+            <div className="rounded-lg border border-gold/40 bg-gold/10 px-3 py-1.5 text-right">
+              <p className="text-[9px] font-semibold uppercase tracking-wider text-gold">
+                마일리지
+              </p>
+              <p className="text-lg font-bold tabular-nums leading-tight text-cream">
+                {balance.move_mile.toLocaleString()}
+                <span className="ml-0.5 text-sm font-semibold text-cream/70">M</span>
+              </p>
+            </div>
+          ) : null}
         </div>
-
-        {loading ? (
-          <p className="p-8 text-center text-sm text-muted">불러오는 중…</p>
-        ) : balance ? (
-          <div className="space-y-4 p-5 sm:p-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <span
-                className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold tracking-wide ${tierBadgeClass(balance.tier)}`}
-              >
-                {balance.tier}
-              </span>
-              {nextTier && (
-                <p className="text-xs text-muted">
-                  {nextTier.tier}까지{' '}
-                  <strong className="text-charcoal">
-                    {nextTier.remaining.toLocaleString()}점
-                  </strong>
-                </p>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-xl border border-gold/30 bg-cream/60 p-4 text-center">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-gold-dark">
-                  MOVE SCORE
-                </p>
-                <p className="mt-1 text-3xl font-bold tabular-nums text-charcoal">
-                  {balance.move_score.toLocaleString()}
-                </p>
-              </div>
-              <div className="rounded-xl border border-gold/40 bg-gold/10 p-4 text-center">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-gold-dark">
-                  MOVE MILE
-                </p>
-                <p className="mt-1 text-3xl font-bold tabular-nums text-charcoal">
-                  {balance.move_mile.toLocaleString()}
-                  <span className="ml-0.5 text-base font-semibold text-charcoal/50">
-                    M
-                  </span>
-                </p>
-              </div>
-            </div>
-
-            {currentTierInfo && balance.tier !== 'MOVEL ELITE' && (
-              <div>
-                <div className="mb-1 flex justify-between text-[11px] text-muted">
-                  <span>{balance.tier}</span>
-                  <span>
-                    {currentTierInfo.min.toLocaleString()} ~{' '}
-                    {currentTierInfo.max === Infinity
-                      ? '∞'
-                      : currentTierInfo.max.toLocaleString()}
-                  </span>
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-cream-dark">
-                  <div
-                    className="h-full rounded-full bg-gold transition-all"
-                    style={{
-                      width: `${Math.min(
-                        100,
-                        ((balance.move_score - currentTierInfo.min) /
-                          (currentTierInfo.max - currentTierInfo.min + 1)) *
-                          100,
-                      )}%`,
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        ) : null}
       </section>
 
       <section className={`${cardClass} p-5 sm:p-6`}>

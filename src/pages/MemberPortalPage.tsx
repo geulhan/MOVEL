@@ -45,7 +45,6 @@ import { MemberCenterPassSection } from '../components/member/MemberCenterPassSe
 import { MemberPaymentSection } from '../components/member/MemberPaymentSection'
 import { MemberRewardsSection } from '../components/MemberRewardsSection'
 import { MemberGrowthGardenShell } from '../components/member/growth/MemberGrowthGardenShell'
-import { MemberVillageSection } from '../components/member/village/MemberVillageSection'
 import { PullToRefresh } from '../components/PullToRefresh'
 import { MemberScheduleSection } from '../components/MemberScheduleSection'
 import { MemberClassBookingSection } from '../components/member/MemberClassBookingSection'
@@ -62,7 +61,6 @@ type Tab =
   | 'inbody'
   | 'rewards'
   | 'growth'
-  | 'village'
   | 'mypage'
 type AuthMode = 'login' | 'signup'
 
@@ -644,13 +642,6 @@ export default function MemberPortalPage() {
 
         {tab === 'growth' && member && (
           <MemberGrowthGardenShell
-            memberId={member.id}
-            refreshToken={refreshToken}
-          />
-        )}
-
-        {tab === 'village' && member && (
-          <MemberVillageSection
             memberId={member.id}
             refreshToken={refreshToken}
           />
