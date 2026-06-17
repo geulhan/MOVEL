@@ -2,6 +2,8 @@ import { supabase } from '../../lib/supabase'
 import type {
   GrowthEventType,
   GrowthProfile,
+  GrowthRewardRule,
+  GrowthTreeStageRow,
   PostGrowthEventResult,
 } from '../../types/growth'
 
@@ -20,6 +22,37 @@ type RpcGrowthProfile = {
   is_max_stage: boolean
   tree: GrowthProfile['tree']
   recent_growth: GrowthProfile['recent_growth']
+  reward_rules?: GrowthRewardRule[]
+  tree_stages?: GrowthTreeStageRow[]
+}
+
+function normalizeRewardRules(raw: unknown): GrowthRewardRule[] {
+  if (!Array.isArray(raw)) return []
+  return raw.map((row) => {
+    const item = row as Record<string, unknown>
+    return {
+      event_type: String(item.event_type ?? ''),
+      display_name_ko: String(item.display_name_ko ?? ''),
+      growth_reward: Number(item.growth_reward) || 0,
+      acorn_reward: Number(item.acorn_reward) || 0,
+      limit_period: item.limit_period === 'monthly' ? 'monthly' : 'none',
+      limit_count:
+        item.limit_count == null ? null : Number(item.limit_count) || null,
+    }
+  })
+}
+
+function normalizeTreeStages(raw: unknown): GrowthTreeStageRow[] {
+  if (!Array.isArray(raw)) return []
+  return raw.map((row) => {
+    const item = row as Record<string, unknown>
+    return {
+      stage_key: String(item.stage_key ?? ''),
+      sort_order: Number(item.sort_order) || 0,
+      min_growth: Number(item.min_growth) || 0,
+      display_name_ko: String(item.display_name_ko ?? ''),
+    }
+  })
 }
 
 function normalizeProfile(raw: RpcGrowthProfile): GrowthProfile {
@@ -37,6 +70,8 @@ function normalizeProfile(raw: RpcGrowthProfile): GrowthProfile {
     is_max_stage: Boolean(raw.is_max_stage),
     tree: raw.tree,
     recent_growth: Array.isArray(raw.recent_growth) ? raw.recent_growth : [],
+    reward_rules: normalizeRewardRules(raw.reward_rules),
+    tree_stages: normalizeTreeStages(raw.tree_stages),
   }
 }
 

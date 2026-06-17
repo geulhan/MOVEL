@@ -161,7 +161,11 @@ export async function createExerciseJournal(
   })
 
   if (input.created_by === 'member') {
-    void awardGrowthOnWorkoutLog(memberId, data.id)
+    void awardGrowthOnWorkoutLog(
+      memberId,
+      data.id,
+      image_urls.length > 0,
+    )
   }
 
   try {

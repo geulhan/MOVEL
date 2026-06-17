@@ -1,5 +1,6 @@
 import { getCurrentCenterId } from '../lib/center'
 import { supabase } from '../lib/supabase'
+import { awardGrowthOnGroupClassAttendance } from './growth'
 
 export type ClassType = 'pilates' | 'yoga' | 'gx' | 'group_pt'
 export type PassType = ClassType | 'none'
@@ -565,18 +566,29 @@ export async function updateReservationStatus(input: {
     }
 
     const centerId = await getCurrentCenterId()
-    const { error: attError } = await supabase.from('class_attendance').insert({
-      center_id: centerId,
-      reservation_id: input.reservationId,
-      schedule_id: input.scheduleId,
-      member_id: input.memberId,
-      status: 'attended',
-      sessions_deducted: sessionsDeducted,
-      checked_by: input.checkedBy ?? 'admin',
-      checked_at: new Date().toISOString(),
-    })
+    const { data: attendanceRow, error: attError } = await supabase
+      .from('class_attendance')
+      .insert({
+        center_id: centerId,
+        reservation_id: input.reservationId,
+        schedule_id: input.scheduleId,
+        member_id: input.memberId,
+        status: 'attended',
+        sessions_deducted: sessionsDeducted,
+        checked_by: input.checkedBy ?? 'admin',
+        checked_at: new Date().toISOString(),
+      })
+      .select('id')
+      .maybeSingle()
 
     if (attError && attError.code !== '23505') throw attError
+
+    if (attendanceRow?.id) {
+      void awardGrowthOnGroupClassAttendance(
+        input.memberId,
+        String(attendanceRow.id),
+      )
+    }
   }
 }
 

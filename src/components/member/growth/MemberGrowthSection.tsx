@@ -1,9 +1,13 @@
 import { useMemo } from 'react'
-import { formatDate } from '../../api/members'
-import { GROWTH_EVENT_LABELS, GROWTH_TREE_EMOJI } from '../../types/growth'
-import type { GrowthProfile } from '../../types/growth'
-import { useGrowthProfile } from '../../hooks/useGrowthProfile'
-import { cardClass } from '../../styles/theme'
+import { formatDate } from '../../../api/members'
+import {
+  DEFAULT_GROWTH_REWARD_RULES,
+  GROWTH_EVENT_LABELS,
+  GROWTH_TREE_EMOJI,
+} from '../../../types/growth'
+import type { GrowthProfile, GrowthRewardRule } from '../../../types/growth'
+import { useGrowthProfile } from '../../../hooks/useGrowthProfile'
+import { cardClass } from '../../../styles/theme'
 
 type Props = {
   memberId: string
@@ -24,6 +28,32 @@ function growthProgressPercent(profile: GrowthProfile): number {
   return Math.min(100, Math.max(0, Math.round(p)))
 }
 
+function formatRewardLimit(rule: GrowthRewardRule): string | null {
+  if (rule.limit_period === 'monthly' && rule.limit_count) {
+    return `월 ${rule.limit_count}회`
+  }
+  return null
+}
+
+const EARN_RULE_ORDER = [
+  'PT_ATTENDANCE',
+  'GROUP_CLASS_ATTENDANCE',
+  'WORKOUT_LOG',
+  'PHOTO_WORKOUT_LOG',
+  'BODY_COMPOSITION',
+  'CHALLENGE_COMPLETE',
+  'STREAK_7_DAYS',
+  'STREAK_30_DAYS',
+]
+
+function sortRewardRules(rules: GrowthRewardRule[]): GrowthRewardRule[] {
+  return [...rules].sort((a, b) => {
+    const ai = EARN_RULE_ORDER.indexOf(String(a.event_type))
+    const bi = EARN_RULE_ORDER.indexOf(String(b.event_type))
+    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi)
+  })
+}
+
 export function MemberGrowthSection({ memberId, refreshToken = 0 }: Props) {
   const { profile, loading, error, reload } = useGrowthProfile(
     memberId,
@@ -34,6 +64,28 @@ export function MemberGrowthSection({ memberId, refreshToken = 0 }: Props) {
     () => (profile ? growthProgressPercent(profile) : 0),
     [profile],
   )
+
+  const rewardRules = useMemo(() => {
+    if (!profile) return []
+    const rules =
+      profile.reward_rules.length > 0
+        ? profile.reward_rules
+        : DEFAULT_GROWTH_REWARD_RULES
+    return sortRewardRules(rules)
+  }, [profile])
+
+  const treeStages = useMemo(() => {
+    if (!profile?.tree_stages.length) {
+      return [
+        { stage_key: 'seed', min_growth: 100, display_name_ko: '씨앗' },
+        { stage_key: 'sprout', min_growth: 500, display_name_ko: '새싹' },
+        { stage_key: 'small', min_growth: 1500, display_name_ko: '어린 나무' },
+        { stage_key: 'large', min_growth: 5000, display_name_ko: '큰 나무' },
+        { stage_key: 'sakura', min_growth: 15000, display_name_ko: '벚꽃나무' },
+      ]
+    }
+    return profile.tree_stages
+  }, [profile])
 
   const treeEmoji = profile
     ? GROWTH_TREE_EMOJI[profile.current_stage_key] ?? '🌱'
@@ -48,8 +100,8 @@ export function MemberGrowthSection({ memberId, refreshToken = 0 }: Props) {
       <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
         <p>{error}</p>
         <p className="mt-2 text-xs text-red-600/80">
-          Supabase에서 migration_078_platform_growth_mvp.sql 실행 후 다시 시도해
-          주세요.
+          Supabase에서 migration_078_platform_growth_mvp.sql 및
+          migration_080_growth_reward_balance.sql 실행 후 다시 시도해 주세요.
         </p>
         <button
           type="button"
@@ -73,18 +125,21 @@ export function MemberGrowthSection({ memberId, refreshToken = 0 }: Props) {
             <p className="mt-0.5 text-lg font-bold tabular-nums text-charcoal">
               {formatGrowth(profile.total_growth)}
             </p>
+            <p className="mt-0.5 text-[10px] text-muted">운동할수록 빠르게 쌓여요</p>
           </div>
           <div className="rounded-xl border border-gold/25 bg-white px-3 py-2.5">
             <p className="text-[11px] font-semibold text-muted">마일</p>
             <p className="mt-0.5 text-lg font-bold tabular-nums text-charcoal">
               {formatGrowth(profile.current_mile)}
             </p>
+            <p className="mt-0.5 text-[10px] text-muted">센터 혜택 포인트</p>
           </div>
           <div className="rounded-xl border border-amber-200/80 bg-white px-3 py-2.5">
             <p className="text-[11px] font-semibold text-muted">도토리</p>
             <p className="mt-0.5 text-lg font-bold tabular-nums text-charcoal">
               {formatGrowth(profile.current_acorns)}
             </p>
+            <p className="mt-0.5 text-[10px] text-muted">정원·마을 재화</p>
           </div>
         </div>
       </section>
@@ -133,11 +188,74 @@ export function MemberGrowthSection({ memberId, refreshToken = 0 }: Props) {
       </section>
 
       <section className={`${cardClass} p-4`}>
+        <h3 className="text-base font-semibold text-charcoal">운동나무 단계</h3>
+        <ul className="mt-3 space-y-2">
+          {treeStages.map((stage) => {
+            const isCurrent = profile.current_stage_key === stage.stage_key
+            return (
+              <li
+                key={stage.stage_key}
+                className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm ${
+                  isCurrent
+                    ? 'bg-[#5A9E6F]/10 font-semibold text-charcoal'
+                    : 'text-charcoal/80'
+                }`}
+              >
+                <span>{stage.display_name_ko}</span>
+                <span className="tabular-nums text-muted">
+                  {formatGrowth(stage.min_growth)} 성장치
+                </span>
+              </li>
+            )
+          })}
+        </ul>
+      </section>
+
+      <section className={`${cardClass} p-4`}>
+        <h3 className="text-base font-semibold text-charcoal">성장 보상</h3>
+        <p className="mt-1 text-xs text-muted">
+          성장치는 후하게, 도토리는 소중하게 적립돼요
+        </p>
+        <ul className="mt-3 divide-y divide-gold/15">
+          {rewardRules.map((rule) => {
+            const limit = formatRewardLimit(rule)
+            return (
+              <li
+                key={rule.event_type}
+                className="flex items-start justify-between gap-3 py-3 text-sm"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium text-charcoal">
+                    {rule.display_name_ko ||
+                      GROWTH_EVENT_LABELS[rule.event_type] ||
+                      rule.event_type}
+                  </p>
+                  {limit && (
+                    <p className="mt-0.5 text-xs text-muted">{limit}</p>
+                  )}
+                </div>
+                <div className="shrink-0 text-right text-xs leading-relaxed">
+                  <p className="font-bold tabular-nums text-[#5A9E6F]">
+                    +{rule.growth_reward} 성장치
+                  </p>
+                  {rule.acorn_reward > 0 && (
+                    <p className="tabular-nums text-amber-700">
+                      +{rule.acorn_reward} 도토리
+                    </p>
+                  )}
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      </section>
+
+      <section className={`${cardClass} p-4`}>
         <h3 className="text-base font-semibold text-charcoal">최근 성장</h3>
         {profile.recent_growth.length === 0 ? (
           <p className="mt-3 text-sm text-muted">
-            아직 기록이 없어요. PT 출석이나 운동일지를 작성하면 성장치가
-            쌓여요.
+            아직 기록이 없어요. PT 출석, 그룹수업, 운동일지를 하면 성장치가
+            빠르게 쌓여요.
           </p>
         ) : (
           <ul className="mt-3 divide-y divide-gold/15">
