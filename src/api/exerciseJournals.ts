@@ -1,4 +1,4 @@
-import { resolveCenterIdForMember } from '../lib/center'
+import { getCurrentCenterId, resolveCenterIdForMember } from '../lib/center'
 import { supabase } from '../lib/supabase'
 
 export type ExerciseJournalCreatedBy = 'member' | 'trainer' | 'admin'
@@ -78,6 +78,33 @@ export async function fetchExerciseJournals(
 
   if (error) throw error
   return (data ?? []).map((row) => normalize(row as ExerciseJournal))
+}
+
+export function exerciseJournalLookupKey(memberId: string, trainedAt: string): string {
+  return `${memberId}|${trainedAt}`
+}
+
+/** PT 일정과 운동일지 매칭용: member_id + trained_at(YYYY-MM-DD) */
+export async function fetchExerciseJournalKeysInRange(
+  startDate: string,
+  endDate: string,
+): Promise<Set<string>> {
+  const centerId = await getCurrentCenterId()
+  const { data, error } = await supabase
+    .from('exercise_journals')
+    .select('member_id, trained_at')
+    .eq('center_id', centerId)
+    .gte('trained_at', startDate)
+    .lte('trained_at', endDate)
+
+  if (error) throw error
+
+  const keys = new Set<string>()
+  for (const row of data ?? []) {
+    const trainedAt = String(row.trained_at).slice(0, 10)
+    keys.add(exerciseJournalLookupKey(String(row.member_id), trainedAt))
+  }
+  return keys
 }
 
 export async function createExerciseJournal(

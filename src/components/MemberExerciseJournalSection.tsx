@@ -22,17 +22,25 @@ const PLACEHOLDER = `예) 하체 데이
 type Props = {
   memberId: string
   memberName?: string
+  initialTrainedAt?: string
+}
+
+function isValidDateKey(value: string | undefined): value is string {
+  return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value))
 }
 
 export function MemberExerciseJournalSection({
   memberId,
   memberName = '회원',
+  initialTrainedAt,
 }: Props) {
   const [journals, setJournals] = useState<ExerciseJournal[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [trainedAt, setTrainedAt] = useState(
-    new Date().toISOString().slice(0, 10),
+  const [trainedAt, setTrainedAt] = useState(() =>
+    isValidDateKey(initialTrainedAt)
+      ? initialTrainedAt
+      : new Date().toISOString().slice(0, 10),
   )
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
@@ -64,6 +72,12 @@ export function MemberExerciseJournalSection({
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    if (isValidDateKey(initialTrainedAt)) {
+      setTrainedAt(initialTrainedAt)
+    }
+  }, [initialTrainedAt, memberId])
 
   async function handleCreate(e: FormEvent) {
     e.preventDefault()

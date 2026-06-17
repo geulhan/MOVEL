@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { fetchMembers } from '../../api/members'
 import { fetchTrainers } from '../../api/trainers'
+import {
+  exerciseJournalLookupKey,
+  fetchExerciseJournalKeysInRange,
+} from '../../api/exerciseJournals'
 import {
   cancelAllFutureFixedSchedules,
   cancelScheduleWithSessionRestore,
@@ -23,6 +28,7 @@ import {
 } from '../../api/schedule'
 import { completeScheduleAttendance } from '../../api/attendance'
 import { formatSupabaseError } from '../../lib/errors'
+import { useCenterFeatures } from '../../hooks/useCenterFeatures'
 import type { Member, Trainer } from '../../types/database'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/theme'
 import { dateKey, getMonthMatrix, monthLabel, WEEKDAYS } from '../../utils/calendar'
@@ -88,6 +94,7 @@ export function PtScheduleCalendar({
   const [month, setMonth] = useState(now.getMonth())
   const [selectedDate, setSelectedDate] = useState<string | null>(dateKey(now))
   const [schedules, setSchedules] = useState<PtSchedule[]>([])
+  const [journalKeys, setJournalKeys] = useState<Set<string>>(new Set())
   const [members, setMembers] = useState<Member[]>([])
   const [trainers, setTrainers] = useState<Trainer[]>([])
   const [loading, setLoading] = useState(true)
@@ -114,18 +121,26 @@ export function PtScheduleCalendar({
 
   const effectiveTrainerId = lockedTrainerId ?? filterTrainerId
   const canManage = isAdmin || Boolean(lockedTrainerId)
+  const { features } = useCenterFeatures()
+  const journalFeatureEnabled = features?.exercise_log !== false
 
   const range = useMemo(() => {
     const start = new Date(year, month, 1)
     const end = new Date(year, month + 1, 0, 23, 59, 59)
-    return { startIso: start.toISOString(), endIso: end.toISOString() }
+    return {
+      startIso: start.toISOString(),
+      endIso: end.toISOString(),
+      startDate: dateKey(start),
+      endDate: dateKey(end),
+    }
   }, [year, month])
 
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const [scheduleData, memberData, trainerData, fixedData] = await Promise.all([
+      const [scheduleData, memberData, trainerData, fixedData, journalKeySet] =
+        await Promise.all([
         fetchSchedulesInRange(range.startIso, range.endIso, {
           trainerId: effectiveTrainerId || undefined,
         }),
@@ -135,6 +150,9 @@ export function PtScheduleCalendar({
           trainerId: effectiveTrainerId || undefined,
           activeOnly: true,
         }),
+        journalFeatureEnabled
+          ? fetchExerciseJournalKeysInRange(range.startDate, range.endDate)
+          : Promise.resolve(new Set<string>()),
       ])
       const memberMap = new Map(memberData.map((m) => [m.id, m.name]))
       const trainerMap = new Map(trainerData.map((t) => [t.id, t.name]))
@@ -144,6 +162,7 @@ export function PtScheduleCalendar({
         trainer_name: s.trainer_id ? trainerMap.get(s.trainer_id) : undefined,
       }))
       setSchedules(enriched)
+      setJournalKeys(journalKeySet)
       const activeMembers = memberData.filter((m) => m.status !== 'terminated')
       setMembers(
         lockedTrainerId
@@ -157,7 +176,7 @@ export function PtScheduleCalendar({
     } finally {
       setLoading(false)
     }
-  }, [range.startIso, range.endIso, effectiveTrainerId, lockedTrainerId])
+  }, [range.startIso, range.endIso, range.startDate, range.endDate, effectiveTrainerId, lockedTrainerId, journalFeatureEnabled])
 
   useEffect(() => {
     void load()
@@ -226,6 +245,12 @@ export function PtScheduleCalendar({
   const selectedSchedules = selectedDate ? (byDate.get(selectedDate) ?? []) : []
   const matrix = getMonthMatrix(year, month)
   const today = dateKey(now)
+
+  function scheduleNeedsJournal(schedule: PtSchedule): boolean {
+    if (schedule.status !== 'completed' || !journalFeatureEnabled) return false
+    const day = scheduleDateKey(schedule.scheduled_at)
+    return !journalKeys.has(exerciseJournalLookupKey(schedule.member_id, day))
+  }
 
   function prevMonth() {
     if (month === 0) {
@@ -581,6 +606,16 @@ export function PtScheduleCalendar({
                       >
                         삭제
                       </button>
+                    </div>
+                  )}
+                  {scheduleNeedsJournal(s) && (
+                    <div className="mt-2.5">
+                      <Link
+                        to={`/admin/member/${s.member_id}/journal?date=${scheduleDateKey(s.scheduled_at)}`}
+                        className="inline-flex rounded-lg border border-gold/50 bg-gold/15 px-2.5 py-1 text-xs font-semibold text-charcoal transition hover:bg-gold/25"
+                      >
+                        운동일지 작성
+                      </Link>
                     </div>
                   )}
                 </li>
