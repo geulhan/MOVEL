@@ -1,19 +1,5 @@
 import { supabase } from '../../lib/supabase'
-import type { Season, SeasonPassState } from '../../types/season'
-
-function normalizeSeason(row: Record<string, unknown>): Season {
-  return {
-    id: String(row.id ?? ''),
-    center_id: String(row.center_id ?? ''),
-    title: String(row.title ?? ''),
-    description: String(row.description ?? ''),
-    start_date: String(row.start_date ?? '').slice(0, 10),
-    end_date: String(row.end_date ?? '').slice(0, 10),
-    max_level: Number(row.max_level) || 20,
-    is_active: Boolean(row.is_active),
-    created_at: String(row.created_at ?? ''),
-  }
-}
+import type { SeasonPassState } from '../../types/season'
 
 function normalizeSeasonPassState(raw: Record<string, unknown>): SeasonPassState {
   const rewards = Array.isArray(raw.rewards)

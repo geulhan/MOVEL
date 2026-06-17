@@ -1221,6 +1221,16 @@ export type Database = {
         Record<string, unknown>,
         Record<string, unknown>
       >
+      center_challenges: TableDef<
+        Record<string, unknown>,
+        Record<string, unknown>,
+        Record<string, unknown>
+      >
+      seasons: TableDef<
+        Record<string, unknown>,
+        Record<string, unknown>,
+        Record<string, unknown>
+      >
     }
     Views: Record<string, never>
     Functions: {
@@ -1537,6 +1547,99 @@ export type Database = {
         Args: {
           p_session_token: string
         }
+        Returns: Json
+      }
+      sync_center_challenges_for_member: {
+        Args: { p_member_id: string }
+        Returns: Json
+      }
+      get_growth_profile: {
+        Args: { p_member_id: string }
+        Returns: Json
+      }
+      mark_growth_notifications_read: {
+        Args: { p_member_id: string }
+        Returns: undefined
+      }
+      post_growth_event_for_member: {
+        Args: {
+          p_member_id: string
+          p_event_type: string
+          p_event_key: string
+          p_source?: string | null
+        }
+        Returns: Json
+      }
+      get_garden_state: {
+        Args: { p_member_id: string }
+        Returns: Json
+      }
+      purchase_garden_shop_item: {
+        Args: { p_member_id: string; p_shop_item_id: string }
+        Returns: Json
+      }
+      place_garden_item: {
+        Args: {
+          p_member_id: string
+          p_shop_item_id: string
+          p_x: number
+          p_y: number
+        }
+        Returns: Json
+      }
+      move_garden_item: {
+        Args: {
+          p_member_id: string
+          p_placement_id: string
+          p_x: number
+          p_y: number
+        }
+        Returns: Json
+      }
+      retrieve_garden_item: {
+        Args: { p_member_id: string; p_placement_id: string }
+        Returns: Json
+      }
+      seed_season_default_rewards: {
+        Args: { p_season_id: string }
+        Returns: undefined
+      }
+      get_season_pass_state: {
+        Args: { p_member_id: string }
+        Returns: Json
+      }
+      claim_season_reward: {
+        Args: { p_member_id: string; p_season_reward_id: string }
+        Returns: Json
+      }
+      get_slg_village_state: {
+        Args: { p_member_id: string }
+        Returns: Json
+      }
+      purchase_slg_building: {
+        Args: { p_member_id: string; p_building_id: string }
+        Returns: Json
+      }
+      place_slg_building: {
+        Args: {
+          p_member_id: string
+          p_building_id: string
+          p_x: number
+          p_y: number
+        }
+        Returns: Json
+      }
+      move_slg_building: {
+        Args: {
+          p_member_id: string
+          p_placement_id: string
+          p_x: number
+          p_y: number
+        }
+        Returns: Json
+      }
+      retrieve_slg_building: {
+        Args: { p_member_id: string; p_placement_id: string }
         Returns: Json
       }
     }
