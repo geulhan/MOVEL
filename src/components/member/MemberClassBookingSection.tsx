@@ -4,11 +4,19 @@ import {
   RESERVATION_STATUS_LABELS,
   canMemberCancelReservation,
   cancelClassReservation,
+  classRequiresSessionPass,
   fetchMemberClassSchedules,
   reserveClassForMember,
   type ReservationStatus,
 } from '../../api/classes'
 import { todayDateString } from '../../api/members'
+import {
+  canMemberBookWithPasses,
+  fetchMemberActiveSessionPasses,
+  sessionPassLabel,
+  type MemberSessionPassSummary,
+} from '../../api/memberSessionPasses'
+import { supabase } from '../../lib/supabase'
 import { btnOutline, btnPrimary, cardClass } from '../../styles/theme'
 
 function addDays(dateStr: string, days: number): string {
@@ -37,6 +45,8 @@ export function MemberClassBookingSection({ memberId }: Props) {
   const [schedules, setSchedules] = useState<
     Awaited<ReturnType<typeof fetchMemberClassSchedules>>
   >([])
+  const [passes, setPasses] = useState<MemberSessionPassSummary[]>([])
+  const [ptRemaining, setPtRemaining] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -47,12 +57,15 @@ export function MemberClassBookingSection({ memberId }: Props) {
     try {
       const start = todayDateString()
       const end = addDays(start, 14)
-      const rows = await fetchMemberClassSchedules(
-        memberId,
-        `${start}T00:00:00`,
-        `${end}T23:59:59`,
-      )
+      const [rows, passRows, memberRes] = await Promise.all([
+        fetchMemberClassSchedules(memberId, `${start}T00:00:00`, `${end}T23:59:59`),
+        fetchMemberActiveSessionPasses(memberId),
+        supabase.from('members').select('remaining_sessions').eq('id', memberId).single(),
+      ])
+      if (memberRes.error) throw memberRes.error
       setSchedules(rows.filter((s) => new Date(s.starts_at) > new Date()))
+      setPasses(passRows)
+      setPtRemaining(Number(memberRes.data?.remaining_sessions ?? 0))
     } catch (err) {
       setError(err instanceof Error ? err.message : '불러오기 실패')
     } finally {
@@ -95,14 +108,33 @@ export function MemberClassBookingSection({ memberId }: Props) {
     }
   }
 
+  const passSummary = passes
+    .filter((p) => p.is_unlimited || p.remaining_sessions > 0)
+    .map((p) =>
+      p.is_unlimited
+        ? `${sessionPassLabel(p.pass_type)} 무제한`
+        : `${sessionPassLabel(p.pass_type)} ${p.remaining_sessions}회`,
+    )
+
   return (
     <section className={`${cardClass} card-pad space-y-4`}>
       <div>
         <h2 className="text-lg font-semibold text-charcoal">그룹수업 예약</h2>
         <p className="mt-1 text-sm text-muted">
-          수업 시작 전까지 정원이 남아 있으면 예약할 수 있습니다. 취소는 수업 24시간 전까지
+          해당 수업 수강권(잔여 회차)이 있어야 예약할 수 있습니다. 취소는 수업 24시간 전까지
           가능합니다.
         </p>
+        {passSummary.length > 0 && (
+          <p className="mt-2 text-xs font-medium text-charcoal">
+            보유 수강권: {passSummary.join(' · ')}
+            {ptRemaining > 0 ? ` · PT ${ptRemaining}회` : ''}
+          </p>
+        )}
+        {!loading && passSummary.length === 0 && ptRemaining <= 0 && (
+          <p className="mt-2 text-xs text-amber-800">
+            사용 가능한 수강권이 없습니다. 센터에 문의해 주세요.
+          </p>
+        )}
       </div>
 
       {loading && <p className="text-sm text-muted">불러오는 중…</p>}
@@ -121,6 +153,11 @@ export function MemberClassBookingSection({ memberId }: Props) {
               s.reservation_status !== 'noshow' &&
               canMemberCancelReservation(s.starts_at)
             const full = (s.reserved_count ?? 0) >= (s.capacity ?? 8)
+            const canBook = canMemberBookWithPasses(s, passes, ptRemaining)
+            const needsPass = classRequiresSessionPass(
+              s.pass_type ?? s.class_type ?? 'pilates',
+              s.deduct_sessions ?? true,
+            )
 
             return (
               <li
@@ -139,9 +176,12 @@ export function MemberClassBookingSection({ memberId }: Props) {
                       내 예약: {RESERVATION_STATUS_LABELS[s.reservation_status]}
                     </p>
                   )}
+                  {!reserved && needsPass && !canBook && (
+                    <p className="mt-0.5 text-xs text-amber-800">수강권이 필요합니다</p>
+                  )}
                 </div>
                 <div className="flex gap-2">
-                  {!reserved && !full && (
+                  {!reserved && !full && canBook && (
                     <button
                       type="button"
                       className={btnPrimary}

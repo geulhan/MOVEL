@@ -20,6 +20,10 @@ import {
   type ReservationStatus,
 } from '../../api/classes'
 import { fetchMembers, formatPhone, todayDateString } from '../../api/members'
+import {
+  classRequiresSessionPass,
+  fetchEligibleMemberIdsForClassPass,
+} from '../../api/memberSessionPasses'
 import { fetchTrainers } from '../../api/trainers'
 import { getAdminSession } from '../../lib/adminSession'
 import { getErrorMessage } from '../../lib/errors'
@@ -65,6 +69,7 @@ export default function ClassesPage() {
   const [newScheduleCapacity, setNewScheduleCapacity] = useState(8)
   const [reserveQuery, setReserveQuery] = useState('')
   const [reserveMember, setReserveMember] = useState<Member | null>(null)
+  const [eligibleMemberIds, setEligibleMemberIds] = useState<Set<string> | null>(null)
 
   const weekEnd = addDays(weekStart, 6)
   const weekLabel = `${formatDayHeading(weekStart)} ~ ${formatDayHeading(weekEnd)}`
@@ -115,6 +120,37 @@ export default function ClassesPage() {
     [members],
   )
 
+  const selectedClass = useMemo(
+    () => classes.find((c) => c.id === selectedSchedule?.class_id),
+    [classes, selectedSchedule],
+  )
+
+  const scheduleRequiresPass = Boolean(
+    selectedClass &&
+      classRequiresSessionPass(selectedClass.pass_type, selectedClass.deduct_sessions),
+  )
+
+  useEffect(() => {
+    if (!selectedClass) {
+      setEligibleMemberIds(null)
+      return
+    }
+    let cancelled = false
+    void fetchEligibleMemberIdsForClassPass(
+      selectedClass.pass_type,
+      selectedClass.deduct_sessions,
+    )
+      .then((ids) => {
+        if (!cancelled) setEligibleMemberIds(ids)
+      })
+      .catch(() => {
+        if (!cancelled) setEligibleMemberIds(new Set())
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [selectedClass])
+
   const reservedMemberIds = useMemo(
     () =>
       new Set(
@@ -129,11 +165,19 @@ export default function ClassesPage() {
   )
 
   const reservePickList = useMemo(() => {
-    const pool = reserveQuery.trim()
-      ? reserveSuggestions
-      : activeMembers
-    return pool.filter((m) => !reservedMemberIds.has(m.id)).slice(0, 12)
-  }, [reserveQuery, reserveSuggestions, activeMembers, reservedMemberIds])
+    const pool = reserveQuery.trim() ? reserveSuggestions : activeMembers
+    let list = pool.filter((m) => !reservedMemberIds.has(m.id))
+    if (eligibleMemberIds) {
+      list = list.filter((m) => eligibleMemberIds.has(m.id))
+    }
+    return list.slice(0, 12)
+  }, [
+    reserveQuery,
+    reserveSuggestions,
+    activeMembers,
+    reservedMemberIds,
+    eligibleMemberIds,
+  ])
 
   const reserveTargetMember = useMemo(
     () => resolveMemberFromSearch(activeMembers, reserveQuery, reserveMember),
@@ -607,7 +651,9 @@ export default function ClassesPage() {
               <div className="space-y-2 rounded-xl border border-gold/20 bg-cream/40 p-3">
                 <p className="text-xs font-semibold text-charcoal">예약 추가</p>
                 <p className="text-xs text-muted">
-                  아래 회원을 눌러 선택한 뒤 예약하세요. 이름·전화번호로 검색할 수도 있습니다.
+                  {scheduleRequiresPass
+                    ? '해당 수업 수강권(잔여 회차)이 있는 회원만 예약할 수 있습니다.'
+                    : '아래 회원을 눌러 선택한 뒤 예약하세요. 이름·전화번호로 검색할 수도 있습니다.'}
                 </p>
                 <MemberSearchCombobox
                   elevated
@@ -652,9 +698,11 @@ export default function ClassesPage() {
                   </ul>
                 ) : (
                   <p className="text-xs text-muted">
-                    {reserveQuery.trim()
-                      ? '검색 결과가 없거나 이미 예약된 회원입니다.'
-                      : '예약 가능한 회원이 없습니다.'}
+                    {scheduleRequiresPass
+                      ? '수강권이 있는 회원이 없거나, 검색 결과가 없습니다.'
+                      : reserveQuery.trim()
+                        ? '검색 결과가 없거나 이미 예약된 회원입니다.'
+                        : '예약 가능한 회원이 없습니다.'}
                   </p>
                 )}
                 {reserveAmbiguous && (

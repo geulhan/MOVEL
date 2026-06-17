@@ -60,6 +60,8 @@ export type ClassSchedule = {
   class_name?: string
   class_type?: ClassType
   class_color?: string
+  pass_type?: PassType
+  deduct_sessions?: boolean
   trainer_name?: string
   reserved_count?: number
   waitlist_count?: number
@@ -85,6 +87,90 @@ export function canMemberCancelReservation(startsAtIso: string, now = new Date()
   const starts = new Date(startsAtIso)
   const cutoff = new Date(starts.getTime() - MEMBER_CANCEL_HOURS * 60 * 60 * 1000)
   return now < cutoff
+}
+
+export function classRequiresSessionPass(passType: PassType, deductSessions: boolean): boolean {
+  return deductSessions && passType !== 'none'
+}
+
+function passTypeLabel(passType: PassType): string {
+  if (passType === 'none') return '수강권'
+  return CLASS_TYPE_LABELS[passType]
+}
+
+async function countPendingReservationsForPassType(
+  memberId: string,
+  centerId: string,
+  passType: PassType,
+): Promise<number> {
+  const { data, error } = await supabase
+    .from('class_reservations')
+    .select('id, class_schedules(classes(pass_type))')
+    .eq('member_id', memberId)
+    .eq('center_id', centerId)
+    .in('status', ['reserved', 'waitlist'])
+
+  if (error) throw error
+
+  return (data ?? []).filter((row) => {
+    const cls = (row as { class_schedules?: { classes?: { pass_type?: PassType } | null } | null })
+      .class_schedules?.classes
+    return cls?.pass_type === passType
+  }).length
+}
+
+async function assertMemberCanReserveClass(input: {
+  memberId: string
+  centerId: string
+  passType: PassType
+  deductSessions: boolean
+}): Promise<void> {
+  if (!classRequiresSessionPass(input.passType, input.deductSessions)) return
+
+  const passType = input.passType as ClassType
+  const pendingCount = await countPendingReservationsForPassType(
+    input.memberId,
+    input.centerId,
+    input.passType,
+  )
+
+  const { data: pass, error: passError } = await supabase
+    .from('member_session_passes')
+    .select('remaining_sessions, is_unlimited')
+    .eq('center_id', input.centerId)
+    .eq('member_id', input.memberId)
+    .eq('pass_type', passType)
+    .eq('status', 'active')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (passError) throw passError
+
+  if (pass?.is_unlimited) return
+
+  const passRemaining = pass ? Number(pass.remaining_sessions ?? 0) - pendingCount : 0
+  if (passRemaining > 0) return
+
+  if (passType === 'group_pt') {
+    const { data: member, error: memberError } = await supabase
+      .from('members')
+      .select('remaining_sessions')
+      .eq('id', input.memberId)
+      .single()
+
+    if (memberError) throw memberError
+    const ptRemaining = Number(member?.remaining_sessions ?? 0) - pendingCount
+    if (ptRemaining > 0) return
+  }
+
+  const label = passTypeLabel(input.passType)
+  if (!pass) {
+    throw new Error(`${label} 수강권이 없습니다. 결제·수강권 지급 후 예약할 수 있습니다.`)
+  }
+  throw new Error(
+    `${label} 잔여 횟수가 부족합니다. (보유 ${pass.remaining_sessions ?? 0}회, 예약 대기 ${pendingCount}건)`,
+  )
 }
 
 export async function fetchClasses(): Promise<FitnessClass[]> {
@@ -166,7 +252,7 @@ export async function fetchClassSchedulesInRange(
   const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('class_schedules')
-    .select('*, classes(name, class_type, color, capacity, trainers(name))')
+    .select('*, classes(name, class_type, color, capacity, pass_type, deduct_sessions, trainers(name))')
     .eq('center_id', centerId)
     .gte('starts_at', startIso)
     .lte('starts_at', endIso)
@@ -181,6 +267,8 @@ export async function fetchClassSchedulesInRange(
       class_type?: ClassType
       color?: string
       capacity?: number
+      pass_type?: PassType
+      deduct_sessions?: boolean
       trainers?: { name?: string } | null
     } | null
     const { classes: _c, ...rest } = row
@@ -191,6 +279,8 @@ export async function fetchClassSchedulesInRange(
       class_name: cls?.name,
       class_type: cls?.class_type,
       class_color: cls?.color,
+      pass_type: cls?.pass_type,
+      deduct_sessions: cls?.deduct_sessions,
       trainer_name: cls?.trainers?.name ?? undefined,
     }
   })
@@ -292,10 +382,12 @@ async function getScheduleCapacity(scheduleId: string): Promise<{
   waitlist: number
   waitlistEnabled: boolean
   startsAt: string
+  passType: PassType
+  deductSessions: boolean
 }> {
   const { data: schedule, error } = await supabase
     .from('class_schedules')
-    .select('capacity, starts_at, classes(capacity, waitlist_enabled)')
+    .select('capacity, starts_at, classes(capacity, waitlist_enabled, pass_type, deduct_sessions)')
     .eq('id', scheduleId)
     .single()
 
@@ -304,7 +396,12 @@ async function getScheduleCapacity(scheduleId: string): Promise<{
   const scheduleRow = schedule as {
     capacity: number | null
     starts_at: string
-    classes: { capacity?: number; waitlist_enabled?: boolean } | null
+    classes: {
+      capacity?: number
+      waitlist_enabled?: boolean
+      pass_type?: PassType
+      deduct_sessions?: boolean
+    } | null
   }
 
   const cls = scheduleRow.classes
@@ -331,6 +428,8 @@ async function getScheduleCapacity(scheduleId: string): Promise<{
     waitlist,
     waitlistEnabled: cls?.waitlist_enabled ?? false,
     startsAt: String(scheduleRow.starts_at),
+    passType: cls?.pass_type ?? 'pilates',
+    deductSessions: cls?.deduct_sessions ?? true,
   }
 }
 
@@ -345,7 +444,14 @@ export async function reserveClassForMember(input: {
     throw new Error('이미 시작된 수업은 예약할 수 없습니다.')
   }
 
-  const centerId = await getCurrentCenterId()
+  const centerId = await getCurrentCenterId(input.memberId)
+  await assertMemberCanReserveClass({
+    memberId: input.memberId,
+    centerId,
+    passType: info.passType,
+    deductSessions: info.deductSessions,
+  })
+
   let status: ReservationStatus = 'reserved'
 
   if (info.reserved >= info.capacity) {
