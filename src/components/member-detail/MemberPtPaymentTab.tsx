@@ -284,9 +284,13 @@ export function MemberPtPaymentTab() {
 
       <MemberPendingPaymentRequest
         memberId={memberId}
+        member={member}
         refreshToken={requestRefresh}
         onError={setError}
-        onChanged={() => setRequestRefresh((value) => value + 1)}
+        onChanged={async () => {
+          setRequestRefresh((value) => value + 1)
+          await reload()
+        }}
       />
 
       <section className={`${cardClass} overflow-hidden`}>
