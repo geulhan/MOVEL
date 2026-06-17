@@ -311,6 +311,13 @@ export default function ClassesPage() {
       )
       return
     }
+    if (
+      !window.confirm(
+        `${member.name} 님을 ${selectedSchedule.class_name} 수업에 예약하시겠습니까?`,
+      )
+    ) {
+      return
+    }
     await runAction(async () => {
       await reserveClassForMember({
         scheduleId: selectedSchedule.id,
@@ -326,10 +333,11 @@ export default function ClassesPage() {
   async function handleDeleteSchedule() {
     if (!selectedSchedule) return
     const activeCount = reservations.filter((r) => r.status !== 'cancelled').length
+    const scheduleLabel = `${selectedSchedule.class_name} · ${formatDayHeading(selectedSchedule.starts_at.slice(0, 10))} ${formatTime(selectedSchedule.starts_at)}`
     const message =
       activeCount > 0
-        ? `${formatDayHeading(selectedSchedule.starts_at.slice(0, 10))} ${formatTime(selectedSchedule.starts_at)} 일정을 삭제할까요?\n예약 ${activeCount}건도 함께 취소됩니다.`
-        : `${formatDayHeading(selectedSchedule.starts_at.slice(0, 10))} ${formatTime(selectedSchedule.starts_at)} 일정을 삭제할까요?`
+        ? `${scheduleLabel}\n이 수업 일정을 취소하시겠습니까?\n예약 ${activeCount}건도 함께 취소됩니다.`
+        : `${scheduleLabel}\n이 수업 일정을 취소하시겠습니까?`
     if (!window.confirm(message)) return
 
     await runAction(async () => {
@@ -339,13 +347,31 @@ export default function ClassesPage() {
       setReserveMember(null)
       setReserveQuery('')
       await load()
-    }, '일정이 삭제되었습니다.')
+    }, '일정이 취소되었습니다.')
+  }
+
+  function confirmReservationAction(
+    reservation: ClassReservation,
+    status: ReservationStatus,
+  ): boolean {
+    const name = reservation.member_name ?? '회원'
+    if (status === 'attended') {
+      return window.confirm(`${name} 님을 출석 처리하시겠습니까?\n회차권이 차감될 수 있습니다.`)
+    }
+    if (status === 'noshow') {
+      return window.confirm(`${name} 님을 노쇼 처리하시겠습니까?`)
+    }
+    if (status === 'cancelled') {
+      return window.confirm(`${name} 님의 예약을 취소하시겠습니까?`)
+    }
+    return true
   }
 
   async function handleStatusChange(reservation: ClassReservation, status: ReservationStatus) {
     if (!selectedSchedule) return
     const cls = classes.find((c) => c.id === selectedSchedule.class_id)
     if (!cls) return
+    if (!confirmReservationAction(reservation, status)) return
 
     await runAction(async () => {
       if (status === 'cancelled') {
@@ -574,7 +600,7 @@ export default function ClassesPage() {
                   className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50"
                   onClick={() => void handleDeleteSchedule()}
                 >
-                  일정 삭제
+                  일정 취소
                 </button>
               </div>
 
