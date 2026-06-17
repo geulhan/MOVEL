@@ -921,6 +921,7 @@ export type Database = {
           setting_value?: Json
           description?: string | null
           updated_at?: string
+          branch_id?: string | null
         }
       >
       reward_balances: TableDef<
@@ -1464,6 +1465,68 @@ export type Database = {
       deactivate_trainer: {
         Args: {
           p_trainer_id: string
+        }
+        Returns: Json
+      }
+      log_platform_activity: {
+        Args: {
+          p_center_id: string
+          p_action: string
+          p_actor_type?: string
+          p_actor_id?: string | null
+          p_metadata?: Json
+        }
+        Returns: Json
+      }
+      submit_platform_feedback: {
+        Args: {
+          p_center_id: string
+          p_created_by: string
+          p_created_by_type: string
+          p_type: string
+          p_title: string
+          p_content: string
+        }
+        Returns: Json
+      }
+      list_platform_feedback_for_platform: {
+        Args: {
+          p_session_token: string
+          p_type?: string | null
+          p_status?: string | null
+        }
+        Returns: Json
+      }
+      update_platform_feedback_status: {
+        Args: {
+          p_session_token: string
+          p_feedback_id: string
+          p_status: string
+        }
+        Returns: Json
+      }
+      get_platform_dashboard_snapshot: {
+        Args: {
+          p_session_token: string
+        }
+        Returns: Json
+      }
+      get_center_detail_for_platform: {
+        Args: {
+          p_session_token: string
+          p_center_id: string
+        }
+        Returns: Json
+      }
+      get_platform_analytics: {
+        Args: {
+          p_session_token: string
+        }
+        Returns: Json
+      }
+      list_beta_centers_for_platform: {
+        Args: {
+          p_session_token: string
         }
         Returns: Json
       }

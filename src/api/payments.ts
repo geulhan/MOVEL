@@ -1,6 +1,7 @@
 import { getCurrentCenterId } from '../lib/center'
 import { fetchMemberById } from './memberDetail'
 import { notifyPaymentDone } from './notifications'
+import { logPlatformActivity } from './platformActivity'
 import { awardCustomRulesOnPayment, awardReferralOnPayment } from './rewards'
 import { recalcMemberExpiry } from './period'
 import { supabase } from '../lib/supabase'
@@ -70,6 +71,12 @@ export async function createPaymentRecord(
   }
 
   notifyPaymentDone(memberId, data.id)
+
+  void logPlatformActivity('payment_registered', {
+    centerId,
+    metadata: { payment_id: data.id, member_id: memberId, amount: input.amount },
+  })
+
   return data
 }
 

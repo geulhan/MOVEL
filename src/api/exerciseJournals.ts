@@ -1,5 +1,6 @@
 import { getCurrentCenterId, resolveCenterIdForMember } from '../lib/center'
 import { supabase } from '../lib/supabase'
+import { logPlatformActivity } from './platformActivity'
 
 export type ExerciseJournalCreatedBy = 'member' | 'trainer' | 'admin'
 
@@ -145,6 +146,18 @@ export async function createExerciseJournal(
     .single()
 
   if (error) throw error
+
+  void logPlatformActivity('journal_created', {
+    centerId,
+    actorType:
+      input.created_by === 'member'
+        ? 'member'
+        : input.created_by === 'trainer'
+          ? 'trainer'
+          : 'admin',
+    metadata: { journal_id: data.id, member_id: memberId },
+  })
+
   return normalize(data as ExerciseJournal)
 }
 

@@ -3,7 +3,7 @@ import {
   type ContractSettings,
 } from '../types/contractSettings'
 
-/** MOVEL 기본 계약 약관 (센터별 커스터마이즈 전까지 공통 사용) */
+/** MotionHub 플랫폼 기본 계약 약관 (센터별 커스터마이즈 전까지 공통 사용) */
 
 export type ContractTermSection = {
   id: string

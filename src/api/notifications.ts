@@ -1,5 +1,6 @@
 import { getCurrentCenterId } from '../lib/center'
 import { supabase } from '../lib/supabase'
+import { logPlatformActivity } from './platformActivity'
 import type { MessageLog, MessageTemplateKey } from '../types/database'
 
 export type NotificationTemplateKey = MessageTemplateKey
@@ -81,6 +82,18 @@ async function invokeNotification(
     if (result?.status === 'failed') {
       console.warn(`[notifications] ${templateKey} 발송 실패:`, data)
     }
+
+    if (result?.status === 'sent') {
+      void getCurrentCenterId()
+        .then((centerId) =>
+          logPlatformActivity('message_sent', {
+            centerId,
+            metadata: { template_key: templateKey, member_id: memberId },
+          }),
+        )
+        .catch(() => undefined)
+    }
+
     return (
       result ?? {
         ok: false,

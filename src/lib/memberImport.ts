@@ -95,13 +95,15 @@ const PRESET_OVERRIDES: Partial<
   Record<CrmPresetId, Partial<Record<ImportFieldKey, string[]>>>
 > = {
   broj: {
-    name: ['회원명', '이름'],
-    phone: ['휴대폰', '연락처'],
-    total_sessions: ['등록횟수', '총횟수'],
-    remaining_sessions: ['잔여횟수', '잔여'],
-    payment_amount: ['결제금액', '판매금액'],
-    registered_at: ['등록일', '최초등록일'],
-    trainer_name: ['담당트레이너', '트레이너'],
+    name: ['고객명', '회원명', '이름'],
+    phone: ['연락처', '휴대폰', '휴대전화'],
+    status: ['상태', '회원상태'],
+    registered_at: ['최초 등록일', '최초등록일', '등록일'],
+    payment_amount: ['누적 결제 금액', '누적결제금액', '결제금액', '판매금액'],
+    trainer_name: ['상담 담당자', '담당트레이너', '트레이너'],
+    expires_at: ['최종 이용 만료일', '최종이용만료일', '만료일'],
+    total_sessions: ['보유 이용권', '보유이용권'],
+    remaining_sessions: ['보유 이용권', '보유이용권', '잔여횟수', '잔여'],
   },
   bodycodi: {
     name: ['회원명', '이름'],
@@ -137,6 +139,101 @@ export type ImportMemberDraft = {
 
 function normalizeHeader(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, '')
+}
+
+/** 브로제이 고객목록 엑셀 자동 감지 */
+export function detectCrmPreset(headers: string[]): CrmPresetId {
+  const keys = new Set(headers.map(normalizeHeader))
+  if (keys.has('고객명') && (keys.has('보유이용권') || keys.has('보유멤버십'))) {
+    return 'broj'
+  }
+  if (keys.has('회원명') && keys.has('담당강사')) {
+    return 'bodycodi'
+  }
+  return 'custom'
+}
+
+/** 브로제이 "보유 이용권" 셀: `PT 20회 (2026. 6. 9. ~ 2026. 8. 27.)` */
+function parseBrojeTicketCell(raw: string): {
+  totalSessions: number | null
+  remainingSessions: number | null
+  expiresAt: string | null
+} {
+  const trimmed = raw.trim()
+  if (!trimmed || trimmed === '-') {
+    return { totalSessions: null, remainingSessions: null, expiresAt: null }
+  }
+
+  const remainExplicit = trimmed.match(/잔여\s*(\d+)\s*회|(\d+)\s*회\s*남음/)
+  const sessionMatch = trimmed.match(/(\d+)\s*회/)
+  const totalSessions = sessionMatch ? Number(sessionMatch[1]) : null
+  const remainingSessions = remainExplicit
+    ? Number(remainExplicit[1] ?? remainExplicit[2])
+    : totalSessions
+
+  const endDateMatch = trimmed.match(
+    /~\s*(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.?/,
+  )
+  let expiresAt: string | null = null
+  if (endDateMatch) {
+    const mm = String(endDateMatch[2]).padStart(2, '0')
+    const dd = String(endDateMatch[3]).padStart(2, '0')
+    expiresAt = `${endDateMatch[1]}-${mm}-${dd}`
+  }
+
+  return { totalSessions, remainingSessions, expiresAt }
+}
+
+function enrichFromBrojeRow(
+  row: Record<string, string>,
+  draft: {
+    total_sessions: number
+    remaining_sessions: number
+    expires_at: string | null
+    registered_at: string
+    payment_amount: number
+    status: MemberStatus
+  },
+): void {
+  const activePass = row['보유 이용권'] ?? row['보유이용권'] ?? ''
+  const expiredPass = row['만료 이용권'] ?? row['만료이용권'] ?? ''
+  const passCell =
+    activePass.trim() && activePass.trim() !== '-' ? activePass : expiredPass
+  const ticket = parseBrojeTicketCell(passCell)
+
+  if (ticket.totalSessions != null && draft.total_sessions <= 0) {
+    draft.total_sessions = ticket.totalSessions
+  }
+  if (ticket.remainingSessions != null && draft.remaining_sessions <= 0) {
+    draft.remaining_sessions = ticket.remainingSessions
+  }
+  if (ticket.expiresAt && !draft.expires_at) {
+    draft.expires_at = ticket.expiresAt
+  }
+
+  if (!draft.payment_amount) {
+    const amountRaw = row['누적 결제 금액'] ?? row['누적결제금액'] ?? ''
+    if (amountRaw.trim()) {
+      draft.payment_amount = Math.max(0, Math.round(parseNumber(amountRaw, 0)))
+    }
+  }
+
+  const brojeStatus = (row['상태'] ?? '').trim()
+  if (brojeStatus) {
+    if (brojeStatus.includes('만료') || brojeStatus.includes('종료')) {
+      draft.status = 'terminated'
+    } else if (brojeStatus.includes('휴면')) {
+      draft.status = 'dormant'
+    } else if (brojeStatus.includes('활성')) {
+      draft.status = 'active'
+    }
+  }
+
+  if (draft.registered_at === new Date().toISOString().slice(0, 10)) {
+    const regRaw = row['최초 등록일'] ?? row['최초등록일'] ?? ''
+    const parsed = parseDate(regRaw)
+    if (parsed) draft.registered_at = parsed
+  }
 }
 
 function cellToString(value: unknown): string {
@@ -237,14 +334,24 @@ function parsePhone(raw: string): string | null {
 }
 
 function parseNumber(raw: string, fallback = 0): number {
-  const cleaned = raw.replace(/[^\d.-]/g, '')
+  const trimmed = raw.trim()
+  if (!trimmed || trimmed === '-') return fallback
+  const cleaned = trimmed.replace(/,/g, '').replace(/[^\d.-]/g, '')
+  if (!cleaned) return fallback
   const value = Number(cleaned)
   return Number.isFinite(value) ? value : fallback
 }
 
 function parseDate(raw: string): string | null {
   const trimmed = raw.trim()
-  if (!trimmed) return null
+  if (!trimmed || trimmed === '-') return null
+
+  const brojeDot = trimmed.match(/^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.?$/)
+  if (brojeDot) {
+    const mm = String(brojeDot[2]).padStart(2, '0')
+    const dd = String(brojeDot[3]).padStart(2, '0')
+    return `${brojeDot[1]}-${mm}-${dd}`
+  }
 
   const iso = trimmed.match(/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})/)
   if (iso) {
@@ -281,6 +388,12 @@ function parseStatus(raw: string): MemberStatus {
   return 'active'
 }
 
+function looksLikeBrojeTicket(raw: string): boolean {
+  const trimmed = raw.trim()
+  if (!trimmed || trimmed === '-') return false
+  return /\d+\s*회/.test(trimmed)
+}
+
 function readMappedValue(
   row: Record<string, string>,
   mapping: ColumnMapping,
@@ -301,14 +414,19 @@ export function mapRowsToImportDrafts(
     const phoneRaw = readMappedValue(row, mapping, 'phone')
     const phone = parsePhone(phoneRaw)
 
-    const totalSessions = Math.max(
-      0,
-      Math.round(parseNumber(readMappedValue(row, mapping, 'total_sessions'), 0)),
-    )
+    const totalRaw = readMappedValue(row, mapping, 'total_sessions')
     const remainingRaw = readMappedValue(row, mapping, 'remaining_sessions')
-    const remainingSessions = remainingRaw.trim()
-      ? Math.max(0, Math.round(parseNumber(remainingRaw, 0)))
-      : totalSessions
+
+    let totalSessions = 0
+    let remainingSessions = 0
+    if (looksLikeBrojeTicket(totalRaw) || looksLikeBrojeTicket(remainingRaw)) {
+      // 브로제이 이용권 문자열 — enrichFromBrojeRow 에서 파싱
+    } else {
+      totalSessions = Math.max(0, Math.round(parseNumber(totalRaw, 0)))
+      remainingSessions = remainingRaw.trim()
+        ? Math.max(0, Math.round(parseNumber(remainingRaw, 0)))
+        : totalSessions
+    }
 
     const paymentAmount = Math.max(
       0,
@@ -331,7 +449,7 @@ export function mapRowsToImportDrafts(
       errors.push('잔여 횟수가 총 횟수보다 큼')
     }
 
-    return {
+    const draft = {
       rowIndex: index + 2,
       name,
       phone: phone ?? '',
@@ -344,7 +462,26 @@ export function mapRowsToImportDrafts(
       expires_at: expiresAt,
       errors,
     }
+
+    enrichFromBrojeRow(row, draft)
+
+    if (draft.total_sessions > 0 && draft.remaining_sessions > draft.total_sessions) {
+      draft.errors.push('잔여 횟수가 총 횟수보다 큼')
+    }
+    if (draft.total_sessions <= 0 && draft.remaining_sessions <= 0 && passCellHasSessions(row)) {
+      draft.errors.push('이용권 횟수를 읽을 수 없음')
+    }
+
+    return draft
   })
+}
+
+function passCellHasSessions(row: Record<string, string>): boolean {
+  const active = (row['보유 이용권'] ?? row['보유이용권'] ?? '').trim()
+  const expired = (row['만료 이용권'] ?? row['만료이용권'] ?? '').trim()
+  return (
+    (active.length > 0 && active !== '-') || (expired.length > 0 && expired !== '-')
+  )
 }
 
 export function exportImportTemplateExcel(): void {

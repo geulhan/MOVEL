@@ -1,6 +1,7 @@
 import { getCurrentCenterId } from '../lib/center'
 import { supabase } from '../lib/supabase'
 import { isSameLocalDay } from '../utils/date'
+import { logPlatformActivity } from './platformActivity'
 
 export const DEFAULT_PT_DURATION_MINUTES = 50
 
@@ -8,6 +9,7 @@ export type ScheduleStatus = 'scheduled' | 'completed' | 'cancelled' | 'no_show'
 
 export type PtSchedule = {
   id: string
+  center_id?: string
   member_id: string
   trainer_id: string | null
   scheduled_at: string
@@ -71,6 +73,12 @@ export async function createSchedule(input: {
     .single()
 
   if (error) throw error
+
+  void logPlatformActivity('schedule_created', {
+    centerId,
+    metadata: { schedule_id: data.id, member_id: input.member_id },
+  })
+
   return data as PtSchedule
 }
 

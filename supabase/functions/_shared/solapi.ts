@@ -23,7 +23,7 @@ export function getSolapiConfig(): SolapiConfig {
       pt_reminder: Deno.env.get('SOLAPI_TEMPLATE_PT_REMINDER') ?? '',
     },
     enabled: (Deno.env.get('MESSAGING_ENABLED') ?? 'false').toLowerCase() === 'true',
-    siteUrl: (Deno.env.get('SITE_URL') ?? 'https://movel.vercel.app').replace(
+    siteUrl: (Deno.env.get('SITE_URL') ?? 'https://motionhub.kr').replace(
       /\/$/,
       '',
     ),

@@ -3,6 +3,7 @@ import { getCurrentCenterId, resolveCenterIdForMember } from '../lib/center'
 import { normalizeMember } from '../lib/memberNormalize'
 import type { Member, MemberInsert, MemberStatus } from '../types/database'
 import { notifyMemberWelcome, notifyPaymentDone } from './notifications'
+import { logPlatformActivity } from './platformActivity'
 import { awardReferralOnPayment } from './rewards'
 import { calcSessionExpiry } from '../utils/period'
 
@@ -97,6 +98,12 @@ export async function createMember(input: {
   }
 
   notifyMemberWelcome(data.id)
+
+  void logPlatformActivity('member_created', {
+    centerId,
+    actorType: 'admin',
+    metadata: { member_id: data.id },
+  })
 
   return normalizeMember(data)
 }

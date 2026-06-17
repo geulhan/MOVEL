@@ -1,3 +1,8 @@
+import {
+  ALIMTALK_BRAND_HEADER,
+  ALIMTALK_GREETING_PATTERN,
+} from '../constants/alimtalkTemplates'
+
 export type MessagingTemplateIds = {
   welcome: string
   payment_done: string
@@ -40,26 +45,26 @@ export const MESSAGING_TEMPLATE_FIELDS: Array<{
   {
     key: 'welcome',
     label: '신규 가입 환영',
-    hint: '변수: #{name}, #{centerName}, #{portalUrl}',
+    hint: `본문: ${ALIMTALK_BRAND_HEADER} + ${ALIMTALK_GREETING_PATTERN}. 변수: #{brandHeader}, #{centerName}, #{name}, #{portalUrl}, #{phone}`,
   },
   {
     key: 'payment_done',
     label: '결제 완료',
-    hint: '변수: #{name}, #{centerName}, #{amount}, #{sessions}, #{portalUrl}',
+    hint: `본문: ${ALIMTALK_BRAND_HEADER} + ${ALIMTALK_GREETING_PATTERN}. 변수: #{brandHeader}, #{centerName}, #{amount}, #{sessions}, #{portalUrl}`,
   },
   {
     key: 'renewal',
     label: '재등록 안내',
-    hint: '변수: #{name}, #{centerName}, #{daysLeft}, #{expiresAt}, #{remainingSessions}, #{portalUrl}',
+    hint: `본문: ${ALIMTALK_BRAND_HEADER} + ${ALIMTALK_GREETING_PATTERN}. 변수: #{brandHeader}, #{centerName}, #{daysLeft}, #{expiresAt}, #{remainingSessions}, #{portalUrl}`,
   },
   {
     key: 'step_verification_result',
     label: '만보 인증 결과',
-    hint: '변수: #{name}, #{centerName}, #{result}, #{reason}, #{portalUrl}',
+    hint: `본문: ${ALIMTALK_BRAND_HEADER} + ${ALIMTALK_GREETING_PATTERN}. 변수: #{brandHeader}, #{centerName}, #{result}, #{reason}, #{portalUrl}`,
   },
   {
     key: 'pt_reminder',
     label: 'PT 리마인더',
-    hint: '변수: #{name}, #{centerName}, #{scheduledAt}, #{trainerName}, #{portalUrl}',
+    hint: `본문: ${ALIMTALK_BRAND_HEADER} + ${ALIMTALK_GREETING_PATTERN}. 변수: #{brandHeader}, #{centerName}, #{scheduledAt}, #{trainerName}, #{portalUrl}`,
   },
 ]

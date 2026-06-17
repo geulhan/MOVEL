@@ -7,6 +7,7 @@ import {
 import { MessageCampaignPanel } from '../../components/admin/MessageCampaignPanel'
 import { MessagingCreditPanel } from '../../components/admin/MessagingCreditPanel'
 import { PageHeader } from '../../components/admin/PageHeader'
+import { MotionHubSupportLink } from '../../components/admin/MotionHubSupportLink'
 import type { MessageCampaignKind } from '../../api/messageCampaigns'
 import {
   MESSAGE_STATUS_LABELS,
@@ -97,10 +98,14 @@ export default function MessagesPage() {
     <div className="space-y-6">
       <PageHeader
         title="메시지 발송"
-        description="회원 유형별로 알림톡을 확인하고 수동 발송할 수 있습니다."
+        description="회원 유형별로 알림톡을 확인하고 수동 발송할 수 있습니다. 템플릿·채널 문의는 모션허브 카카오 채널을 이용해 주세요."
       />
 
       <MessagingCreditPanel onUpdated={() => void loadLogs()} />
+
+      <p className="text-sm text-muted">
+        알림톡 채널·템플릿 심사 문의: <MotionHubSupportLink />
+      </p>
 
       <nav className="chip-scroll -mx-1 px-1">
         {SEND_TABS.map((tab) => (

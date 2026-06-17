@@ -1,3 +1,4 @@
+import { upsertCenterRewardSetting } from '../lib/rewardSettingsUpsert'
 import { getCurrentCenterId } from '../lib/center'
 import { supabase } from '../lib/supabase'
 import type { Json } from '../types/database'
@@ -47,36 +48,12 @@ export async function fetchContractSettings(): Promise<ContractSettings> {
 export async function saveContractSettings(
   settings: ContractSettings,
 ): Promise<ContractSettings> {
-  const centerId = await getCurrentCenterId()
   const payload = normalizeSettings(settings)
 
-  const { data: existing, error: fetchError } = await supabase
-    .from('reward_settings')
-    .select('id')
-    .eq('center_id', centerId)
-    .eq('setting_key', SETTING_KEY)
-    .order('updated_at', { ascending: false })
-    .limit(1)
-
-  if (fetchError) throw fetchError
-
-  const value = payload as unknown as Json
-  const existingId = existing?.[0]?.id
-
-  if (existingId) {
-    const { error } = await supabase
-      .from('reward_settings')
-      .update({ setting_value: value })
-      .eq('id', existingId)
-    if (error) throw error
-    return payload
-  }
-
-  const { error } = await supabase.from('reward_settings').insert({
-    center_id: centerId,
-    setting_key: SETTING_KEY,
-    setting_value: value,
+  await upsertCenterRewardSetting({
+    settingKey: SETTING_KEY,
+    settingValue: payload as unknown as Json,
   })
-  if (error) throw error
+
   return payload
 }

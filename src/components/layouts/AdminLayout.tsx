@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { navItemsForSession } from '../../lib/adminPermissions'
 import { clearAdminAuth, getAdminSession } from '../../lib/adminSession'
@@ -7,6 +8,8 @@ import { getMemberPortalUrl } from '../../lib/siteUrl'
 import { useCenterFeatures } from '../../hooks/useCenterFeatures'
 import { CenterBrandMark } from '../brand/CenterBrandMark'
 import { SetupBanner } from '../SetupBanner'
+import { MotionHubSupportLink } from '../admin/MotionHubSupportLink'
+import { PlatformFeedbackModal } from '../platform/PlatformFeedbackModal'
 import {
   CenterBrandingProvider,
   useCenterBranding,
@@ -41,6 +44,7 @@ function MemberPortalLink({
 function AdminLayoutInner() {
   const navigate = useNavigate()
   const session = getAdminSession()
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
   const { branding } = useCenterBranding()
   const themeVars = useCenterThemeVars(branding.theme)
   useApplyCenterTheme(branding.theme, branding.centerName)
@@ -118,6 +122,23 @@ function AdminLayoutInner() {
             centerSlug={session?.centerSlug}
             className="w-full !px-3 !py-2 !text-xs"
           />
+          <p className="px-1 text-[11px] leading-relaxed" style={{ color: 'var(--center-sidebar-muted)' }}>
+            플랫폼 문의{' '}
+            <MotionHubSupportLink compact className="!text-[11px] !font-medium" />
+          </p>
+          {session && (
+            <button
+              type="button"
+              onClick={() => setFeedbackOpen(true)}
+              className="block w-full rounded-lg border px-3 py-2 text-center text-xs font-semibold transition hover:bg-white/5"
+              style={{
+                borderColor: 'color-mix(in srgb, var(--center-accent) 40%, transparent)',
+                color: 'var(--center-sidebar-text)',
+              }}
+            >
+              의견 보내기
+            </button>
+          )}
           <button
             type="button"
             onClick={handleLogout}
@@ -210,6 +231,16 @@ function AdminLayoutInner() {
           <Outlet />
         </main>
       </div>
+
+      {session && (
+        <PlatformFeedbackModal
+          open={feedbackOpen}
+          onClose={() => setFeedbackOpen(false)}
+          centerId={session.centerId}
+          createdBy={session.adminId}
+          createdByType={session.role === 'trainer' ? 'trainer' : 'admin'}
+        />
+      )}
     </div>
   )
 }

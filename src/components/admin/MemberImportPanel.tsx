@@ -3,6 +3,7 @@ import { createMember } from '../../api/members'
 import { formatSupabaseError } from '../../lib/errors'
 import {
   CRM_PRESET_LABELS,
+  detectCrmPreset,
   exportImportTemplateExcel,
   IMPORT_FIELD_LABELS,
   mapRowsToImportDrafts,
@@ -49,7 +50,10 @@ export function MemberImportPanel({ trainers, onImported }: Props) {
       if (parsed.headers.length === 0) {
         throw new Error('엑셀 시트를 읽을 수 없습니다.')
       }
-      const suggested = suggestColumnMapping(parsed.headers, preset)
+      const detected = detectCrmPreset(parsed.headers)
+      const nextPreset = detected !== 'custom' ? detected : preset
+      const suggested = suggestColumnMapping(parsed.headers, nextPreset)
+      setPreset(nextPreset)
       setSheet(parsed)
       setMapping(suggested)
     } catch (err) {

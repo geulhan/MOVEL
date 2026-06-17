@@ -1,3 +1,5 @@
+import { ALIMTALK_BRAND_HEADER } from './alimtalkBrand.ts'
+
 export type TemplateKey =
   | 'welcome'
   | 'payment_done'
@@ -55,47 +57,43 @@ export function buildTemplateVariables(
     ? `${config.siteUrl}/member?center=${encodeURIComponent(slug)}`
     : `${config.siteUrl}/member`
   const centerName = config.centerName?.trim() || '센터'
+  const base = {
+    '#{brandHeader}': ALIMTALK_BRAND_HEADER,
+    '#{centerName}': centerName,
+    '#{name}': member.name,
+    '#{portalUrl}': portalUrl,
+  }
 
   switch (templateKey) {
     case 'welcome':
       return {
-        '#{name}': member.name,
-        '#{centerName}': centerName,
-        '#{portalUrl}': portalUrl,
+        ...base,
         '#{phone}': member.phone,
       }
     case 'payment_done':
       return {
-        '#{name}': member.name,
-        '#{centerName}': centerName,
+        ...base,
         '#{amount}': formatCurrency(extra.amount ?? 0),
         '#{sessions}': String(extra.sessions ?? 0),
-        '#{portalUrl}': portalUrl,
       }
     case 'renewal':
       return {
-        '#{name}': member.name,
-        '#{centerName}': centerName,
+        ...base,
         '#{expiresAt}': formatKoreanDate(member.expires_at),
         '#{daysLeft}': String(extra.daysLeft ?? 0),
         '#{remainingSessions}': String(member.remaining_sessions),
-        '#{portalUrl}': portalUrl,
       }
     case 'step_verification_result':
       return {
-        '#{name}': member.name,
-        '#{centerName}': centerName,
+        ...base,
         '#{result}': extra.approved ? '승인' : '반려',
         '#{reason}': extra.reason?.trim() || (extra.approved ? '인증 완료' : '-'),
-        '#{portalUrl}': portalUrl,
       }
     case 'pt_reminder':
       return {
-        '#{name}': member.name,
-        '#{centerName}': centerName,
+        ...base,
         '#{scheduledAt}': extra.scheduledAt ?? '-',
         '#{trainerName}': extra.trainerName?.trim() || '담당 트레이너',
-        '#{portalUrl}': portalUrl,
       }
     default:
       return {}

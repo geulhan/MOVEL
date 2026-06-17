@@ -1,7 +1,19 @@
+import { MOTIONHUB_BRAND_KO } from './motionhubSeo'
+
 /** MotionHub 플랫폼 랜딩 — 외부 링크·설정 */
 
+/**
+ * MotionHub 공식 카카오톡 채널 URL (MOVEL 채널 대체).
+ * 운영 시 VITE_MOTIONHUB_KAKAO_URL 로 MotionHub 비즈니스 채널 URL을 설정하세요.
+ */
+export function getMotionHubKakaoUrl(): string {
+  const fromEnv = import.meta.env.VITE_MOTIONHUB_KAKAO_URL as string | undefined
+  if (fromEnv?.trim()) return fromEnv.trim()
+  return 'https://open.kakao.com/o/sPkR4Rzi'
+}
+
 export const MOTIONHUB_CONTACT = {
-  kakaoUrl: 'https://open.kakao.com/o/sPkR4Rzi',
+  kakaoLabel: `${MOTIONHUB_BRAND_KO} 카카오톡 채널`,
   instagramUrl: 'https://instagram.com/motionhub.kr',
   instagramHandle: '@motionhub.kr',
 } as const

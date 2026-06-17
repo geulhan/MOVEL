@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { changeMemberPassword } from '../api/memberAuth'
 import { formatPhone } from '../api/members'
-import { btnPrimary, cardClass, inputClass } from '../styles/theme'
+import { getMemberCenterId } from '../api/memberPortal'
+import { PlatformFeedbackModal } from './platform/PlatformFeedbackModal'
+import { btnOutline, btnPrimary, cardClass, inputClass } from '../styles/theme'
 
 import type { CenterTheme } from '../types/centerBranding'
 import { MemberThemeSettings } from './member/MemberThemeSettings'
@@ -20,6 +22,8 @@ export function MemberMyPageSection({ phone, memberId, onThemeChange }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
+  const centerId = getMemberCenterId()
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -126,7 +130,31 @@ export function MemberMyPageSection({ phone, memberId, onThemeChange }: Props) {
       </form>
 
       <MemberThemeSettings memberId={memberId} onThemeChange={onThemeChange} />
+
+      {centerId && (
+        <div className="mt-6 border-t border-gold/20 pt-6">
+          <h4 className="text-sm font-bold text-charcoal">MotionHub에 의견 보내기</h4>
+          <p className="mt-1 text-xs text-muted">버그·기능 요청·개선 사항을 플랫폼 팀에 전달합니다.</p>
+          <button
+            type="button"
+            onClick={() => setFeedbackOpen(true)}
+            className={`mt-3 w-full ${btnOutline}`}
+          >
+            의견 보내기
+          </button>
+        </div>
+      )}
     </section>
+
+    {centerId && (
+      <PlatformFeedbackModal
+        open={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+        centerId={centerId}
+        createdBy={memberId}
+        createdByType="member"
+      />
+    )}
     </div>
   )
 }

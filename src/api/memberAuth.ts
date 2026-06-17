@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { formatSupabaseError, getErrorMessage } from '../lib/errors'
 import { notifyMemberWelcome } from './notifications'
 import { getMemberCenterSlug, saveMemberSession } from './memberPortal'
+import { logPlatformActivity } from './platformActivity'
 import type { Json } from '../types/database'
 import { normalizePhone } from './members'
 
@@ -227,6 +228,15 @@ export async function loginMember(
     result.center_slug,
     result.center_id,
   )
+
+  if (result.center_id) {
+    void logPlatformActivity('login', {
+      centerId: result.center_id,
+      actorType: 'member',
+      actorId: result.id,
+    })
+  }
+
   return {
     memberId: result.id,
     memberName: result.name ?? '회원',

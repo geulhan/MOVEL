@@ -3,6 +3,7 @@ import { resetCenterIdCache } from '../lib/center'
 import { LEGACY_MOVEL_SLUG } from '../lib/centerSlug'
 import { getErrorMessage } from '../lib/errors'
 import { saveAdminAuth, type AdminRole } from '../lib/adminSession'
+import { logPlatformActivity } from './platformActivity'
 import type { Json } from '../types/database'
 
 type AdminLoginResponse = {
@@ -170,6 +171,12 @@ export async function loginAdmin(
         result.center_slug!,
         result.center_name ?? result.center_slug!,
       )
+
+      void logPlatformActivity('login', {
+        centerId: result.center_id!,
+        actorType: role === 'trainer' ? 'trainer' : 'admin',
+        actorId: result.id,
+      })
 
       return {
         adminId: result.id,

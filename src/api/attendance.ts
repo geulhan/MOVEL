@@ -13,6 +13,7 @@ import {
   type ScheduleStatus,
 } from './schedule'
 import { deductSession, fetchMembers, restoreOneSession, assertMemberCanCheckIn, normalizeMember } from './members'
+import { logPlatformActivity } from './platformActivity'
 
 export type AttendanceMethod = 'self' | 'admin' | 'trainer'
 
@@ -135,6 +136,13 @@ export async function checkInMember(
       console.warn('리워드 적립 실패:', rewardErr)
     }
 
+    void logPlatformActivity('attendance_checkin', {
+      centerId: memberCenterId,
+      actorType: method === 'self' ? 'member' : 'admin',
+      actorId: memberId,
+      metadata: { attendance_id: attendance.id },
+    })
+
     return { member, attendance }
   } catch (err) {
     if (deducted) {
@@ -189,6 +197,8 @@ export async function completeScheduleAttendance(
 
   if (error) throw error
   const schedule = row as PtSchedule
+  const scheduleCenterId =
+    schedule.center_id ?? (await resolveCenterIdForMember(schedule.member_id))
 
   if (schedule.status !== 'scheduled') {
     throw new Error('이미 처리된 수업입니다.')
@@ -211,15 +221,23 @@ export async function completeScheduleAttendance(
       .eq('id', schedule.member_id)
       .single()
     if (memberError) throw memberError
+    void logPlatformActivity('schedule_completed', {
+      centerId: scheduleCenterId,
+      metadata: { schedule_id: scheduleId, member_id: schedule.member_id },
+    })
     return { member: normalizeMember(memberRow), alreadyAttended: true }
   }
 
   if (isSameLocalDay(schedule.scheduled_at)) {
     const { member } = await checkInMember(schedule.member_id, 'admin')
+    void logPlatformActivity('schedule_completed', {
+      centerId: scheduleCenterId,
+      metadata: { schedule_id: scheduleId, member_id: schedule.member_id },
+    })
     return { member, alreadyAttended: false }
   }
 
-  const centerId = await resolveCenterIdForMember(schedule.member_id)
+  const centerId = scheduleCenterId
   const { data: memberRow, error: memberError } = await supabase
     .from('members')
     .select('*')
@@ -258,6 +276,16 @@ export async function completeScheduleAttendance(
     } catch (rewardErr) {
       console.warn('리워드 적립 실패:', rewardErr)
     }
+
+    void logPlatformActivity('attendance_processed', {
+      centerId: memberCenterId,
+      actorType: 'admin',
+      metadata: { schedule_id: scheduleId, attendance_id: attendance.id },
+    })
+    void logPlatformActivity('schedule_completed', {
+      centerId: memberCenterId,
+      metadata: { schedule_id: scheduleId, member_id: schedule.member_id },
+    })
 
     return { member, alreadyAttended: false }
   } catch (err) {

@@ -3,6 +3,7 @@ import { submitBetaApplication, type CenterType } from '../api/betaApplication'
 import { MotionHubLogo } from '../components/brand/MotionHubLogo'
 import {
   getMotionHubDemoUrl,
+  getMotionHubKakaoUrl,
   MOTIONHUB_CONTACT,
   MOTIONHUB_TRUST_FEATURES,
 } from '../constants/motionhub'
@@ -513,7 +514,7 @@ function ContactSection() {
         </div>
         <div className="mt-10 grid gap-4 sm:grid-cols-2">
           <a
-            href={MOTIONHUB_CONTACT.kakaoUrl}
+            href={getMotionHubKakaoUrl()}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-4 rounded-2xl border border-charcoal/10 bg-cream/40 p-6 transition hover:border-teal-500/40 hover:bg-teal-50/50"

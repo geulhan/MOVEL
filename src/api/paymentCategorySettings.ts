@@ -1,3 +1,4 @@
+import { upsertCenterRewardSetting } from '../lib/rewardSettingsUpsert'
 import { getCurrentCenterId } from '../lib/center'
 import { supabase } from '../lib/supabase'
 import type { Json } from '../types/database'
@@ -42,38 +43,14 @@ export async function fetchPaymentCategoryFlags(): Promise<PaymentCategoryFlags>
 export async function savePaymentCategoryFlags(
   flags: PaymentCategoryFlags,
 ): Promise<PaymentCategoryFlags> {
-  const centerId = await getCurrentCenterId()
   const payload = normalizeFlags(flags)
 
-  const { data: existing, error: fetchError } = await supabase
-    .from('reward_settings')
-    .select('id')
-    .eq('center_id', centerId)
-    .eq('setting_key', SETTING_KEY)
-    .order('updated_at', { ascending: false })
-    .limit(1)
-
-  if (fetchError) throw fetchError
-
-  const value = payload as unknown as Json
-  const existingId = existing?.[0]?.id
-
-  if (existingId) {
-    const { error } = await supabase
-      .from('reward_settings')
-      .update({ setting_value: value, updated_at: new Date().toISOString() })
-      .eq('id', existingId)
-    if (error) throw error
-    return payload
-  }
-
-  const { error } = await supabase.from('reward_settings').insert({
-    center_id: centerId,
-    setting_key: SETTING_KEY,
-    setting_value: value,
+  await upsertCenterRewardSetting({
+    settingKey: SETTING_KEY,
+    settingValue: payload as unknown as Json,
     description: '결제 상품 카테고리 ON/OFF',
   })
-  if (error) throw error
+
   return payload
 }
 

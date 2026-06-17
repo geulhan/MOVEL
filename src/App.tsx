@@ -28,10 +28,15 @@ import LoginPage from './pages/LoginPage'
 import CenterSignupPage from './pages/CenterSignupPage'
 import MotionHubLandingPage from './pages/MotionHubLandingPage'
 import PlatformLoginPage from './pages/platform/PlatformLoginPage'
-import PlatformHomePage from './pages/platform/PlatformHomePage'
+import PlatformDashboardPage from './pages/platform/PlatformDashboardPage'
+import PlatformCentersPage from './pages/platform/PlatformCentersPage'
+import PlatformCenterDetailPage from './pages/platform/PlatformCenterDetailPage'
 import PlatformCreateCenterPage from './pages/platform/PlatformCreateCenterPage'
 import PlatformConsentsPage from './pages/platform/PlatformConsentsPage'
 import PlatformBetaApplicationsPage from './pages/platform/PlatformBetaApplicationsPage'
+import PlatformFeedbackPage from './pages/platform/PlatformFeedbackPage'
+import PlatformAnalyticsPage from './pages/platform/PlatformAnalyticsPage'
+import PlatformBetaOpsPage from './pages/platform/PlatformBetaOpsPage'
 import { PlatformAccessGuard } from './components/PlatformAccessGuard'
 import { PlatformLayout } from './components/layouts/PlatformLayout'
 import NotFoundPage from './pages/NotFoundPage'
@@ -47,10 +52,15 @@ export default function App() {
         <Route path="/platform/login" element={<PlatformLoginPage />} />
         <Route path="/platform" element={<PlatformAccessGuard />}>
           <Route element={<PlatformLayout />}>
-            <Route index element={<PlatformHomePage />} />
+            <Route index element={<PlatformDashboardPage />} />
+            <Route path="centers" element={<PlatformCentersPage />} />
+            <Route path="centers/:centerId" element={<PlatformCenterDetailPage />} />
+            <Route path="centers/new" element={<PlatformCreateCenterPage />} />
+            <Route path="feedback" element={<PlatformFeedbackPage />} />
+            <Route path="analytics" element={<PlatformAnalyticsPage />} />
+            <Route path="beta" element={<PlatformBetaOpsPage />} />
             <Route path="consents" element={<PlatformConsentsPage />} />
             <Route path="beta-applications" element={<PlatformBetaApplicationsPage />} />
-            <Route path="centers/new" element={<PlatformCreateCenterPage />} />
           </Route>
         </Route>
         <Route path="/admin" element={<ProtectedRoute />}>

@@ -5,6 +5,11 @@ import {
 } from '../../api/messagingSettings'
 import { btnPrimary, inputClass } from '../../styles/theme'
 import {
+  ALIMTALK_BRAND_HEADER,
+  ALIMTALK_GREETING_PATTERN,
+} from '../../constants/alimtalkTemplates'
+import { MotionHubSupportLink } from './MotionHubSupportLink'
+import {
   DEFAULT_CENTER_MESSAGING_SETTINGS,
   MESSAGING_TEMPLATE_FIELDS,
   type CenterMessagingSettings,
@@ -77,8 +82,16 @@ export function MessagingSettingsPanel() {
       <div>
         <h2 className="text-sm font-semibold text-charcoal">알림톡·문자 채널 설정</h2>
         <p className="mt-1 text-sm text-muted">
-          센터별 카카오 채널(pfId)과 알림톡 템플릿 ID를 등록합니다. 솔라피에서
-          템플릿 심사·변수명(#{`{centerName}`} 등)을 맞춘 뒤 입력하세요.
+          센터별 카카오 채널(pfId)과 알림톡 템플릿 ID를 등록합니다. MotionHub
+          공용 채널·API 키 사용 시 플랫폼 pfId가 적용됩니다. 템플릿 본문은{' '}
+          <strong className="font-semibold text-charcoal">
+            {ALIMTALK_BRAND_HEADER}
+          </strong>
+          와 <strong className="font-semibold text-charcoal">{ALIMTALK_GREETING_PATTERN}</strong>
+          구조로 Solapi에 등록하세요.
+        </p>
+        <p className="mt-2 text-xs text-muted">
+          채널·템플릿 심사 문의: <MotionHubSupportLink compact />
         </p>
       </div>
 

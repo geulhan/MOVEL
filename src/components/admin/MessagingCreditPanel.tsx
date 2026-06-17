@@ -7,6 +7,7 @@ import {
 import { MESSAGE_TEMPLATE_LABELS, type MessageTemplateKey } from '../../types/database'
 import { cardClass } from '../../styles/theme'
 import type { CenterMessageDashboard } from '../../types/messageCredits'
+import { MotionHubSupportLink } from './MotionHubSupportLink'
 
 type Props = {
   onUpdated?: () => void
@@ -113,7 +114,9 @@ export function MessagingCreditPanel({ onUpdated }: Props) {
 
       {(credits?.balance ?? 0) <= 0 && (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          {INSUFFICIENT_CREDITS_MESSAGE} MotionHub에 크레딧 지급을 요청해 주세요.
+          {INSUFFICIENT_CREDITS_MESSAGE}{' '}
+          <MotionHubSupportLink className="text-amber-950" /> 으로 크레딧 지급을
+          요청해 주세요.
         </p>
       )}
 

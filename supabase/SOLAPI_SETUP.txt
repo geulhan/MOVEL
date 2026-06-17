@@ -1,11 +1,22 @@
 솔라피 + MotionHub 알림 연동 가이드
 ================================
 
+[브랜드 전환 — 2026]
+- 카카오 채널: MOVEL → MotionHub 비즈니스 채널
+- Solapi pfId: MOVEL 채널 pfId 제거 → MotionHub 채널 pfId 로 교체 (Supabase Secret)
+- 알림톡 본문: 「안녕하세요 MOVEL입니다」 제거
+- 공통 구조:
+    [모션허브]
+    #{centerName} 회원님
+    (이하 안내 본문)
+- 상세: docs/motionhub-brand-transition-report.md
+
 [센터별 채널 — 권장 운영 방식]
 1) MotionHub 플랫폼: Supabase Secrets에 공용 SOLAPI_API_KEY/SECRET + MESSAGING_ENABLED=true
+   + SOLAPI_PF_ID = MotionHub 카카오 채널 pfId
 2) 각 센터 관리자: 관리자 → 메시지 발송 → 「알림톡·문자 채널 설정」
-   - 카카오 pfId, 발신번호, 템플릿 ID (센터별)
-   - 「이 센터 메시지 발송 사용」 체크
+   - MotionHub 공용 API 키 사용 시 pfId는 플랫폼 Secret 값이 적용됨
+   - 센터 전용 카카오 채널이 있으면 센터 pfId·템플릿 ID 별도 등록
 3) 센터별 솔라피 계정이 따로 있으면 「MotionHub 공용 API 키 사용」 해제 후 전용 키 입력
 
 DB: migration_064_center_messaging_config.sql 실행 필수
@@ -18,9 +29,11 @@ DB: migration_064_center_messaging_config.sql 실행 필수
    - migration_019_pre_solapi_fixes.sql
 
 2) Edge Function 배포 + Secrets (MESSAGING_ENABLED=false 로 시작)
-   NOTIFICATION_INTERNAL_SECRET, SITE_URL, SOLAPI_API_KEY/SECRET, SOLAPI_PF_ID, SOLAPI_FROM_NUMBER
+   NOTIFICATION_INTERNAL_SECRET, SITE_URL=https://motionhub.kr
+   SOLAPI_API_KEY/SECRET, SOLAPI_PF_ID(MotionHub), SOLAPI_FROM_NUMBER
 
 3) Vercel: VITE_NOTIFICATION_TRIGGER_KEY = NOTIFICATION_INTERNAL_SECRET 와 동일
+   VITE_MOTIONHUB_KAKAO_URL = MotionHub 카카오 채널 문의 링크 (랜딩·관리자 UI)
 
 4) 관리자 → 알림 발송 에서 skipped 로그 확인 (실발송 없이 연동 테스트)
 
@@ -30,29 +43,44 @@ DB: migration_064_center_messaging_config.sql 실행 필수
 1) 솔라피 가입
    https://solapi.com
 
-2) 카카오 비즈니스 채널 연동
+2) 카카오 비즈니스 채널 연동 (MotionHub)
    - 솔라피 콘솔 → 카카오 채널 연동
-   - pfId(프로필 ID) 메모
+   - MotionHub 채널 pfId(프로필 ID) 메모 → SOLAPI_PF_ID Secret 에 설정
+   - MOVEL 채널 pfId 는 더 이상 사용하지 않음
 
-3) 알림톡 템플릿 등록 및 심사 (변수명은 아래와 동일하게, 센터마다 별도 등록)
+3) 알림톡 템플릿 등록 및 심사 (변수명은 아래와 동일하게)
+   ※ 모든 템플릿 첫 줄은 [모션허브], 둘째 줄은 #{centerName} 회원님
+
    [환영] welcome
-     #{name}님 #{centerName} 가입을 환영합니다.
+     [모션허브]
+     #{centerName} 회원님, 가입을 환영합니다.
      회원 포털: #{portalUrl}
      초기 비밀번호는 휴대폰 뒤 4자리입니다.
 
    [결제] payment_done
-     #{name}님 #{centerName} — #{amount} 결제가 완료되었습니다. (PT #{sessions}회)
+     [모션허브]
+     #{centerName} 회원님, #{amount} 결제가 완료되었습니다. (PT #{sessions}회)
      회원 포털: #{portalUrl}
 
    [갱신] renewal
-     #{name}님 #{centerName} 회원권 만료가 #{daysLeft}일 남았습니다. (만료일 #{expiresAt})
+     [모션허브]
+     #{centerName} 회원님, 회원권 만료가 #{daysLeft}일 남았습니다. (만료일 #{expiresAt})
      잔여 PT #{remainingSessions}회 · #{portalUrl}
 
+   [만보 인증] step_verification_result
+     [모션허브]
+     #{centerName} 회원님, 만보 인증 결과: #{result}
+     사유: #{reason}
+     #{portalUrl}
+
    [PT 리마인더] pt_reminder
-     #{name}님 #{centerName} PT 수업이 내일 예정되어 있습니다.
+     [모션허브]
+     #{centerName} 회원님, PT 수업이 내일 예정되어 있습니다.
      일시: #{scheduledAt}
      담당: #{trainerName}
      회원 포털: #{portalUrl}
+
+   (선택) 변수 #{brandHeader} 에 [모션허브] 를 넣어 본문 첫 줄을 변수로 구성할 수도 있습니다.
 
 4) 문자 발신번호 등록 (알림톡 실패 시 대체발송용)
 
@@ -64,14 +92,15 @@ DB: migration_064_center_messaging_config.sql 실행 필수
    supabase link --project-ref YOUR_PROJECT_REF
    supabase secrets set NOTIFICATION_INTERNAL_SECRET=랜덤문자열
    supabase secrets set MESSAGING_ENABLED=false
-   supabase secrets set SITE_URL=https://movel.vercel.app
+   supabase secrets set SITE_URL=https://motionhub.kr
    supabase secrets set SOLAPI_API_KEY=...
    supabase secrets set SOLAPI_API_SECRET=...
-   supabase secrets set SOLAPI_PF_ID=...
+   supabase secrets set SOLAPI_PF_ID=...        # MotionHub 채널 pfId
    supabase secrets set SOLAPI_FROM_NUMBER=...
    supabase secrets set SOLAPI_TEMPLATE_WELCOME=...
    supabase secrets set SOLAPI_TEMPLATE_PAYMENT=...
    supabase secrets set SOLAPI_TEMPLATE_RENEWAL=...
+   supabase secrets set SOLAPI_TEMPLATE_STEP_RESULT=...
    supabase secrets set SOLAPI_TEMPLATE_PT_REMINDER=...
    supabase functions deploy send-notification
    supabase functions deploy renewal-reminders
@@ -79,6 +108,7 @@ DB: migration_064_center_messaging_config.sql 실행 필수
 
 7) Vercel 환경 변수
    VITE_NOTIFICATION_TRIGGER_KEY = NOTIFICATION_INTERNAL_SECRET 와 동일
+   VITE_MOTIONHUB_KAKAO_URL = MotionHub 카카오 채널 URL (pf.kakao.com 또는 채널 홈)
 
 8) 솔라피 키 입력 후 실발송 켜기
    supabase secrets set MESSAGING_ENABLED=true
