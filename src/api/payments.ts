@@ -149,6 +149,53 @@ export async function updatePayment(
   return data
 }
 
+export async function deletePayment(
+  paymentId: string,
+  memberId: string,
+): Promise<void> {
+  const centerId = await getCurrentCenterId()
+  const { data: current, error: fetchError } = await supabase
+    .from('payment_history')
+    .select('sessions, category')
+    .eq('id', paymentId)
+    .eq('member_id', memberId)
+    .eq('center_id', centerId)
+    .single()
+
+  if (fetchError) throw fetchError
+
+  const category = (current.category as PaymentCategory | null) ?? 'pt'
+  const sessions = Number(current.sessions)
+
+  if (category === 'pt' && sessions > 0) {
+    const member = await fetchMemberById(memberId)
+    const nextRemaining = member.remaining_sessions - sessions
+    if (nextRemaining < 0) {
+      throw new Error(
+        `이 결제를 삭제하면 잔여 PT가 음수가 됩니다. (현재 잔여 ${member.remaining_sessions}회, 결제 PT ${sessions}회)`,
+      )
+    }
+    if (member.total_sessions - sessions < 0) {
+      throw new Error('PT 횟수를 더 이상 줄일 수 없습니다.')
+    }
+    await applySessionsDeltaToMember(memberId, -sessions)
+  }
+
+  const { error } = await supabase
+    .from('payment_history')
+    .delete()
+    .eq('id', paymentId)
+    .eq('member_id', memberId)
+    .eq('center_id', centerId)
+
+  if (error) throw error
+
+  if (category === 'pt' && sessions > 0) {
+    await recalcMemberExpiry(memberId)
+  }
+  await syncMemberPaymentTotal(memberId)
+}
+
 async function applySessionsDeltaToMember(
   memberId: string,
   sessionsDelta: number,

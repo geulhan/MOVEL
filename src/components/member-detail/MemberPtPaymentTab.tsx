@@ -11,7 +11,7 @@ import {
   updateMemberRemainingSessions,
 } from '../../api/members'
 import { recalcMemberExpiry } from '../../api/period'
-import { updatePayment } from '../../api/payments'
+import { deletePayment, updatePayment } from '../../api/payments'
 import {
   btnInlineCancel,
   btnInlineSave,
@@ -21,6 +21,8 @@ import {
   cardClass,
   inputClass,
 } from '../../styles/theme'
+import { isFullAdmin } from '../../lib/adminPermissions'
+import { getAdminSession } from '../../lib/adminSession'
 import { getRemainingSessionsClass } from '../../utils/sessions'
 import { useMemberDetail } from './MemberDetailContext'
 import { PaymentFormModal } from './PaymentFormModal'
@@ -44,6 +46,7 @@ export function MemberPtPaymentTab() {
   const [editAmount, setEditAmount] = useState('')
   const [editSessions, setEditSessions] = useState('')
   const [savingPaymentId, setSavingPaymentId] = useState<string | null>(null)
+  const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null)
   const [editingRemaining, setEditingRemaining] = useState(false)
   const [editRemaining, setEditRemaining] = useState('')
   const [savingRemaining, setSavingRemaining] = useState(false)
@@ -141,6 +144,33 @@ export function MemberPtPaymentTab() {
   }
 
   const needsFirstPayment = member.total_sessions === 0
+  const canManagePayments = isFullAdmin(getAdminSession())
+
+  async function handlePaymentDelete(payment: (typeof payments)[number]) {
+    const sessionNote =
+      payment.sessions > 0 ? `, PT ${payment.sessions}회` : ''
+    if (
+      !window.confirm(
+        `${formatDate(payment.paid_at)} 결제 (${formatCurrency(Number(payment.amount))}${sessionNote})를 삭제할까요?\n\n삭제하면 PT 횟수·결제 합계가 조정되며 되돌릴 수 없습니다.`,
+      )
+    ) {
+      return
+    }
+
+    setDeletingPaymentId(payment.id)
+    setError(null)
+    try {
+      await deletePayment(payment.id, memberId)
+      if (editingPaymentId === payment.id) {
+        setEditingPaymentId(null)
+      }
+      await reload()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '결제 삭제 실패')
+    } finally {
+      setDeletingPaymentId(null)
+    }
+  }
 
   return (
     <div className="space-y-5">
@@ -264,7 +294,9 @@ export function MemberPtPaymentTab() {
           <div>
             <h3 className="text-base font-semibold text-charcoal">결제 내역</h3>
             <p className="mt-0.5 text-xs text-muted">
-              최신순 · 수정 가능 · 결제 요청 건은 계약서 보기·인쇄
+              최신순 · 수정 가능
+              {canManagePayments ? ' · 관리자 삭제 가능' : ''}
+              {' · '}결제 요청 건은 계약서 보기·인쇄
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -298,6 +330,9 @@ export function MemberPtPaymentTab() {
                   <th className="px-4 py-2.5">PT 횟수</th>
                   <th className="px-4 py-2.5">계약서</th>
                   <th className="px-4 py-2.5">수정</th>
+                  {canManagePayments && (
+                    <th className="px-4 py-2.5">삭제</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gold/15">
@@ -400,6 +435,21 @@ export function MemberPtPaymentTab() {
                           </button>
                         )}
                       </td>
+                      {canManagePayments && (
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <button
+                            type="button"
+                            disabled={
+                              deletingPaymentId === p.id ||
+                              editingPaymentId === p.id
+                            }
+                            onClick={() => void handlePaymentDelete(p)}
+                            className="text-xs font-semibold text-red-700 hover:underline disabled:opacity-50"
+                          >
+                            {deletingPaymentId === p.id ? '삭제 중…' : '삭제'}
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   )
                 })}

@@ -4,11 +4,17 @@ import { btnOutline } from '../../styles/theme'
 type Props = {
   onChange: (dataUrl: string | null) => void
   disabled?: boolean
+  canvasClassName?: string
 }
 
-export function SignaturePad({ onChange, disabled = false }: Props) {
+export function SignaturePad({
+  onChange,
+  disabled = false,
+  canvasClassName = 'h-36',
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const drawingRef = useRef(false)
+  const hasStrokeRef = useRef(false)
   const [hasStroke, setHasStroke] = useState(false)
 
   useEffect(() => {
@@ -18,6 +24,7 @@ export function SignaturePad({ onChange, disabled = false }: Props) {
     const resize = () => {
       const rect = canvas.getBoundingClientRect()
       const ratio = window.devicePixelRatio || 1
+      const saved = hasStrokeRef.current ? canvas.toDataURL('image/png') : null
       canvas.width = Math.floor(rect.width * ratio)
       canvas.height = Math.floor(rect.height * ratio)
       const ctx = canvas.getContext('2d')
@@ -26,6 +33,13 @@ export function SignaturePad({ onChange, disabled = false }: Props) {
       ctx.lineWidth = 2
       ctx.lineCap = 'round'
       ctx.strokeStyle = '#1a1a1a'
+      if (saved) {
+        const img = new Image()
+        img.onload = () => {
+          ctx.drawImage(img, 0, 0, rect.width, rect.height)
+        }
+        img.src = saved
+      }
     }
 
     resize()
@@ -45,6 +59,7 @@ export function SignaturePad({ onChange, disabled = false }: Props) {
 
   function startDraw(event: React.PointerEvent<HTMLCanvasElement>) {
     if (disabled) return
+    event.preventDefault()
     const canvas = canvasRef.current
     const ctx = canvas?.getContext('2d')
     if (!canvas || !ctx) return
@@ -63,6 +78,7 @@ export function SignaturePad({ onChange, disabled = false }: Props) {
     const { x, y } = getPoint(event)
     ctx.lineTo(x, y)
     ctx.stroke()
+    hasStrokeRef.current = true
     setHasStroke(true)
     onChange(canvas.toDataURL('image/png'))
   }
@@ -81,6 +97,7 @@ export function SignaturePad({ onChange, disabled = false }: Props) {
     const ctx = canvas?.getContext('2d')
     if (!canvas || !ctx) return
     ctx.clearRect(0, 0, canvas.width, canvas.height)
+    hasStrokeRef.current = false
     setHasStroke(false)
     onChange(null)
   }
@@ -100,7 +117,7 @@ export function SignaturePad({ onChange, disabled = false }: Props) {
       </div>
       <canvas
         ref={canvasRef}
-        className="h-36 w-full touch-none rounded-xl border border-gold/30 bg-white"
+        className={`${canvasClassName} w-full touch-none rounded-xl border border-gold/30 bg-white`}
         onPointerDown={startDraw}
         onPointerMove={draw}
         onPointerUp={endDraw}
