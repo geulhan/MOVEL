@@ -1,4 +1,5 @@
 import { CENTER_PASS_STATUS_LABELS, type CenterPassStatus } from '../constants/centerPasses'
+import { getCurrentCenterId } from '../lib/center'
 import { supabase } from '../lib/supabase'
 import { todayDateString } from './members'
 import { addDays } from '../utils/dates'
@@ -213,10 +214,12 @@ export async function assignCenterPass(input: {
 
   const endsAt = addDays(input.startsAt, durationDays - 1)
   const status = resolvePassStatus(input.startsAt, endsAt, 'scheduled')
+  const centerId = await getCurrentCenterId(input.memberId)
 
   const { data, error } = await supabase
     .from('center_passes')
     .insert({
+      center_id: centerId,
       member_id: input.memberId,
       product_id: input.productId ?? null,
       label,

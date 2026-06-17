@@ -12,6 +12,7 @@ import {
 } from '../../api/rewards'
 import { isPeriodPaymentCategory } from '../../constants/paymentCategories'
 import { REDEMPTION_MAX_PERCENT } from '../../constants/rewards'
+import { getErrorMessage } from '../../lib/errors'
 import { btnGold, btnOutline, inputClass } from '../../styles/theme'
 
 export type CompletePaymentOptions = {
@@ -93,7 +94,7 @@ export function CompletePaymentModal({
         startsAt: showStartsAt ? startsAt : undefined,
       })
     } catch (err) {
-      setError(err instanceof Error ? err.message : '완료 처리에 실패했습니다.')
+      setError(getErrorMessage(err))
     }
   }
 

@@ -1086,6 +1086,7 @@ export type Database = {
         MemberFacilitySubscription,
         {
           member_id: string
+          center_id?: string
           product_id?: string | null
           label: string
           sub_type?: FacilitySubType
@@ -1134,6 +1135,7 @@ export type Database = {
         CenterPass,
         {
           member_id: string
+          center_id?: string
           product_id?: string | null
           label: string
           starts_at: string

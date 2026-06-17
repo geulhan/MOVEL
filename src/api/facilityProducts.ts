@@ -4,6 +4,7 @@ import type {
   FacilitySubscriptionStatus,
   MemberFacilitySubscription,
 } from '../types/database'
+import { getCurrentCenterId } from '../lib/center'
 import { supabase } from '../lib/supabase'
 import { todayDateString } from './members'
 import { addDays } from '../utils/dates'
@@ -125,10 +126,12 @@ export async function assignFacilitySubscription(input: {
 
   const endsAt = addDays(input.startsAt, durationDays - 1)
   const status = resolveSubscriptionStatus(input.startsAt, endsAt, 'scheduled')
+  const centerId = await getCurrentCenterId(input.memberId)
 
   const { data, error } = await supabase
     .from('member_facility_subscriptions')
     .insert({
+      center_id: centerId,
       member_id: input.memberId,
       product_id: input.productId ?? null,
       label,

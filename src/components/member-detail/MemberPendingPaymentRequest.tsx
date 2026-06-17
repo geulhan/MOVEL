@@ -125,6 +125,8 @@ export function MemberPendingPaymentRequest({
           : '결제가 완료 처리되었습니다.',
       )
       await onChanged?.()
+    } catch (err) {
+      throw err
     } finally {
       setCompleting(false)
     }

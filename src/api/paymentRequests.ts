@@ -16,6 +16,19 @@ import { assignSessionPass } from './memberSessionPasses'
 import { createPaymentRecord, syncMemberPaymentTotal } from './payments'
 import { redeemMilesForPayment } from './rewards'
 import { todayDateString } from './members'
+import { getErrorMessage } from '../lib/errors'
+
+async function rollbackFailedPaymentFulfillment(
+  paymentId: string,
+  memberId: string,
+): Promise<void> {
+  try {
+    await supabase.from('payment_history').delete().eq('id', paymentId)
+    await syncMemberPaymentTotal(memberId)
+  } catch (rollbackErr) {
+    console.warn('결제 완료 롤백 실패:', rollbackErr)
+  }
+}
 
 export type PaymentRequestWithMember = PaymentRequest & {
   member?: Pick<Member, 'id' | 'name' | 'phone'> | null
@@ -273,94 +286,102 @@ async function fulfillPaymentRequest(
     sessions: isSessionPaymentCategory(category) ? request.sessions ?? 1 : 0,
   })
 
-  let finalPayment = payment
-  if (milesToUse > 0) {
-    const { milesUsed, cashAmount } = await redeemMilesForPayment(
-      request.member_id,
-      contractAmount,
-      milesToUse,
-      payment.id,
-    )
-    if (milesUsed > 0) {
-      const mileNote = `MILE ${milesUsed.toLocaleString()}M 사용 (실수납 ${cashAmount.toLocaleString()}원)`
-      const { data: updated, error: mileUpdateError } = await supabase
-        .from('payment_history')
-        .update({
-          amount: cashAmount,
-          note: [payment.note, mileNote].filter(Boolean).join(' · '),
-        })
-        .eq('id', payment.id)
-        .select()
-        .single()
+  try {
+    let finalPayment = payment
+    if (milesToUse > 0) {
+      const { milesUsed, cashAmount } = await redeemMilesForPayment(
+        request.member_id,
+        contractAmount,
+        milesToUse,
+        payment.id,
+      )
+      if (milesUsed > 0) {
+        const mileNote = `MILE ${milesUsed.toLocaleString()}M 사용 (실수납 ${cashAmount.toLocaleString()}원)`
+        const { data: updated, error: mileUpdateError } = await supabase
+          .from('payment_history')
+          .update({
+            amount: cashAmount,
+            note: [payment.note, mileNote].filter(Boolean).join(' · '),
+          })
+          .eq('id', payment.id)
+          .select()
+          .single()
 
-      if (mileUpdateError) throw mileUpdateError
-      finalPayment = updated
-      await syncMemberPaymentTotal(request.member_id)
+        if (mileUpdateError) throw mileUpdateError
+        finalPayment = updated
+        await syncMemberPaymentTotal(request.member_id)
+      }
     }
-  }
 
-  await supabase
-    .from('payment_history')
-    .update({
-      source: 'payment_request',
-      payment_request_id: request.id,
-    })
-    .eq('id', payment.id)
-
-  const startsAt =
-    options.startsAt?.trim() ||
-    request.starts_at?.trim() ||
-    todayDateString()
-  if (category === 'center_pass') {
-    await assignCenterPass({
-      memberId: request.member_id,
-      productId: request.package_id,
-      label: request.label,
-      startsAt,
-      durationDays: request.duration_days ?? undefined,
-      amount: contractAmount,
-      note: request.note,
-      paymentHistoryId: payment.id,
-      createdBy: 'payment_request',
-    })
-  } else if (category === 'locker_towel') {
-    await assignFacilitySubscription({
-      memberId: request.member_id,
-      productId: request.package_id,
-      label: request.label,
-      startsAt,
-      durationDays: request.duration_days ?? undefined,
-      amount: contractAmount,
-      note: request.note,
-      paymentHistoryId: payment.id,
-      createdBy: 'payment_request',
-    })
-  } else if (isClassSessionPaymentCategory(category)) {
-    const passType = sessionPassTypeFromCategory(category)
-    if (passType) {
-      await assignSessionPass({
-        memberId: request.member_id,
-        passType,
-        label: request.label,
-        sessionsToAdd: request.sessions ?? 1,
-        amount: contractAmount,
-        paymentHistoryId: payment.id,
+    const { error: linkError } = await supabase
+      .from('payment_history')
+      .update({
+        source: 'payment_request',
+        payment_request_id: request.id,
       })
+      .eq('id', payment.id)
+
+    if (linkError) throw linkError
+
+    const startsAt =
+      options.startsAt?.trim() ||
+      request.starts_at?.trim() ||
+      todayDateString()
+    if (category === 'center_pass') {
+      await assignCenterPass({
+        memberId: request.member_id,
+        productId: request.package_id,
+        label: request.label,
+        startsAt,
+        durationDays: request.duration_days ?? undefined,
+        amount: contractAmount,
+        note: request.note,
+        paymentHistoryId: payment.id,
+        createdBy: 'payment_request',
+      })
+    } else if (category === 'locker_towel') {
+      await assignFacilitySubscription({
+        memberId: request.member_id,
+        productId: request.package_id,
+        label: request.label,
+        startsAt,
+        durationDays: request.duration_days ?? undefined,
+        amount: contractAmount,
+        note: request.note,
+        paymentHistoryId: payment.id,
+        createdBy: 'payment_request',
+      })
+    } else if (isClassSessionPaymentCategory(category)) {
+      const passType = sessionPassTypeFromCategory(category)
+      if (passType) {
+        await assignSessionPass({
+          memberId: request.member_id,
+          passType,
+          label: request.label,
+          sessionsToAdd: request.sessions ?? 1,
+          amount: contractAmount,
+          paymentHistoryId: payment.id,
+        })
+      }
     }
+
+    const { error: updateError } = await supabase
+      .from('payment_requests')
+      .update({
+        status: 'paid',
+        payment_history_id: payment.id,
+        paid_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', request.id)
+      .eq('status', 'pending')
+
+    if (updateError) throw updateError
+    return finalPayment
+  } catch (err) {
+    await rollbackFailedPaymentFulfillment(payment.id, request.member_id)
+    throw new Error(getErrorMessage(err))
   }
-
-  const { error: updateError } = await supabase
-    .from('payment_requests')
-    .update({
-      status: 'paid',
-      payment_history_id: payment.id,
-      paid_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', request.id)
-
-  if (updateError) throw updateError
-  return finalPayment
 }
 
 export function formatDiscountSummary(request: PaymentRequest): string | null {
