@@ -1642,6 +1642,14 @@ export type Database = {
         Args: { p_member_id: string; p_placement_id: string }
         Returns: Json
       }
+      build_slg_village_slot: {
+        Args: { p_member_id: string; p_slot_key: string }
+        Returns: Json
+      }
+      upgrade_slg_village_slot: {
+        Args: { p_member_id: string; p_slot_key: string }
+        Returns: Json
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>

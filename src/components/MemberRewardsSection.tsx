@@ -36,7 +36,6 @@ import {
 import { useClientDevice } from '../hooks/useClientDevice'
 import { VerificationCodeFullscreen } from './VerificationCodeFullscreen'
 import { IosStepVerificationUpload } from './IosStepVerificationUpload'
-import { MemberVillageSection } from './member/village/MemberVillageSection'
 import { MemberCenterPhotoSection } from './MemberCenterPhotoSection'
 import { MemberRewardGuideSection } from './MemberRewardGuideSection'
 import { btnGold, btnOutline, cardClass } from '../styles/theme'
@@ -242,8 +241,6 @@ export function MemberRewardsSection({ memberId, refreshToken }: Props) {
 
   return (
     <div className="space-y-4">
-      <MemberVillageSection memberId={memberId} refreshToken={refreshToken} />
-
       {showCodeFullscreen && todayCode && (
         <VerificationCodeFullscreen
           code={todayCode}

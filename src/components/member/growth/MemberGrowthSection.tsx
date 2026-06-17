@@ -6,6 +6,7 @@ import {
   GROWTH_TREE_EMOJI,
 } from '../../../types/growth'
 import type { GrowthProfile, GrowthRewardRule } from '../../../types/growth'
+import { VILLAGE_UNLOCK_BY_STAGE } from '../../../types/slgVillage'
 import { useGrowthProfile } from '../../../hooks/useGrowthProfile'
 import { MemberChallengesSection } from './MemberChallengesSection'
 import { cardClass } from '../../../styles/theme'
@@ -107,8 +108,7 @@ export function MemberGrowthSection({ memberId, refreshToken = 0 }: Props) {
           Supabase에서 migration_078_platform_growth_mvp.sql,
           migration_081_growth_events_auto_earn.sql,
           migration_083_growth_achievements_notifications.sql,
-          migration_084_center_challenges.sql,
-          migration_085_garden_mvp.sql 실행 후 다시 시도해 주세요.
+          migration_084_center_challenges.sql 실행 후 다시 시도해 주세요.
         </p>
         <button
           type="button"
@@ -171,7 +171,7 @@ export function MemberGrowthSection({ memberId, refreshToken = 0 }: Props) {
             <p className="mt-0.5 text-lg font-bold tabular-nums text-charcoal">
               {formatGrowth(profile.current_acorns)}
             </p>
-            <p className="mt-0.5 text-[10px] text-muted">정원 상점 재화</p>
+            <p className="mt-0.5 text-[10px] text-muted">마을 발전 재화</p>
           </div>
         </div>
       </section>
@@ -221,9 +221,14 @@ export function MemberGrowthSection({ memberId, refreshToken = 0 }: Props) {
 
       <section className={`${cardClass} p-4`}>
         <h3 className="text-base font-semibold text-charcoal">운동나무 단계</h3>
+        <p className="mt-1 text-xs text-muted">
+          단계가 오를수록 마을 탭에서 새 건물을 건설할 수 있어요
+        </p>
         <ul className="mt-3 space-y-2">
           {treeStages.map((stage) => {
             const isCurrent = profile.current_stage_key === stage.stage_key
+            const villageUnlock =
+              VILLAGE_UNLOCK_BY_STAGE[stage.stage_key] ?? null
             return (
               <li
                 key={stage.stage_key}
@@ -233,7 +238,12 @@ export function MemberGrowthSection({ memberId, refreshToken = 0 }: Props) {
                     : 'text-charcoal/80'
                 }`}
               >
-                <span>{stage.display_name_ko}</span>
+                <div>
+                  <span>{stage.display_name_ko}</span>
+                  {villageUnlock && (
+                    <p className="text-[11px] text-muted">마을 · {villageUnlock}</p>
+                  )}
+                </div>
                 <span className="tabular-nums text-muted">
                   {formatGrowth(stage.min_growth)} 성장치
                 </span>

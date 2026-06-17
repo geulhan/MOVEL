@@ -87,7 +87,7 @@ export function formatSupabaseError(err: unknown): string {
       '성장 시스템 DB가 아직 설정되지 않았습니다. ' +
       'Supabase SQL Editor에서 supabase/migration_078_platform_growth_mvp.sql, ' +
       'migration_080_growth_reward_balance.sql, migration_081_growth_events_auto_earn.sql, ' +
-      'migration_083_growth_achievements_notifications.sql, migration_084_center_challenges.sql, migration_085_garden_mvp.sql, migration_086_season_pass_mvp.sql, migration_087_slg_village_mvp.sql 을 실행해 주세요.'
+      'migration_083_growth_achievements_notifications.sql, migration_084_center_challenges.sql, migration_086_season_pass_mvp.sql, migration_087_slg_village_mvp.sql, migration_091_motionhub_village_v2.sql 을 실행해 주세요.'
     )
   }
 

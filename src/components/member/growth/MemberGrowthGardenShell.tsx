@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { MemberGardenSection } from '../garden/MemberGardenSection'
 import { MemberSeasonSection } from '../season/MemberSeasonSection'
+import { MemberVillageSection } from '../village/MemberVillageSection'
 import { MemberGrowthSection } from './MemberGrowthSection'
 
-type SubTab = 'growth' | 'garden' | 'season'
+type SubTab = 'growth' | 'village' | 'season'
 
 type Props = {
   memberId: string
@@ -29,14 +29,14 @@ export function MemberGrowthGardenShell({ memberId, refreshToken = 0 }: Props) {
         </button>
         <button
           type="button"
-          onClick={() => setSubTab('garden')}
+          onClick={() => setSubTab('village')}
           className={`rounded-lg py-2.5 text-sm font-bold transition ${
-            subTab === 'garden'
+            subTab === 'village'
               ? 'bg-charcoal text-cream shadow-sm'
               : 'text-charcoal hover:bg-cream/80'
           }`}
         >
-          정원
+          마을
         </button>
         <button
           type="button"
@@ -54,8 +54,8 @@ export function MemberGrowthGardenShell({ memberId, refreshToken = 0 }: Props) {
       {subTab === 'growth' && (
         <MemberGrowthSection memberId={memberId} refreshToken={refreshToken} />
       )}
-      {subTab === 'garden' && (
-        <MemberGardenSection memberId={memberId} refreshToken={refreshToken} />
+      {subTab === 'village' && (
+        <MemberVillageSection memberId={memberId} refreshToken={refreshToken} />
       )}
       {subTab === 'season' && (
         <MemberSeasonSection memberId={memberId} refreshToken={refreshToken} />

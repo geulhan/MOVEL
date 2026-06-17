@@ -1,14 +1,16 @@
 import { useMemo, useState } from 'react'
 import {
-  moveSlgBuilding,
-  placeSlgBuilding,
-  purchaseSlgBuilding,
-  retrieveSlgBuilding,
+  buildSlgVillageSlot,
+  upgradeSlgVillageSlot,
 } from '../../../api/slgVillage'
 import { formatSupabaseError } from '../../../lib/errors'
 import { useSlgVillage } from '../../../hooks/useSlgVillage'
-import type { SlgVillageBuilding } from '../../../types/slgVillage'
-import { SLG_TIER_LABELS } from '../../../types/slgVillage'
+import type { SlgVillageSlot } from '../../../types/slgVillage'
+import {
+  SLG_TIER_LABELS,
+  UNLOCK_STAGE_LABELS,
+  VILLAGE_UNLOCK_BY_STAGE,
+} from '../../../types/slgVillage'
 import { btnOutline, btnPrimary, cardClass } from '../../../styles/theme'
 import { GardenPixelSprite, resolveTreeSpriteKey } from '../garden/GardenPixelSprite'
 import { SlgVillagePixelSprite } from './SlgVillagePixelSprite'
@@ -19,32 +21,28 @@ type Props = {
   refreshToken?: number
 }
 
-type Mode =
-  | { kind: 'view' }
-  | { kind: 'place'; buildingId: string; spriteKey: string; itemName: string }
-  | { kind: 'move'; placementId: string; spriteKey: string; itemName: string }
-
 function villageErrorMessage(err: unknown): string {
   const msg = formatSupabaseError(err)
   if (msg.includes('INSUFFICIENT_ACORNS')) {
-    return '도토리가 부족해요. 운동하고 성장치를 쌓아 도토리를 모아보세요!'
+    return '도토리가 부족해요. 운동으로 성장치를 쌓고 도토리를 모아보세요!'
   }
-  if (msg.includes('SLG_GROWTH_REQUIRED')) {
-    return '성장치가 더 필요해요. 운동으로 성장치를 쌓으면 건물이 해금됩니다.'
+  if (msg.includes('SLG_STAGE_REQUIRED')) {
+    return '운동나무 단계가 더 올라가야 이 건물을 지을 수 있어요.'
   }
-  if (msg.includes('SLG_PLAZA_BLOCKED')) {
-    return '광장(운동나무) 칸에는 배치할 수 없어요.'
+  if (msg.includes('SLG_SLOT_ALREADY_BUILT')) {
+    return '이미 건설된 슬롯이에요.'
   }
-  if (msg.includes('SLG_TILE_OCCUPIED')) {
-    return '이미 건물이 있는 칸이에요.'
+  if (msg.includes('SLG_SLOT_NOT_BUILT')) {
+    return '먼저 건물을 건설해 주세요.'
   }
-  if (msg.includes('SLG_INVENTORY_EMPTY')) {
-    return '보관함에 건물이 없어요. 상점에서 먼저 구매해 주세요.'
-  }
-  if (msg.includes('SLG_OUT_OF_BOUNDS')) {
-    return '마을 밖에는 배치할 수 없어요.'
+  if (msg.includes('SLG_MAX_LEVEL')) {
+    return '이 건물은 최대 레벨에 도달했어요.'
   }
   return msg
+}
+
+function builtCount(slots: SlgVillageSlot[]): number {
+  return slots.filter((s) => s.is_built).length
 }
 
 export function MemberVillageSection({ memberId, refreshToken = 0 }: Props) {
@@ -52,19 +50,22 @@ export function MemberVillageSection({ memberId, refreshToken = 0 }: Props) {
     memberId,
     refreshToken,
   )
-  const [mode, setMode] = useState<Mode>({ kind: 'view' })
-  const [selectedPlacement, setSelectedPlacement] =
-    useState<SlgVillageBuilding | null>(null)
+  const [selectedSlotKey, setSelectedSlotKey] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
 
-  const placedMap = useMemo(() => {
-    const map = new Map<string, SlgVillageBuilding>()
-    for (const item of state?.buildings ?? []) {
-      map.set(`${item.x},${item.y}`, item)
+  const slotMap = useMemo(() => {
+    const map = new Map<string, SlgVillageSlot>()
+    for (const slot of state?.slots ?? []) {
+      map.set(`${slot.grid_x},${slot.grid_y}`, slot)
     }
     return map
-  }, [state?.buildings])
+  }, [state?.slots])
+
+  const selectedSlot = useMemo(
+    () => state?.slots.find((s) => s.slot_key === selectedSlotKey) ?? null,
+    [state?.slots, selectedSlotKey],
+  )
 
   const treeSprite = resolveTreeSpriteKey(state?.tree_stage_key ?? 'seed')
 
@@ -80,46 +81,10 @@ export function MemberVillageSection({ memberId, refreshToken = 0 }: Props) {
     }
   }
 
-  function handleTileClick(x: number, y: number) {
-    if (!state) return
-
-    const isPlaza =
-      x === state.village.plaza_x && y === state.village.plaza_y
-    if (isPlaza) return
-
-    const placed = placedMap.get(`${x},${y}`)
-
-    if (mode.kind === 'place') {
-      void runAction(async () => {
-        const next = await placeSlgBuilding(memberId, mode.buildingId, x, y)
-        setState(next)
-        setMode({ kind: 'view' })
-      })
-      return
-    }
-
-    if (mode.kind === 'move') {
-      if (placed && placed.id !== mode.placementId) return
-      void runAction(async () => {
-        const next = await moveSlgBuilding(memberId, mode.placementId, x, y)
-        setState(next)
-        setMode({ kind: 'view' })
-        setSelectedPlacement(null)
-      })
-      return
-    }
-
-    if (placed) {
-      setSelectedPlacement(placed)
-    } else {
-      setSelectedPlacement(null)
-    }
-  }
-
   if (loading) {
     return (
       <div className={`${cardClass} p-6 text-center text-sm text-muted`}>
-        마을을 불러오는 중…
+        MotionHub 마을을 불러오는 중…
       </div>
     )
   }
@@ -131,7 +96,8 @@ export function MemberVillageSection({ memberId, refreshToken = 0 }: Props) {
           {error ?? '마을 정보를 불러올 수 없습니다.'}
         </p>
         <p className="mt-2 text-xs text-red-600/80">
-          Supabase에서 migration_087_slg_village_mvp.sql 실행 후 다시 시도해 주세요.
+          Supabase에서 migration_091_motionhub_village_v2.sql 실행 후 다시 시도해
+          주세요.
         </p>
         <button
           type="button"
@@ -146,55 +112,43 @@ export function MemberVillageSection({ memberId, refreshToken = 0 }: Props) {
 
   const width = state.village.width
   const height = state.village.height
-  const tileSize = 36
+  const tileSize = 44
+  const built = builtCount(state.slots)
 
   return (
     <div className="space-y-4">
       <section className={`${cardClass} p-4`}>
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-base font-semibold text-charcoal">마을 키우기</h3>
+            <h3 className="text-base font-semibold text-charcoal">마을 현황</h3>
             <p className="mt-0.5 text-xs text-muted">
-              운동나무 {state.tree_stage_name} · {width}×{height} · 성장치{' '}
-              {state.total_growth.toLocaleString()}
+              운동나무 {state.tree_stage_name} · 건물 {built}/{state.slots.length}
             </p>
           </div>
           <div className="rounded-xl border border-amber-200/80 bg-amber-50 px-3 py-2 text-right">
-            <p className="text-[10px] font-semibold text-amber-800">보유 도토리</p>
+            <p className="text-[10px] font-semibold text-amber-800">도토리</p>
             <p className="text-lg font-bold tabular-nums text-amber-900">
               {state.current_acorns.toLocaleString()}
             </p>
+            <p className="text-[10px] text-amber-700">마을 발전 재화</p>
           </div>
         </div>
 
-        {mode.kind !== 'view' && (
-          <p className="mt-3 rounded-lg bg-sky-50 px-3 py-2 text-xs font-medium text-sky-900">
-            {mode.kind === 'place'
-              ? `「${mode.itemName}」을(를) 놓을 칸을 탭하세요`
-              : `「${mode.itemName}」을(를) 옮길 칸을 탭하세요`}
-            <button
-              type="button"
-              className="ml-2 underline"
-              onClick={() => {
-                setMode({ kind: 'view' })
-                setSelectedPlacement(null)
-              }}
-            >
-              취소
-            </button>
-          </p>
-        )}
+        <p className="mt-3 rounded-lg bg-cream/80 px-3 py-2 text-xs leading-relaxed text-charcoal/85">
+          운동으로 성장치를 쌓으면 운동나무가 자라고, 단계마다 새 건물 슬롯이
+          열립니다. 도토리로 건설하고 업그레이드해 마을을 발전시켜 보세요.
+        </p>
 
         <div className="mt-4 overflow-x-auto pb-1">
           <div
-            className="mx-auto rounded-2xl p-2.5 shadow-md ring-1 ring-[#4a6f3d]/25"
+            className="mx-auto rounded-2xl p-3 shadow-md ring-1 ring-[#4a6f3d]/25"
             style={{
-              width: width * tileSize + 20,
+              width: width * tileSize + 24,
               background: 'linear-gradient(180deg, #8fcf7e 0%, #6ba85c 100%)',
             }}
           >
             <div
-              className="grid gap-[2px] overflow-hidden rounded-xl"
+              className="grid gap-[3px] overflow-hidden rounded-xl"
               style={{
                 gridTemplateColumns: `repeat(${width}, ${tileSize}px)`,
                 gridTemplateRows: `repeat(${height}, ${tileSize}px)`,
@@ -205,28 +159,33 @@ export function MemberVillageSection({ memberId, refreshToken = 0 }: Props) {
                 Array.from({ length: width }, (_, x) => {
                   const isPlaza =
                     x === state.village.plaza_x && y === state.village.plaza_y
-                  const placed = placedMap.get(`${x},${y}`)
-                  const isSelected = selectedPlacement?.id === placed?.id
-                  const isMoveTarget =
-                    mode.kind === 'move' && mode.placementId === placed?.id
-                  const canPlace =
-                    mode.kind !== 'view' && !isPlaza && !placed
+                  const slot = slotMap.get(`${x},${y}`)
+                  const isSelected = slot?.slot_key === selectedSlotKey
+                  const showBuilding = slot?.is_built
 
                   return (
                     <button
                       key={`${x}-${y}`}
                       type="button"
-                      disabled={actionLoading}
-                      onClick={() => handleTileClick(x, y)}
+                      disabled={actionLoading || !slot}
+                      onClick={() => {
+                        if (slot) setSelectedSlotKey(slot.slot_key)
+                      }}
                       className={`relative overflow-hidden transition duration-150 ${
-                        isSelected || isMoveTarget
+                        isSelected
                           ? 'z-10 ring-2 ring-inset ring-amber-300 ring-offset-1 ring-offset-amber-100'
-                          : canPlace
+                          : slot
                             ? 'hover:brightness-110'
                             : ''
                       }`}
                       style={{ width: tileSize, height: tileSize }}
-                      aria-label={`타일 ${x + 1},${y + 1}`}
+                      aria-label={
+                        isPlaza
+                          ? '운동나무'
+                          : slot
+                            ? `${slot.title} 슬롯`
+                            : `빈 땅 ${x + 1},${y + 1}`
+                      }
                     >
                       <VillageGrassTile
                         x={x}
@@ -243,13 +202,33 @@ export function MemberVillageSection({ memberId, refreshToken = 0 }: Props) {
                           />
                         </span>
                       )}
-                      {placed && (
-                        <span className="pointer-events-none absolute inset-0 flex items-center justify-center pb-0.5">
-                          <SlgVillagePixelSprite
-                            spriteKey={placed.sprite_key}
-                            scale={2}
-                          />
-                        </span>
+                      {slot && !isPlaza && (
+                        <>
+                          {!showBuilding && (
+                            <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                              <span
+                                className={`flex h-8 w-8 items-center justify-center rounded-lg border-2 border-dashed text-lg ${
+                                  slot.is_unlocked
+                                    ? 'border-amber-400/80 bg-amber-50/90 text-amber-700'
+                                    : 'border-gray-300/80 bg-gray-100/80 text-gray-400'
+                                }`}
+                              >
+                                {slot.is_unlocked ? '+' : '🔒'}
+                              </span>
+                            </span>
+                          )}
+                          {showBuilding && (
+                            <span className="pointer-events-none absolute inset-0 flex flex-col items-center justify-end pb-1">
+                              <SlgVillagePixelSprite
+                                spriteKey={slot.sprite_key}
+                                scale={2}
+                              />
+                              <span className="mt-0.5 rounded bg-charcoal/75 px-1 text-[9px] font-bold text-cream">
+                                Lv.{slot.level}
+                              </span>
+                            </span>
+                          )}
+                        </>
                       )}
                     </button>
                   )
@@ -260,149 +239,238 @@ export function MemberVillageSection({ memberId, refreshToken = 0 }: Props) {
         </div>
 
         <p className="mt-2 text-center text-[11px] text-muted">
-          가운데 광장의 운동나무는 성장치에 따라 자랍니다
+          가운데 운동나무를 중심으로 건물 슬롯이 열립니다
+        </p>
+      </section>
+
+      <section className={`${cardClass} p-4`}>
+        <h3 className="text-base font-semibold text-charcoal">건물 · 업그레이드</h3>
+        <p className="mt-1 text-xs text-muted">
+          슬롯을 탭하거나 아래 목록에서 건설·업그레이드하세요
         </p>
 
-        {selectedPlacement && mode.kind === 'view' && (
-          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-gold/25 bg-cream/50 px-3 py-3">
-            <p className="text-sm font-medium text-charcoal">
-              {selectedPlacement.title} 선택됨
-            </p>
-            <button
-              type="button"
-              className={btnOutline}
-              disabled={actionLoading}
-              onClick={() =>
-                setMode({
-                  kind: 'move',
-                  placementId: selectedPlacement.id,
-                  spriteKey: selectedPlacement.sprite_key,
-                  itemName: selectedPlacement.title,
-                })
-              }
-            >
-              이동
-            </button>
-            <button
-              type="button"
-              className={btnOutline}
-              disabled={actionLoading}
-              onClick={() =>
-                void runAction(async () => {
-                  const next = await retrieveSlgBuilding(
-                    memberId,
-                    selectedPlacement.id,
-                  )
-                  setState(next)
-                  setSelectedPlacement(null)
-                })
-              }
-            >
-              회수
-            </button>
-            <p className="w-full text-[11px] text-muted">
-              회수 시 도토리는 환급되지 않아요. 보관함으로 돌아갑니다.
-            </p>
+        {selectedSlot && (
+          <div className="mt-3 rounded-xl border border-gold/25 bg-cream/50 px-3 py-3">
+            <div className="flex items-center gap-3">
+              <SlgVillagePixelSprite spriteKey={selectedSlot.sprite_key} scale={2} />
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-charcoal">
+                  {selectedSlot.title}
+                  {selectedSlot.is_built && (
+                    <span className="ml-1.5 text-xs font-medium text-[#5A9E6F]">
+                      Lv.{selectedSlot.level}
+                    </span>
+                  )}
+                </p>
+                <p className="text-xs text-muted">{selectedSlot.description}</p>
+              </div>
+            </div>
+
+            {!selectedSlot.is_unlocked && (
+              <p className="mt-2 text-xs text-gray-600">
+                🔒{' '}
+                {UNLOCK_STAGE_LABELS[selectedSlot.unlock_stage_key] ??
+                  selectedSlot.unlock_stage_key}{' '}
+                단계에서 해금
+              </p>
+            )}
+
+            {selectedSlot.is_unlocked && !selectedSlot.is_built && (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <p className="text-xs text-amber-800">
+                  건설 비용 🌰{' '}
+                  {(selectedSlot.build_cost_now ?? selectedSlot.build_cost_acorns).toLocaleString()}
+                </p>
+                <button
+                  type="button"
+                  className={btnPrimary}
+                  disabled={
+                    actionLoading ||
+                    state.current_acorns <
+                      (selectedSlot.build_cost_now ?? selectedSlot.build_cost_acorns)
+                  }
+                  onClick={() =>
+                    void runAction(async () => {
+                      const next = await buildSlgVillageSlot(
+                        memberId,
+                        selectedSlot.slot_key,
+                      )
+                      setState(next)
+                    })
+                  }
+                >
+                  건설하기
+                </button>
+              </div>
+            )}
+
+            {selectedSlot.is_built && selectedSlot.next_upgrade_cost != null && (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <p className="text-xs text-amber-800">
+                  업그레이드 비용 🌰{' '}
+                  {selectedSlot.next_upgrade_cost.toLocaleString()} → Lv.
+                  {selectedSlot.level + 1}
+                </p>
+                <button
+                  type="button"
+                  className={btnPrimary}
+                  disabled={
+                    actionLoading ||
+                    state.current_acorns < selectedSlot.next_upgrade_cost
+                  }
+                  onClick={() =>
+                    void runAction(async () => {
+                      const next = await upgradeSlgVillageSlot(
+                        memberId,
+                        selectedSlot.slot_key,
+                      )
+                      setState(next)
+                    })
+                  }
+                >
+                  업그레이드
+                </button>
+              </div>
+            )}
+
+            {selectedSlot.is_built &&
+              selectedSlot.next_upgrade_cost == null &&
+              selectedSlot.level >= selectedSlot.max_level && (
+                <p className="mt-2 text-xs font-medium text-[#5A9E6F]">
+                  최대 레벨에 도달했습니다
+                </p>
+              )}
           </div>
         )}
+
+        <ul className="mt-3 space-y-2">
+          {state.slots.map((slot) => {
+            const tierLabel = SLG_TIER_LABELS[slot.tier] ?? `T${slot.tier}`
+            const unlockBuilding =
+              VILLAGE_UNLOCK_BY_STAGE[slot.unlock_stage_key] ?? slot.title
+
+            return (
+              <li
+                key={slot.slot_key}
+                className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-3 ${
+                  slot.is_unlocked
+                    ? 'border-gold/20 bg-white'
+                    : 'border-gray-200 bg-gray-50/80'
+                }`}
+              >
+                <button
+                  type="button"
+                  className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                  onClick={() => setSelectedSlotKey(slot.slot_key)}
+                >
+                  <div className={slot.is_unlocked ? '' : 'opacity-40'}>
+                    <SlgVillagePixelSprite spriteKey={slot.sprite_key} scale={2} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-charcoal">
+                      {slot.title}
+                      <span className="ml-1.5 text-[10px] font-medium text-muted">
+                        {tierLabel}
+                      </span>
+                      {slot.is_built && (
+                        <span className="ml-1 text-xs text-[#5A9E6F]">
+                          Lv.{slot.level}
+                        </span>
+                      )}
+                    </p>
+                    {slot.is_unlocked ? (
+                      <p className="text-xs text-muted">
+                        {slot.is_built
+                          ? slot.next_upgrade_cost != null
+                            ? `업그레이드 🌰 ${slot.next_upgrade_cost.toLocaleString()}`
+                            : '최대 레벨'
+                          : `건설 🌰 ${(slot.build_cost_now ?? slot.build_cost_acorns).toLocaleString()}`}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-gray-600">
+                        {UNLOCK_STAGE_LABELS[slot.unlock_stage_key]} 단계 해금 ·{' '}
+                        {unlockBuilding}
+                      </p>
+                    )}
+                  </div>
+                </button>
+                {slot.is_unlocked && !slot.is_built && (
+                  <button
+                    type="button"
+                    className={btnOutline}
+                    disabled={
+                      actionLoading ||
+                      state.current_acorns <
+                        (slot.build_cost_now ?? slot.build_cost_acorns)
+                    }
+                    onClick={() =>
+                      void runAction(async () => {
+                        const next = await buildSlgVillageSlot(
+                          memberId,
+                          slot.slot_key,
+                        )
+                        setState(next)
+                        setSelectedSlotKey(slot.slot_key)
+                      })
+                    }
+                  >
+                    건설
+                  </button>
+                )}
+                {slot.is_built && slot.next_upgrade_cost != null && (
+                  <button
+                    type="button"
+                    className={btnOutline}
+                    disabled={
+                      actionLoading ||
+                      state.current_acorns < slot.next_upgrade_cost
+                    }
+                    onClick={() =>
+                      void runAction(async () => {
+                        const next = await upgradeSlgVillageSlot(
+                          memberId,
+                          slot.slot_key,
+                        )
+                        setState(next)
+                        setSelectedSlotKey(slot.slot_key)
+                      })
+                    }
+                  >
+                    업그레이드
+                  </button>
+                )}
+              </li>
+            )
+          })}
+        </ul>
 
         {actionError && (
           <p className="mt-3 text-sm text-red-700">{actionError}</p>
         )}
       </section>
 
-      {state.inventory.length > 0 && (
-        <section className={`${cardClass} p-4`}>
-          <h3 className="text-base font-semibold text-charcoal">보관함</h3>
-          <p className="mt-1 text-xs text-muted">탭해서 마을에 배치하세요</p>
-          <ul className="mt-3 flex flex-wrap gap-2">
-            {state.inventory.map((item) => (
-              <li key={item.id}>
-                <button
-                  type="button"
-                  disabled={actionLoading || mode.kind !== 'view'}
-                  onClick={() =>
-                    setMode({
-                      kind: 'place',
-                      buildingId: item.building_id,
-                      spriteKey: item.sprite_key,
-                      itemName: item.title,
-                    })
-                  }
-                  className="flex items-center gap-2 rounded-xl border border-gold/25 bg-white px-3 py-2 text-left hover:bg-cream/60"
-                >
-                  <SlgVillagePixelSprite spriteKey={item.sprite_key} scale={2} />
-                  <span className="text-sm font-medium text-charcoal">
-                    {item.title}
-                    <span className="ml-1 text-xs text-muted">×{item.quantity}</span>
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
       <section className={`${cardClass} p-4`}>
-        <h3 className="text-base font-semibold text-charcoal">건물 상점</h3>
-        <p className="mt-1 text-xs text-muted">
-          도토리로 건물을 구매하고 마을을 꾸며보세요. 성장치에 따라 상위 건물이
-          해금됩니다.
-        </p>
-        <ul className="mt-3 space-y-3">
-          {state.catalog.map((item) => {
-            const canBuy =
-              item.is_unlocked && state.current_acorns >= item.cost_acorns
-            const tierLabel = SLG_TIER_LABELS[item.tier] ?? `T${item.tier}`
-
+        <h3 className="text-base font-semibold text-charcoal">성장 단계별 해금</h3>
+        <ul className="mt-3 space-y-2 text-sm">
+          {[
+            { key: 'seed', label: '씨앗', unlock: '건물 없음' },
+            { key: 'sprout', label: '새싹', unlock: '창고' },
+            { key: 'small', label: '어린 나무', unlock: '벤치' },
+            { key: 'large', label: '큰 나무', unlock: '광장' },
+            { key: 'sakura', label: '벚꽃나무', unlock: '분수' },
+          ].map((row) => {
+            const isCurrent = state.tree_stage_key === row.key
             return (
               <li
-                key={item.id}
-                className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-3 ${
-                  item.is_unlocked
-                    ? 'border-gold/20 bg-white'
-                    : 'border-gray-200 bg-gray-50/80'
+                key={row.key}
+                className={`flex items-center justify-between rounded-lg px-3 py-2 ${
+                  isCurrent
+                    ? 'bg-[#5A9E6F]/10 font-semibold text-charcoal'
+                    : 'text-charcoal/80'
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <div className={item.is_unlocked ? '' : 'opacity-40'}>
-                    <SlgVillagePixelSprite spriteKey={item.sprite_key} scale={2} />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-charcoal">
-                      {item.title}
-                      <span className="ml-1.5 text-[10px] font-medium text-muted">
-                        {tierLabel}
-                      </span>
-                    </p>
-                    {item.description && (
-                      <p className="text-xs text-muted">{item.description}</p>
-                    )}
-                    {item.is_unlocked ? (
-                      <p className="text-xs text-amber-800">
-                        🌰 {item.cost_acorns.toLocaleString()} 도토리
-                      </p>
-                    ) : (
-                      <p className="text-xs text-gray-600">
-                        🔒 성장치 {item.min_growth.toLocaleString()} 필요 (현재{' '}
-                        {state.total_growth.toLocaleString()})
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className={canBuy ? btnPrimary : btnOutline}
-                  disabled={!canBuy || actionLoading}
-                  onClick={() =>
-                    void runAction(async () => {
-                      const next = await purchaseSlgBuilding(memberId, item.id)
-                      setState(next)
-                    })
-                  }
-                >
-                  {item.is_unlocked ? '구매' : '잠김'}
-                </button>
+                <span>{row.label}</span>
+                <span className="text-xs text-muted">{row.unlock}</span>
               </li>
             )
           })}
