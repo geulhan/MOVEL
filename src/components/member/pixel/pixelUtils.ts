@@ -1,5 +1,4 @@
 import type { PixelGrid, PixelRect } from './pixelTypes'
-import { ARTBOARD_SIZE } from './pixelTypes'
 
 export function gridToRects(
   grid: PixelGrid,
@@ -39,161 +38,137 @@ export function drawSpriteCentered(
   return gridToRects(grid, cx - w / 2, cy - h / 2, cellPx)
 }
 
-/** 16×16 → 고밀도 그리드로 확대 (셀 내부 음영 변화) */
-export function upscaleGrid(base: PixelGrid, targetSize: number): PixelGrid {
-  const factor = Math.max(1, Math.round(targetSize / base.gridSize))
-  const outSize = base.gridSize * factor
-  const outPixels: string[] = []
-
-  for (let y = 0; y < outSize; y += 1) {
-    let row = ''
-    const sy = Math.floor(y / factor)
-    const subY = y % factor
-    for (let x = 0; x < outSize; x += 1) {
-      const sx = Math.floor(x / factor)
-      const subX = x % factor
-      const src = base.pixels[sy]?.[sx] ?? '0'
-      if (src === '0') {
-        row += '0'
-        continue
-      }
-      const baseIdx = Number(src)
-      const edge = subX === 0 || subY === 0
-      const inner = subX === factor - 1 || subY === factor - 1
-      let idx = baseIdx
-      if (edge && baseIdx > 0 && base.palette.length > baseIdx + 1) {
-        idx = Math.min(base.palette.length - 1, baseIdx + ((subX + subY) % 2))
-      } else if (inner && baseIdx > 1) {
-        idx = Math.max(1, baseIdx - 1)
-      }
-      row += String(idx)
-    }
-    outPixels.push(row)
-  }
-
-  return {
-    gridSize: outSize,
-    palette: base.palette,
-    pixels: outPixels,
-  }
-}
-
 function hash2(x: number, y: number): number {
   return ((x * 374761393 + y * 668265263) ^ (x >> 3)) & 0xff
-}
-
-export function buildGrassBackground(): PixelRect[] {
-  const rects: PixelRect[] = []
-  const tile = 16
-  const cols = ARTBOARD_SIZE / tile
-  const rows = ARTBOARD_SIZE / tile
-  const greens = ['#4a7c3f', '#528c46', '#5a9e4f', '#62a857', '#6ba85c', '#73b363']
-  const darks = ['#3d6b35', '#446f38', '#4a753c']
-
-  for (let gy = 0; gy < rows; gy += 1) {
-    for (let gx = 0; gx < cols; gx += 1) {
-      const h = hash2(gx, gy)
-      const palette = h % 7 === 0 ? darks : greens
-      const color = palette[h % palette.length]
-      rects.push({
-        x: gx * tile,
-        y: gy * tile,
-        width: tile,
-        height: tile,
-        fill: color,
-      })
-      if (h % 11 === 0) {
-        rects.push({
-          x: gx * tile + 4,
-          y: gy * tile + 4,
-          width: 3,
-          height: 3,
-          fill: h % 2 === 0 ? '#7bc96f' : '#8ed16e',
-        })
-      }
-    }
-  }
-  return rects
-}
-
-export function buildSkyGradient(): PixelRect[] {
-  const rects: PixelRect[] = []
-  const bands = [
-    { y: 0, h: 120, c: '#9ec9e8' },
-    { y: 120, h: 120, c: '#b4d4eb' },
-    { y: 240, h: 120, c: '#c8e0f0' },
-    { y: 360, h: 80, c: '#d8ebf5' },
-  ]
-  for (const band of bands) {
-    rects.push({
-      x: 0,
-      y: band.y,
-      width: ARTBOARD_SIZE,
-      height: band.h,
-      fill: band.c,
-    })
-  }
-  return rects
 }
 
 export function buildPlazaAndPaths(): PixelRect[] {
   const rects: PixelRect[] = []
   const cx = 512
-  const cy = 480
+  const cy = 468
+  const plazaR = 168
 
-  for (let y = 320; y < 640; y += 8) {
-    for (let x = 352; x < 672; x += 8) {
-      const dx = (x - cx) / 160
-      const dy = (y - cy) / 160
-      if (dx * dx + dy * dy <= 1.05) {
-        const h = hash2(x, y)
-        rects.push({
-          x,
-          y,
-          width: 8,
-          height: 8,
-          fill: h % 3 === 0 ? '#c9b896' : '#d4c4a0',
-        })
+  for (let y = cy - plazaR; y < cy + plazaR; y += 6) {
+    for (let x = cx - plazaR; x < cx + plazaR; x += 6) {
+      const dx = (x - cx) / plazaR
+      const dy = (y - cy) / plazaR
+      const dist = dx * dx + dy * dy
+      if (dist > 1.02) continue
+
+      const ring = dist > 0.82
+      const h = hash2(x, y)
+      let fill: string
+      if (ring) {
+        fill = h % 2 === 0 ? '#a89878' : '#9a8a6c'
+      } else {
+        fill = h % 3 === 0 ? '#ddd0b0' : h % 3 === 1 ? '#d4c4a0' : '#c9b896'
+      }
+      rects.push({ x, y, width: 6, height: 6, fill })
+    }
+  }
+
+  const drawPath = (x0: number, y0: number, x1: number, y1: number, width: number) => {
+    const steps = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) / 4
+    for (let i = 0; i <= steps; i += 1) {
+      const t = i / steps
+      const px = Math.round(x0 + (x1 - x0) * t)
+      const py = Math.round(y0 + (y1 - y0) * t)
+      const h = hash2(px, py)
+      for (let oy = -width / 2; oy < width / 2; oy += 6) {
+        for (let ox = -width / 2; ox < width / 2; ox += 6) {
+          const edge = Math.abs(ox) > width / 2 - 10 || Math.abs(oy) > width / 2 - 10
+          rects.push({
+            x: px + ox,
+            y: py + oy,
+            width: 6,
+            height: 6,
+            fill: edge ? '#9a8a6c' : h % 2 === 0 ? '#c4b498' : '#b8a888',
+          })
+        }
       }
     }
   }
 
-  const pathW = 56
-  const pathColor = '#b8a888'
-  rects.push({ x: cx - pathW / 2, y: 200, width: pathW, height: 180, fill: pathColor })
-  rects.push({ x: cx - pathW / 2, y: 580, width: pathW, height: 180, fill: pathColor })
-  rects.push({ x: 200, y: cy - pathW / 2, width: 180, height: pathW, fill: pathColor })
-  rects.push({ x: 644, y: cy - pathW / 2, width: 180, height: pathW, fill: pathColor })
+  drawPath(cx, cy - plazaR + 20, cx, 200, 48)
+  drawPath(cx, cy + plazaR - 20, cx, 824, 48)
+  drawPath(cx - plazaR + 20, cy, 200, cy, 48)
+  drawPath(cx + plazaR - 20, cy, 824, cy, 48)
+
+  return rects
+}
+
+export function buildGrassAccents(): PixelRect[] {
+  const rects: PixelRect[] = []
+  const accents = [
+    { x: 88, y: 780, c: '#66bb6a' },
+    { x: 120, y: 800, c: '#57a85a' },
+    { x: 900, y: 760, c: '#66bb6a' },
+    { x: 860, y: 820, c: '#4caf50' },
+    { x: 100, y: 200, c: '#81c784' },
+    { x: 920, y: 220, c: '#81c784' },
+  ]
+
+  for (const a of accents) {
+    rects.push({ x: a.x, y: a.y, width: 8, height: 8, fill: a.c })
+    rects.push({ x: a.x + 6, y: a.y - 4, width: 6, height: 6, fill: '#a5d6a7' })
+    rects.push({ x: a.x - 4, y: a.y + 4, width: 5, height: 5, fill: '#388e3c' })
+  }
 
   return rects
 }
 
 export function buildEmptySlotMarker(cx: number, cy: number, unlocked: boolean): PixelRect[] {
   const rects: PixelRect[] = []
-  const size = 120
-  const x = cx - size / 2
-  const y = cy - size / 2
-  const fill = unlocked ? '#f5e6c8' : '#d8d8d8'
-  const border = unlocked ? '#c9a227' : '#9e9e9e'
+  const size = 136
+  const half = size / 2
 
-  for (let py = 0; py < size; py += 8) {
-    for (let px = 0; px < size; px += 8) {
-      const edge =
-        px < 8 || py < 8 || px >= size - 8 || py >= size - 8
-      rects.push({
-        x: x + px,
-        y: y + py,
-        width: 8,
-        height: 8,
-        fill: edge ? border : fill,
-      })
+  for (let py = -half; py < half; py += 4) {
+    for (let px = -half; px < half; px += 4) {
+      const dist = (px * px) / (half * half) + (py * py) / ((half * 0.82) * (half * 0.82))
+      if (dist > 1) continue
+
+      const edge = dist > 0.78
+      const inner = dist < 0.35
+      let fill: string
+      if (!unlocked) {
+        fill = edge ? '#8a8f94' : inner ? '#b8bcc0' : '#a8adb2'
+      } else if (edge) {
+        fill = '#8d6e4a'
+      } else if (inner) {
+        fill = '#e8d5b5'
+      } else {
+        fill = hash2(px, py) % 2 === 0 ? '#d4bc96' : '#c9ad82'
+      }
+      rects.push({ x: cx + px, y: cy + py, width: 4, height: 4, fill })
     }
   }
 
+  const post = unlocked ? '#6d4c33' : '#6b7075'
+  const posts: [number, number][] = [
+    [-half + 8, -half + 10],
+    [half - 12, -half + 10],
+    [-half + 8, half - 14],
+    [half - 12, half - 14],
+  ]
+  for (const [px, py] of posts) {
+    rects.push({ x: cx + px, y: cy + py, width: 6, height: 18, fill: post })
+    rects.push({
+      x: cx + px - 1,
+      y: cy + py - 4,
+      width: 8,
+      height: 5,
+      fill: unlocked ? '#a1887f' : '#909498',
+    })
+  }
+
   if (unlocked) {
-    const plus = '#c9a227'
-    rects.push({ x: cx - 4, y: cy - 28, width: 8, height: 56, fill: plus })
-    rects.push({ x: cx - 28, y: cy - 4, width: 56, height: 8, fill: plus })
+    const gold = '#e6b422'
+    rects.push({ x: cx - 3, y: cy - 22, width: 6, height: 44, fill: gold })
+    rects.push({ x: cx - 22, y: cy - 3, width: 44, height: 6, fill: gold })
+  } else {
+    rects.push({ x: cx - 10, y: cy - 14, width: 20, height: 16, fill: '#757a80' })
+    rects.push({ x: cx - 6, y: cy - 10, width: 12, height: 10, fill: '#9aa0a6' })
+    rects.push({ x: cx - 2, y: cy - 4, width: 4, height: 8, fill: '#5c636a' })
   }
 
   return rects
@@ -210,4 +185,12 @@ export function hitTestSlot(
     }
   }
   return null
+}
+
+export function buildGrassBackground(): PixelRect[] {
+  return buildGrassAccents()
+}
+
+export function buildSkyGradient(): PixelRect[] {
+  return []
 }

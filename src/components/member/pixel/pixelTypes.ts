@@ -47,10 +47,10 @@ export const SLOT_DRAW_ANCHORS: Record<
   SceneSlotKey,
   { cx: number; cy: number; size: number }
 > = {
-  north: { cx: 512, cy: 210, size: 240 },
-  west: { cx: 210, cy: 512, size: 240 },
-  east: { cx: 814, cy: 512, size: 240 },
-  south: { cx: 512, cy: 814, size: 240 },
+  north: { cx: 512, cy: 200, size: 200 },
+  west: { cx: 200, cy: 512, size: 200 },
+  east: { cx: 824, cy: 512, size: 200 },
+  south: { cx: 512, cy: 824, size: 200 },
 }
 
-export const TREE_ANCHOR = { cx: 512, cy: 430, size: 320 }
+export const TREE_ANCHOR = { cx: 512, cy: 450, size: 280 }

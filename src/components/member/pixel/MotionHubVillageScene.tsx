@@ -1,6 +1,14 @@
 import { useMemo } from 'react'
 import { PixelArtboard, PixelRects } from './PixelArtboard'
 import {
+  SceneBackground,
+  drawBuildingShadow,
+  drawLevelBadge,
+  drawSelectionRing,
+  drawSlotGlow,
+  drawTreeShadow,
+} from './SceneBackground'
+import {
   SLOT_DRAW_ANCHORS,
   SLOT_HIT_AREAS,
   SLOT_SCENE_KEYS,
@@ -9,9 +17,8 @@ import {
 } from './pixelTypes'
 import {
   buildEmptySlotMarker,
-  buildGrassBackground,
+  buildGrassAccents,
   buildPlazaAndPaths,
-  buildSkyGradient,
   drawSpriteCentered,
   hitTestSlot,
 } from './pixelUtils'
@@ -41,96 +48,48 @@ export function MotionHubVillageScene({
     return map
   }, [slots])
 
-  const layers = useMemo(() => {
-    const rects = [
-      ...buildSkyGradient(),
-      ...buildGrassBackground(),
-      ...buildPlazaAndPaths(),
-    ]
+  const pixelLayers = useMemo(() => {
+    const rects = [...buildPlazaAndPaths(), ...buildGrassAccents()]
 
     for (const sceneKey of ['north', 'west', 'east', 'south'] as const) {
       const slot = slotBySceneKey.get(sceneKey)
       if (!slot) continue
       const anchor = SLOT_DRAW_ANCHORS[sceneKey]
 
-      if (slot.is_built) {
-        const sprite = resolveBuildingSprite(slot.sprite_key)
-        if (sprite) {
-          rects.push(...drawSpriteCentered(sprite, anchor.cx, anchor.cy, anchor.size))
-        }
-        const badgeY = anchor.cy + anchor.size * 0.22
-        rects.push({
-          x: anchor.cx - 28,
-          y: badgeY,
-          width: 56,
-          height: 20,
-          fill: '#2d3436',
-        })
-      } else {
-        rects.push(
-          ...buildEmptySlotMarker(anchor.cx, anchor.cy, slot.is_unlocked),
-        )
+      if (!slot.is_built) {
+        rects.push(...buildEmptySlotMarker(anchor.cx, anchor.cy, slot.is_unlocked))
+      }
+    }
+
+    for (const sceneKey of ['north', 'west', 'east', 'south'] as const) {
+      const slot = slotBySceneKey.get(sceneKey)
+      if (!slot?.is_built) continue
+      const anchor = SLOT_DRAW_ANCHORS[sceneKey]
+      const sprite = resolveBuildingSprite(slot.sprite_key)
+      if (sprite) {
+        rects.push(...drawSpriteCentered(sprite, anchor.cx, anchor.cy - 8, anchor.size + 16))
       }
     }
 
     const tree = resolveVillageTreeSprite(treeStageKey)
     rects.push(
-      ...drawSpriteCentered(tree, TREE_ANCHOR.cx, TREE_ANCHOR.cy, TREE_ANCHOR.size),
+      ...drawSpriteCentered(tree, TREE_ANCHOR.cx, TREE_ANCHOR.cy - 16, TREE_ANCHOR.size + 24),
     )
 
     return rects
   }, [slotBySceneKey, treeStageKey])
 
-  const highlights = useMemo(() => {
-    if (!selectedSlotKey) return []
-    const sceneKey = SLOT_SCENE_KEYS[selectedSlotKey]
-    if (!sceneKey) return []
-    const area = SLOT_HIT_AREAS[sceneKey]
-    return [
-      {
-        x: area.x,
-        y: area.y,
-        width: area.w,
-        height: area.h,
-        fill: 'rgba(255, 214, 102, 0.28)',
-      },
-      {
-        x: area.x,
-        y: area.y,
-        width: area.w,
-        height: 4,
-        fill: '#ffd666',
-      },
-      {
-        x: area.x,
-        y: area.y + area.h - 4,
-        width: area.w,
-        height: 4,
-        fill: '#ffd666',
-      },
-      {
-        x: area.x,
-        y: area.y,
-        width: 4,
-        height: area.h,
-        fill: '#ffd666',
-      },
-      {
-        x: area.x + area.w - 4,
-        y: area.y,
-        width: 4,
-        height: area.h,
-        fill: '#ffd666',
-      },
-    ]
-  }, [selectedSlotKey])
+  const selectedSceneKey = selectedSlotKey
+    ? SLOT_SCENE_KEYS[selectedSlotKey]
+    : null
 
   return (
     <div
-      className={`mx-auto w-full max-w-md overflow-hidden rounded-2xl shadow-lg ring-1 ring-[#4a6f3d]/30 ${className}`}
+      className={`mx-auto w-full max-w-md overflow-hidden rounded-2xl bg-[#2d4a28] p-1 shadow-xl ring-1 ring-[#8fbc8f]/40 ${className}`}
     >
       <PixelArtboard
         ariaLabel="MotionHub 마을"
+        className="rounded-xl"
         onClick={({ x, y }) => {
           const sceneKey = hitTestSlot(x, y, SLOT_HIT_AREAS)
           if (!sceneKey) return
@@ -138,14 +97,44 @@ export function MotionHubVillageScene({
           if (slot && onSlotClick) onSlotClick(slot.slot_key)
         }}
       >
-        <PixelRects rects={layers} />
-        <PixelRects rects={highlights} />
+        <SceneBackground />
+
+        {(['north', 'west', 'east', 'south'] as const).map((sceneKey) => {
+          const slot = slotBySceneKey.get(sceneKey)
+          if (!slot) return null
+          const anchor = SLOT_DRAW_ANCHORS[sceneKey]
+          const selected = selectedSceneKey === sceneKey
+          return drawSlotGlow(
+            anchor.cx,
+            anchor.cy,
+            anchor.size,
+            slot.is_unlocked,
+            selected,
+          )
+        })}
+
+        <PixelRects rects={pixelLayers} />
+
+        {drawTreeShadow(TREE_ANCHOR.cx, TREE_ANCHOR.cy, TREE_ANCHOR.size)}
+
+        {(['north', 'west', 'east', 'south'] as const).map((sceneKey) => {
+          const slot = slotBySceneKey.get(sceneKey)
+          if (!slot?.is_built) return null
+          const anchor = SLOT_DRAW_ANCHORS[sceneKey]
+          return (
+            <g key={`shadow-${sceneKey}`}>
+              {drawBuildingShadow(anchor.cx, anchor.cy, anchor.size)}
+              {drawLevelBadge(anchor.cx, anchor.cy + anchor.size * 0.28, slot.level)}
+            </g>
+          )
+        })}
+
+        {selectedSceneKey && drawSelectionRing(SLOT_HIT_AREAS[selectedSceneKey])}
       </PixelArtboard>
     </div>
   )
 }
 
-/** 성장 탭 운동나무만 크게 표시 */
 export function MotionHubTreeScene({
   treeStageKey,
   className = '',
@@ -153,23 +142,23 @@ export function MotionHubTreeScene({
   treeStageKey: string
   className?: string
 }) {
-  const rects = useMemo(() => {
-    const bg = [
-      ...buildSkyGradient(),
-      ...buildGrassBackground(),
-      ...buildPlazaAndPaths(),
-    ]
+  const pixelLayers = useMemo(() => {
     const tree = resolveVillageTreeSprite(treeStageKey)
     return [
-      ...bg,
-      ...drawSpriteCentered(tree, TREE_ANCHOR.cx, TREE_ANCHOR.cy, TREE_ANCHOR.size + 40),
+      ...buildPlazaAndPaths(),
+      ...buildGrassAccents(),
+      ...drawSpriteCentered(tree, TREE_ANCHOR.cx, TREE_ANCHOR.cy - 20, TREE_ANCHOR.size + 48),
     ]
   }, [treeStageKey])
 
   return (
-    <div className={`mx-auto w-full max-w-sm ${className}`}>
-      <PixelArtboard ariaLabel="운동나무">
-        <PixelRects rects={rects} />
+    <div
+      className={`mx-auto w-full max-w-sm overflow-hidden rounded-2xl bg-[#2d4a28] p-1 shadow-lg ring-1 ring-[#8fbc8f]/35 ${className}`}
+    >
+      <PixelArtboard ariaLabel="운동나무" className="rounded-xl">
+        <SceneBackground />
+        {drawTreeShadow(TREE_ANCHOR.cx, TREE_ANCHOR.cy, TREE_ANCHOR.size + 20)}
+        <PixelRects rects={pixelLayers} />
       </PixelArtboard>
     </div>
   )
