@@ -46,6 +46,13 @@ export function formatSupabaseError(err: unknown): string {
     return authRpcSetupMessage(kind, `${msg}${details}`)
   }
 
+  if (msg.includes('SEASON_LEVEL_NOT_REACHED')) {
+    return '아직 해당 레벨에 도달하지 않았습니다.'
+  }
+  if (msg.includes('SEASON_REWARD_ALREADY_CLAIMED')) {
+    return '이미 수령한 보상입니다.'
+  }
+
   if (msg.includes('INSUFFICIENT_ACORNS')) {
     return '도토리가 부족합니다. 운동으로 성장치를 쌓고 도토리를 모아보세요.'
   }
@@ -64,6 +71,10 @@ export function formatSupabaseError(err: unknown): string {
     msg.includes('garden_shop_items') ||
     msg.includes('get_garden_state') ||
     msg.includes('purchase_garden_shop_item') ||
+    msg.includes('seasons') ||
+    msg.includes('season_rewards') ||
+    msg.includes('get_season_pass_state') ||
+    msg.includes('claim_season_reward') ||
     msg.includes('get_growth_profile') ||
     msg.includes('post_growth_event')
   ) {
@@ -71,7 +82,7 @@ export function formatSupabaseError(err: unknown): string {
       '성장 시스템 DB가 아직 설정되지 않았습니다. ' +
       'Supabase SQL Editor에서 supabase/migration_078_platform_growth_mvp.sql, ' +
       'migration_080_growth_reward_balance.sql, migration_081_growth_events_auto_earn.sql, ' +
-      'migration_083_growth_achievements_notifications.sql, migration_084_center_challenges.sql, migration_085_garden_mvp.sql 을 실행해 주세요.'
+      'migration_083_growth_achievements_notifications.sql, migration_084_center_challenges.sql, migration_085_garden_mvp.sql, migration_086_season_pass_mvp.sql 을 실행해 주세요.'
     )
   }
 

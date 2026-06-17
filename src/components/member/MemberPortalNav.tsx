@@ -4,6 +4,7 @@ type TabId =
   | 'inbody'
   | 'payment'
   | 'growth'
+  | 'season'
   | 'rewards'
   | 'mypage'
 
@@ -18,6 +19,7 @@ const NAV_ITEMS: { id: TabId; lines: string[] }[] = [
   { id: 'inbody', lines: ['인바디'] },
   { id: 'payment', lines: ['결제'] },
   { id: 'growth', lines: ['성장', '정원'] },
+  { id: 'season', lines: ['시즌'] },
   { id: 'rewards', lines: ['리워드'] },
   { id: 'mypage', lines: ['마이', '페이지'] },
 ]
@@ -26,11 +28,12 @@ export function MemberPortalNav({ activeTab, onSelect }: Props) {
   return (
     <nav
       aria-label="회원 메뉴"
-      className="grid grid-cols-7 gap-1 rounded-2xl border border-gold/20 bg-white p-1.5 shadow-sm"
+      className="grid grid-cols-8 gap-1 rounded-2xl border border-gold/20 bg-white p-1.5 shadow-sm"
     >
       {NAV_ITEMS.map((item) => {
         const isActive = activeTab === item.id
         const isGrowth = item.id === 'growth'
+        const isSeason = item.id === 'season'
         const isRewards = item.id === 'rewards'
 
         return (
@@ -48,7 +51,7 @@ export function MemberPortalNav({ activeTab, onSelect }: Props) {
               <span
                 key={line}
                 className={`text-center leading-tight font-bold ${
-                  isGrowth || isRewards
+                  isGrowth || isSeason || isRewards
                     ? 'text-[10px] tracking-tight'
                     : 'text-xs tracking-tight'
                 } ${isActive ? 'text-cream' : 'text-charcoal'}`}

@@ -15,6 +15,7 @@ import MemberAdminDetailRedirect from './pages/admin/MemberAdminDetailRedirect'
 import SchedulePage from './pages/admin/SchedulePage'
 import AttendancePage from './pages/admin/AttendancePage'
 import TrainersPage from './pages/admin/TrainersPage'
+import SeasonPassPage from './pages/admin/SeasonPassPage'
 import ChallengesPage from './pages/admin/ChallengesPage'
 import RewardsPage from './pages/admin/RewardsPage'
 import MessagesPage from './pages/admin/MessagesPage'
@@ -86,6 +87,7 @@ export default function App() {
             <Route path="trainers" element={<TrainersPage />} />
             <Route path="rewards" element={<RewardsPage />} />
             <Route path="challenges" element={<ChallengesPage />} />
+            <Route path="season-pass" element={<SeasonPassPage />} />
             <Route path="messages" element={<MessagesPage />} />
             <Route path="payments" element={<PaymentsPage />} />
             <Route path="analytics" element={<BusinessAnalyticsPage />} />
