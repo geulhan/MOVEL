@@ -6,6 +6,7 @@ import {
   MILE_EXPIRY_MONTHS,
   REDEMPTION_MAX_PERCENT,
   REWARD_EVENT_LABELS,
+  MIN_STEPS_FOR_VERIFICATION,
   STEP_REWARD_TIERS,
   STREAK_DAYS,
   type CustomRewardRule,
@@ -140,6 +141,8 @@ export function normalizeEarnRules(
   const raw = value as Record<string, unknown> | null | undefined
   return {
     pt_attendance: normalizeEarnRule(value?.pt_attendance, defaults.pt_attendance),
+    steps_3000: normalizeEarnRule(value?.steps_3000, defaults.steps_3000),
+    steps_5000: normalizeEarnRule(value?.steps_5000, defaults.steps_5000),
     steps_7000: normalizeEarnRule(value?.steps_7000, defaults.steps_7000),
     steps_10000: normalizeEarnRule(value?.steps_10000, defaults.steps_10000),
     steps_15000: normalizeEarnRule(value?.steps_15000, defaults.steps_15000),
@@ -807,7 +810,7 @@ export async function awardStepRewardsFromVerification(
 }
 
 function isQualifyingDay(activity: DailyActivity): boolean {
-  return activity.has_pt_attendance || activity.step_count >= 7000
+  return activity.has_pt_attendance || activity.step_count >= MIN_STEPS_FOR_VERIFICATION
 }
 
 async function checkStreakReward(memberId: string): Promise<void> {

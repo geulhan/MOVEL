@@ -1,4 +1,5 @@
 import { todayDateString } from '../../api/members'
+import { MIN_STEPS_FOR_VERIFICATION } from '../../constants/rewards'
 import {
   extractVerificationCodesFromText,
   normalizeVerificationCode,
@@ -39,11 +40,9 @@ function stepCountQualityBonus(n: number): number {
   if (n >= 20_000) return -1800
   if (isRoundStepGoal(n)) return -400
   if (n % 1000 === 0) return -300
-  if (n >= MIN_DAILY_STEPS && n < 20_000) return 300
+  if (n >= MIN_STEPS_FOR_VERIFICATION && n < 20_000) return 300
   return 0
 }
-
-const MIN_DAILY_STEPS = 7000
 
 function scoreParseResult(result: StepOcrParseResult): number {
   let score = 0
@@ -153,8 +152,8 @@ function pickBestStepCount(candidates: StepCountCandidate[]): number | null {
     .sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score
       if (
-        a.value >= MIN_DAILY_STEPS &&
-        b.value >= MIN_DAILY_STEPS &&
+        a.value >= MIN_STEPS_FOR_VERIFICATION &&
+        b.value >= MIN_STEPS_FOR_VERIFICATION &&
         a.value <= 20_000 &&
         b.value <= 20_000
       ) {

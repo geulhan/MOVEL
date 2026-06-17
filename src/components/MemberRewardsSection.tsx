@@ -15,7 +15,11 @@ import {
   type StepVerification,
   type SubmitStepVerificationOptions,
 } from '../api/stepVerification'
-import { REWARD_EVENT_LABELS, type RewardEventType } from '../constants/rewards'
+import {
+  MIN_STEPS_FOR_VERIFICATION,
+  REWARD_EVENT_LABELS,
+  type RewardEventType,
+} from '../constants/rewards'
 import { formatDate, todayDateString } from '../api/members'
 import { formatSupabaseError } from '../lib/errors'
 import {
@@ -298,7 +302,7 @@ export function MemberRewardsSection({ memberId, refreshToken }: Props) {
             </li>
             <li>
               <strong>공통:</strong> 인증 기준{' '}
-              <strong>7,000보 이상</strong> · 오늘 날짜
+              <strong>{MIN_STEPS_FOR_VERIFICATION.toLocaleString()}보 이상</strong> · 오늘 날짜
             </li>
           </ul>
         </details>

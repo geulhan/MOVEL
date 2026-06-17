@@ -2,6 +2,7 @@ import {
   CUSTOM_REWARD_TRIGGER_LABELS,
   DEFAULT_REWARD_RULES,
   isPaymentCustomRewardTrigger,
+  MIN_STEPS_FOR_VERIFICATION,
   type RewardEarnRules,
   MILE_EXPIRY_MONTHS,
   REDEMPTION_MAX_PERCENT,
@@ -92,7 +93,7 @@ export function buildMemberRewardGuide(
     {
       key: 'streak_7day',
       title: REWARD_EVENT_LABELS.streak_7day,
-      description: `${STREAK_DAYS}일 연속 활동 달성 시 (PT 출석 또는 7,000보 이상)`,
+      description: `${STREAK_DAYS}일 연속 활동 달성 시 (PT 출석 또는 ${MIN_STEPS_FOR_VERIFICATION.toLocaleString()}보 이상)`,
       score: formatRewardAmount(rules.streak_7day.score, '점'),
       mile: formatRewardAmount(rules.streak_7day.mile, 'M'),
     },
@@ -144,7 +145,7 @@ export function buildMemberRewardGuide(
     `MOVE SCORE는 누적 등급(BRONZE → MOVEL ELITE)에만 사용되며 현금 가치가 없습니다.`,
     `MOVE MILE은 재등록 결제 시 사용 가능 (결제금액의 최대 ${redemptionMaxPercent}%, 1M = 1원).`,
     `MILE 유효기간은 적립일 기준 ${MILE_EXPIRY_MONTHS}개월입니다.`,
-    `걸음 인증은 하루 1회이며, 7,000보 미만은 반려됩니다.`,
+    `걸음 인증은 하루 1회이며, ${MIN_STEPS_FOR_VERIFICATION.toLocaleString()}보 미만은 반려됩니다.`,
   ]
 
   return { earnRows, tierRows, notes }
