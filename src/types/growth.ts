@@ -23,7 +23,7 @@ export type GrowthRewardRule = {
   display_name_ko: string
   growth_reward: number
   acorn_reward: number
-  limit_period: 'none' | 'monthly'
+  limit_period: 'none' | 'monthly' | 'rolling_30d'
   limit_count: number | null
 }
 
@@ -48,7 +48,59 @@ export type GrowthTreeInfo = {
 export type GrowthActivityRow = {
   id: string
   event_type: GrowthEventType | string
+  title_ko?: string
   growth_amount: number
+  acorn_amount?: number
+  source: string | null
+  created_at: string
+}
+
+export type GrowthTimelineItem = {
+  id: string
+  kind: 'activity' | 'achievement' | 'tree_stage' | string
+  title: string
+  subtitle: string | null
+  icon: string | null
+  growth_amount: number
+  acorn_amount: number
+  created_at: string
+}
+
+export type GrowthNotification = {
+  id: string
+  notification_type: 'achievement' | 'tree_stage' | string
+  title: string
+  body: string | null
+  icon: string
+  growth_amount: number
+  acorn_amount: number
+  is_read: boolean
+  created_at: string
+}
+
+export type GrowthAchievement = {
+  id: string
+  code: string
+  title: string
+  description: string
+  icon: string
+  metric_type: string
+  target_value: number
+  reward_growth: number
+  reward_acorn: number
+  sort_order: number
+  current_value: number
+  is_unlocked: boolean
+  unlocked_at: string | null
+}
+
+export type GrowthFeedItem = {
+  id: string
+  event_type: GrowthEventType | string
+  event_key?: string
+  title_ko: string
+  growth_amount: number
+  acorn_amount: number
   source: string | null
   created_at: string
 }
@@ -66,7 +118,12 @@ export type GrowthProfile = {
   growth_until_next: number
   is_max_stage: boolean
   tree: GrowthTreeInfo
+  growth_feed: GrowthFeedItem[]
   recent_growth: GrowthActivityRow[]
+  growth_timeline: GrowthTimelineItem[]
+  growth_notifications: GrowthNotification[]
+  unread_notification_count: number
+  achievements: GrowthAchievement[]
   reward_rules: GrowthRewardRule[]
   tree_stages: GrowthTreeStageRow[]
 }
@@ -76,7 +133,11 @@ export type PostGrowthEventResult = {
   duplicate: boolean
   limit_reached?: boolean
   user_id: string
+  member_id?: string
   event_type?: string
+  event_key?: string
+  feed_id?: string
+  title_ko?: string
   growth_awarded?: number
   acorns_awarded?: number
   total_growth: number
@@ -145,7 +206,7 @@ export const DEFAULT_GROWTH_REWARD_RULES: GrowthRewardRule[] = [
     display_name_ko: '체성분 측정',
     growth_reward: 50,
     acorn_reward: 3,
-    limit_period: 'monthly',
+    limit_period: 'rolling_30d',
     limit_count: 1,
   },
   {

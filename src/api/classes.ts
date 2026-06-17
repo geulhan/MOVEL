@@ -1,6 +1,6 @@
 import { getCurrentCenterId } from '../lib/center'
 import { supabase } from '../lib/supabase'
-import { awardGrowthOnGroupClassAttendance } from './growth'
+import { earnGrowthOnGroupClassAttendance } from './growth/growthEarnService'
 
 export type ClassType = 'pilates' | 'yoga' | 'gx' | 'group_pt'
 export type PassType = ClassType | 'none'
@@ -584,7 +584,7 @@ export async function updateReservationStatus(input: {
     if (attError && attError.code !== '23505') throw attError
 
     if (attendanceRow?.id) {
-      void awardGrowthOnGroupClassAttendance(
+      void earnGrowthOnGroupClassAttendance(
         input.memberId,
         String(attendanceRow.id),
       )

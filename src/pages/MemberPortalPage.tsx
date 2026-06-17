@@ -227,12 +227,18 @@ export default function MemberPortalPage() {
     e.preventDefault()
     setLoginError(null)
 
-    const slugForLogin = resolvedCenterSlug || undefined
+    const slugForLogin = resolvedCenterSlug.trim().toLowerCase()
+    if (!slugForLogin) {
+      setLoginError(
+        '이용 중인 센터를 선택해 주세요. (모벨 퍼포먼스: movel)',
+      )
+      return
+    }
 
     setLoginLoading(true)
     try {
       const { memberId } = await loginMember(loginPhone, loginPassword, slugForLogin)
-      if (slugForLogin) saveRememberedMemberCenterSlug(slugForLogin)
+      saveRememberedMemberCenterSlug(slugForLogin)
       const loggedInMember = await fetchMemberById(memberId)
       setMember(loggedInMember)
       if (rememberLogin) {
@@ -342,10 +348,17 @@ export default function MemberPortalPage() {
           {authMode === 'login' ? (
             <>
               <p className="mt-4 text-sm text-muted">
-                아이디는 휴대전화번호(숫자만)입니다. 관리자 등록 회원은 최초 비밀번호가 번호
-                뒤 4자리입니다.
+                이용 중인 센터를 선택한 뒤 로그인하세요. 아이디는 휴대전화번호(숫자만)이며,
+                관리자 등록 회원의 최초 비밀번호는 번호 뒤 4자리입니다.
               </p>
               <form onSubmit={(e) => void handleLogin(e)} className="mt-5 space-y-4">
+                <CenterSearchPicker
+                  centers={signupCenters}
+                  loading={signupCentersLoading}
+                  selectedSlug={resolvedCenterSlug}
+                  onSelect={setCenterSlug}
+                  disabled={loginLoading}
+                />
                 <label className="block">
                   <span className="mb-1.5 block text-sm font-medium">
                     아이디 (휴대전화번호)
@@ -388,7 +401,12 @@ export default function MemberPortalPage() {
                 </label>
                 <button
                   type="submit"
-                  disabled={loginLoading || loginPhone.length !== 11 || !loginPassword}
+                  disabled={
+                    loginLoading ||
+                    !resolvedCenterSlug ||
+                    loginPhone.length !== 11 ||
+                    !loginPassword
+                  }
                   className={`w-full ${btnPrimary}`}
                 >
                   {loginLoading ? '로그인 중…' : '로그인'}

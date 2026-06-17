@@ -51,7 +51,7 @@ function loginErrorMessage(row?: { error?: string; message?: string }): string {
   if (row?.message) return row.message
   switch (row?.error) {
     case 'not_found':
-      return '등록되지 않은 휴대전화번호입니다. 센터에 등록된 번호인지 확인해 주세요.'
+      return '등록되지 않은 휴대전화번호입니다. 이용 중인 센터를 선택했는지 확인해 주세요.'
     case 'no_credentials':
       return '회원 비밀번호가 설정되지 않았습니다. 센터에 문의해 주세요.'
     case 'wrong_password':
@@ -71,7 +71,7 @@ function loginErrorMessage(row?: { error?: string; message?: string }): string {
     case 'multiple_centers':
       return '여러 센터에 등록된 번호입니다. 센터에서 안내한 링크로 접속해 주세요.'
     case 'center_required':
-      return '가입할 센터를 선택해 주세요.'
+      return '가입·이용 중인 센터를 선택하거나, 센터에서 안내한 회원 페이지 링크로 접속해 주세요.'
     default:
       return '아이디 또는 비밀번호가 올바르지 않습니다.'
   }

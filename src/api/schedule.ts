@@ -1,6 +1,7 @@
 import { getCurrentCenterId } from '../lib/center'
 import { supabase } from '../lib/supabase'
 import { isSameLocalDay } from '../utils/date'
+import { earnGrowthOnPtSessionCompleted } from './growth/growthEarnService'
 import { logPlatformActivity } from './platformActivity'
 
 export const DEFAULT_PT_DURATION_MINUTES = 50
@@ -107,12 +108,29 @@ export async function updateScheduleStatus(
   id: string,
   status: ScheduleStatus,
 ): Promise<void> {
+  const { data: before, error: fetchError } = await supabase
+    .from('pt_schedules')
+    .select('member_id, status')
+    .eq('id', id)
+    .single()
+
+  if (fetchError) throw fetchError
+
   const { error } = await supabase
     .from('pt_schedules')
     .update({ status, updated_at: new Date().toISOString() })
     .eq('id', id)
 
   if (error) throw error
+
+  if (
+    status === 'completed' &&
+    before &&
+    before.status !== 'completed' &&
+    before.member_id
+  ) {
+    void earnGrowthOnPtSessionCompleted(String(before.member_id), id)
+  }
 }
 
 export async function deleteSchedule(id: string): Promise<void> {

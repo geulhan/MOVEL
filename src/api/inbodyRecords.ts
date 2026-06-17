@@ -1,6 +1,6 @@
 import { resolveCenterIdForMember } from '../lib/center'
 import { supabase } from '../lib/supabase'
-import { awardGrowthOnBodyComposition } from './growth'
+import { earnGrowthOnBodyComposition } from './growth/growthEarnService'
 
 export type InbodyCreatedBy = 'member' | 'trainer' | 'admin'
 
@@ -74,9 +74,7 @@ export async function createInbodyRecord(
 
   if (error) throw error
 
-  if ((input.created_by ?? 'member') === 'member') {
-    void awardGrowthOnBodyComposition(memberId, data.id)
-  }
+  void earnGrowthOnBodyComposition(memberId, data.id)
 
   return normalize(data as InbodyRecord)
 }

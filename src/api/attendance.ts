@@ -13,7 +13,6 @@ import {
   type ScheduleStatus,
 } from './schedule'
 import { deductSession, fetchMembers, restoreOneSession, assertMemberCanCheckIn, normalizeMember } from './members'
-import { awardGrowthOnPtAttendance } from './growth'
 import { logPlatformActivity } from './platformActivity'
 
 export type AttendanceMethod = 'self' | 'admin' | 'trainer'
@@ -136,8 +135,6 @@ export async function checkInMember(
     } catch (rewardErr) {
       console.warn('리워드 적립 실패:', rewardErr)
     }
-
-    void awardGrowthOnPtAttendance(memberId, attendance.id)
 
     void logPlatformActivity('attendance_checkin', {
       centerId: memberCenterId,

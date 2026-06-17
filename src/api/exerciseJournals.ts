@@ -1,6 +1,6 @@
 import { getCurrentCenterId, resolveCenterIdForMember } from '../lib/center'
 import { supabase } from '../lib/supabase'
-import { awardGrowthOnWorkoutLog } from './growth'
+import { earnGrowthOnWorkoutLog } from './growth/growthEarnService'
 import { awardCustomRulesOnExerciseJournal } from './rewards'
 import { logPlatformActivity } from './platformActivity'
 
@@ -160,13 +160,7 @@ export async function createExerciseJournal(
     metadata: { journal_id: data.id, member_id: memberId },
   })
 
-  if (input.created_by === 'member') {
-    void awardGrowthOnWorkoutLog(
-      memberId,
-      data.id,
-      image_urls.length > 0,
-    )
-  }
+  void earnGrowthOnWorkoutLog(memberId, data.id, image_urls.length > 0)
 
   try {
     await awardCustomRulesOnExerciseJournal(memberId, data.id)

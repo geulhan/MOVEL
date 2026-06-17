@@ -51,13 +51,17 @@ export function formatSupabaseError(err: unknown): string {
     msg.includes('growth_transactions') ||
     msg.includes('acorn_transactions') ||
     msg.includes('growth_reward_rules') ||
+    msg.includes('growth_events') ||
+    msg.includes('growth_achievements') ||
+    msg.includes('growth_notifications') ||
     msg.includes('get_growth_profile') ||
     msg.includes('post_growth_event')
   ) {
     return (
       '성장 시스템 DB가 아직 설정되지 않았습니다. ' +
-      'Supabase SQL Editor에서 supabase/migration_078_platform_growth_mvp.sql 과 ' +
-      'supabase/migration_080_growth_reward_balance.sql 을 실행해 주세요.'
+      'Supabase SQL Editor에서 supabase/migration_078_platform_growth_mvp.sql, ' +
+      'migration_080_growth_reward_balance.sql, migration_081_growth_events_auto_earn.sql, ' +
+      'migration_083_growth_achievements_notifications.sql 을 실행해 주세요.'
     )
   }
 
