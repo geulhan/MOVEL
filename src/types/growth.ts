@@ -10,6 +10,11 @@ export type GrowthEventType =
   | 'CHALLENGE'
   | 'STREAK_7_DAYS'
   | 'STREAK_30_DAYS'
+  | 'STEPS_3000'
+  | 'STEPS_5000'
+  | 'STEPS_7000'
+  | 'STEPS_10000'
+  | 'STEPS_15000'
   | 'MANUAL'
 
 export type GrowthTreeStageKey =

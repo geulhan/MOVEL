@@ -34,8 +34,8 @@ export function getNextTier(score: number): {
   return { tier: 'SILVER', remaining: 1000 - score }
 }
 
-/** 걸음 인증 최소 기준 (3,000보 미만은 반려) */
-export const MIN_STEPS_FOR_VERIFICATION = 3000
+/** 걸음 인증 최소 기준 (7,000보 미만은 반려) */
+export const MIN_STEPS_FOR_VERIFICATION = 7000
 
 /** 관리자가 추가하는 맞춤 적립 규칙 */
 export type CustomRewardTrigger =
@@ -115,8 +115,6 @@ export type RewardEarnRule = { score: number; mile: number }
 
 export type RewardEarnRules = {
   pt_attendance: RewardEarnRule
-  steps_3000: RewardEarnRule
-  steps_5000: RewardEarnRule
   steps_7000: RewardEarnRule
   steps_10000: RewardEarnRule
   steps_15000: RewardEarnRule
@@ -130,11 +128,9 @@ export type RewardEarnRules = {
 
 export const DEFAULT_REWARD_RULES: RewardEarnRules = {
   pt_attendance: { score: 20, mile: 500 },
-  steps_3000: { score: 5, mile: 100 },
-  steps_5000: { score: 8, mile: 200 },
   steps_7000: { score: 10, mile: 300 },
   steps_10000: { score: 15, mile: 500 },
-  steps_15000: { score: 25, mile: 800 },
+  steps_15000: { score: 20, mile: 700 },
   exercise_journal: { score: 5, mile: 100 },
   streak_7day: { score: 50, mile: 3000 },
   naver_review: { score: 0, mile: 10000 },
@@ -145,7 +141,8 @@ export const DEFAULT_REWARD_RULES: RewardEarnRules = {
 
 export const MILE_EXPIRY_MONTHS = 12
 export const REDEMPTION_MAX_PERCENT = 20
-export const STEP_THRESHOLDS = [3000, 5000, 7000, 10000, 15000] as const
+/** 마일리지 적립 걸음 구간 (7k/10k/15k) */
+export const STEP_MILEAGE_THRESHOLDS = [7000, 10000, 15000] as const
 
 /** 건강앱 목표 걸음수로 자주 나오는 값 — OCR 오인 방지 */
 export const COMMON_STEP_GOALS = [
@@ -153,8 +150,6 @@ export const COMMON_STEP_GOALS = [
 ] as const
 
 export const STEP_REWARD_TIERS = [
-  { key: 'steps_3000' as const, min: 3000 },
-  { key: 'steps_5000' as const, min: 5000 },
   { key: 'steps_7000' as const, min: 7000 },
   { key: 'steps_10000' as const, min: 10000 },
   { key: 'steps_15000' as const, min: 15000 },
@@ -163,8 +158,6 @@ export const STREAK_DAYS = 7
 
 export type RewardEventType =
   | 'pt_attendance'
-  | 'steps_3000'
-  | 'steps_5000'
   | 'steps_7000'
   | 'steps_10000'
   | 'steps_15000'
@@ -181,8 +174,6 @@ export type RewardEventType =
 
 export const REWARD_EVENT_LABELS: Record<RewardEventType, string> = {
   pt_attendance: 'PT 출석',
-  steps_3000: '3,000보 달성',
-  steps_5000: '5,000보 달성',
   steps_7000: '7,000보 달성',
   steps_10000: '10,000보 달성',
   steps_15000: '15,000보 달성',

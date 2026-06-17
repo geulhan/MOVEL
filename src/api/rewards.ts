@@ -15,6 +15,7 @@ import {
   type RewardEventType,
   type RewardTier,
 } from '../constants/rewards'
+import { earnGrowthOnStepVerification } from './growth/growthEarnService'
 import {
   PAYMENT_CATEGORIES,
   type PaymentCategory,
@@ -141,8 +142,6 @@ export function normalizeEarnRules(
   const raw = value as Record<string, unknown> | null | undefined
   return {
     pt_attendance: normalizeEarnRule(value?.pt_attendance, defaults.pt_attendance),
-    steps_3000: normalizeEarnRule(value?.steps_3000, defaults.steps_3000),
-    steps_5000: normalizeEarnRule(value?.steps_5000, defaults.steps_5000),
     steps_7000: normalizeEarnRule(value?.steps_7000, defaults.steps_7000),
     steps_10000: normalizeEarnRule(value?.steps_10000, defaults.steps_10000),
     steps_15000: normalizeEarnRule(value?.steps_15000, defaults.steps_15000),
@@ -802,6 +801,12 @@ export async function awardStepRewardsFromVerification(
   }
 
   await checkStreakReward(memberId)
+
+  try {
+    await earnGrowthOnStepVerification(memberId, stepCount, date)
+  } catch (err) {
+    console.warn('걸음 성장·도토리 적립 실패:', err)
+  }
 
   const totalScore = awards.reduce((sum, row) => sum + row.score, 0)
   const totalMile = awards.reduce((sum, row) => sum + row.mile, 0)

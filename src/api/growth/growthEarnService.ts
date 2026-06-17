@@ -1,6 +1,7 @@
 import { resolveCenterIdForMember } from '../../lib/center'
 import { supabase } from '../../lib/supabase'
 import { localDayStartIso } from '../../utils/date'
+import { STEP_GROWTH_TIERS } from '../../constants/growth'
 import type { GrowthEventType, PostGrowthEventResult } from '../../types/growth'
 import { postGrowthEventForMemberRpc } from './growthRepository'
 
@@ -13,6 +14,8 @@ export const GrowthEventKeys = {
   challenge: (challengeId: string) => `CHALLENGE_${challengeId}`,
   streak7: (endDate: string) => `STREAK_7_${endDate}`,
   streak30: (endDate: string) => `STREAK_30_${endDate}`,
+  steps: (eventType: string, memberId: string, date: string) =>
+    `${eventType}_${memberId}_${date}`,
 } as const
 
 export type EarnGrowthInput = {
@@ -43,6 +46,24 @@ export async function earnGrowthEvent(
       err,
     )
     return null
+  }
+}
+
+/** 걸음 OCR 인증 승인 시 구간별 성장치·도토리 (마일리지와 별도) */
+export async function earnGrowthOnStepVerification(
+  memberId: string,
+  stepCount: number,
+  date: string,
+  source = 'step_verification',
+): Promise<void> {
+  for (const tier of STEP_GROWTH_TIERS) {
+    if (stepCount < tier.min) continue
+    await earnGrowthEvent({
+      memberId,
+      eventType: tier.eventType,
+      eventKey: GrowthEventKeys.steps(tier.eventType, memberId, date),
+      source,
+    })
   }
 }
 

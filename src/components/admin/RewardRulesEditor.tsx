@@ -24,14 +24,6 @@ const RULE_ROWS: {
     description: 'PT 수업 출석 시',
   },
   {
-    key: 'steps_3000',
-    description: '걸음 인증 3,000보 이상 (하루 1회)',
-  },
-  {
-    key: 'steps_5000',
-    description: '걸음 인증 5,000보 이상 (하루 1회, 구간별 중복 적립)',
-  },
-  {
     key: 'steps_7000',
     description: '걸음 인증 7,000보 이상 (하루 1회, 구간별 중복 적립)',
   },

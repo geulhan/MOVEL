@@ -182,18 +182,16 @@ on conflict (code) do update set
   is_active = excluded.is_active;
 
 -- ---------------------------------------------------------------------------
--- 4. 마일리지 적립 규칙 — 걸음 구간 3k~15k 병합
+-- 4. 마일리지 earn_rules — 걸음 구간은 7k/10k/15k만 (3k/5k는 migration_090 성장·도토리)
 -- ---------------------------------------------------------------------------
 
 update public.reward_settings
 set
   setting_value = coalesce(setting_value, '{}'::jsonb)
     || jsonb_build_object(
-      'steps_3000', jsonb_build_object('score', 5, 'mile', 100),
-      'steps_5000', jsonb_build_object('score', 8, 'mile', 200),
       'steps_7000', jsonb_build_object('score', 10, 'mile', 300),
       'steps_10000', jsonb_build_object('score', 15, 'mile', 500),
-      'steps_15000', jsonb_build_object('score', 25, 'mile', 800)
+      'steps_15000', jsonb_build_object('score', 20, 'mile', 700)
     ),
   updated_at = now()
 where setting_key = 'earn_rules'
@@ -205,11 +203,9 @@ select
   'earn_rules',
   jsonb_build_object(
     'pt_attendance', jsonb_build_object('score', 20, 'mile', 500),
-    'steps_3000', jsonb_build_object('score', 5, 'mile', 100),
-    'steps_5000', jsonb_build_object('score', 8, 'mile', 200),
     'steps_7000', jsonb_build_object('score', 10, 'mile', 300),
     'steps_10000', jsonb_build_object('score', 15, 'mile', 500),
-    'steps_15000', jsonb_build_object('score', 25, 'mile', 800),
+    'steps_15000', jsonb_build_object('score', 20, 'mile', 700),
     'exercise_journal', jsonb_build_object('score', 5, 'mile', 100),
     'streak_7day', jsonb_build_object('score', 50, 'mile', 3000),
     'naver_review', jsonb_build_object('score', 0, 'mile', 10000),
