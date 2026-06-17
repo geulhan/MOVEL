@@ -10,6 +10,12 @@ import {
 import { fetchMemberById } from '../api/memberDetail'
 import { formatDate } from '../api/members'
 import { fetchTrainers } from '../api/trainers'
+import {
+  CONSULTATION_CONTENT_FIELDS,
+  emptyConsultationContentFields,
+  LEGACY_CONSULTATION_FIELDS,
+  type ConsultationContentFieldKey,
+} from '../constants/consultationFields'
 import { formatSupabaseError } from '../lib/errors'
 import type { Trainer } from '../types/database'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../styles/theme'
@@ -17,31 +23,25 @@ import { btnOutline, btnPrimary, cardClass, inputClass } from '../styles/theme'
 type FormState = {
   consulted_at: string
   trainer_id: string
-  pain_status: string
-  exercise_progress: string
-  goals: string
-  special_notes: string
-}
+} & Record<ConsultationContentFieldKey, string>
 
 const emptyForm = (date = new Date().toISOString().slice(0, 10)): FormState => ({
   consulted_at: date,
   trainer_id: '',
-  pain_status: '',
-  exercise_progress: '',
-  goals: '',
-  special_notes: '',
+  ...emptyConsultationContentFields(),
 })
 
 function toInput(form: FormState, trainers: Trainer[]): ConsultationInput {
   const trainer = trainers.find((t) => t.id === form.trainer_id)
+  const content = emptyConsultationContentFields()
+  for (const field of CONSULTATION_CONTENT_FIELDS) {
+    content[field.key] = form[field.key]
+  }
   return {
     consulted_at: form.consulted_at,
     trainer_id: form.trainer_id || null,
     trainer_name: trainer?.name ?? null,
-    pain_status: form.pain_status,
-    exercise_progress: form.exercise_progress,
-    goals: form.goals,
-    special_notes: form.special_notes,
+    ...content,
   }
 }
 
@@ -49,10 +49,15 @@ function fromRecord(c: MemberConsultation): FormState {
   return {
     consulted_at: String(c.consulted_at).slice(0, 10),
     trainer_id: c.trainer_id ?? '',
-    pain_status: c.pain_status,
-    exercise_progress: c.exercise_progress,
-    goals: c.goals,
-    special_notes: c.special_notes,
+    visit_purpose: c.visit_purpose,
+    occupation_work_pattern: c.occupation_work_pattern,
+    sitting_activity_time: c.sitting_activity_time,
+    current_discomfort: c.current_discomfort,
+    injury_treatment_history: c.injury_treatment_history,
+    sleep_diet: c.sleep_diet,
+    exercise_experience: c.exercise_experience,
+    posture_assessment: c.posture_assessment,
+    movement_assessment: c.movement_assessment,
   }
 }
 
@@ -128,12 +133,7 @@ function ConsultationForm({
           </select>
         </label>
       </div>
-      {[
-        { key: 'pain_status' as const, label: '통증 상태', rows: 2 },
-        { key: 'exercise_progress' as const, label: '운동 진행상황', rows: 2 },
-        { key: 'goals' as const, label: '목표', rows: 2 },
-        { key: 'special_notes' as const, label: '특이사항', rows: 3 },
-      ].map((field) => (
+      {CONSULTATION_CONTENT_FIELDS.map((field) => (
         <label key={field.key} className="block text-sm">
           <span className="mb-1 block font-medium text-charcoal/70">
             {field.label}
@@ -267,7 +267,7 @@ export function MemberConsultationTimeline({ memberId }: Props) {
         <div>
           <h3 className="text-base font-semibold text-charcoal">상담기록</h3>
           <p className="mt-0.5 text-xs text-muted">
-            통증·진행·목표를 타임라인으로 관리합니다.
+            방문 목적·생활 패턴·평가 항목을 타임라인으로 관리합니다.
           </p>
         </div>
         {!showForm && !editingId && (
@@ -367,13 +367,20 @@ export function MemberConsultationTimeline({ memberId }: Props) {
                           </button>
                         </div>
                       </div>
-                      <TimelineField label="통증 상태" value={record.pain_status} />
-                      <TimelineField
-                        label="운동 진행상황"
-                        value={record.exercise_progress}
-                      />
-                      <TimelineField label="목표" value={record.goals} />
-                      <TimelineField label="특이사항" value={record.special_notes} />
+                      {CONSULTATION_CONTENT_FIELDS.map((field) => (
+                        <TimelineField
+                          key={field.key}
+                          label={field.label}
+                          value={record[field.key]}
+                        />
+                      ))}
+                      {LEGACY_CONSULTATION_FIELDS.map((field) => (
+                        <TimelineField
+                          key={field.key}
+                          label={field.label}
+                          value={record[field.key]}
+                        />
+                      ))}
                     </div>
                   )}
                 </li>

@@ -270,6 +270,15 @@ export type MemberConsultation = {
   consulted_at: string
   trainer_id: string | null
   trainer_name: string | null
+  visit_purpose: string
+  occupation_work_pattern: string
+  sitting_activity_time: string
+  current_discomfort: string
+  injury_treatment_history: string
+  sleep_diet: string
+  exercise_experience: string
+  posture_assessment: string
+  movement_assessment: string
   pain_status: string
   exercise_progress: string
   goals: string
@@ -765,6 +774,15 @@ export type Database = {
           consulted_at: string
           trainer_id?: string | null
           trainer_name?: string | null
+          visit_purpose?: string
+          occupation_work_pattern?: string
+          sitting_activity_time?: string
+          current_discomfort?: string
+          injury_treatment_history?: string
+          sleep_diet?: string
+          exercise_experience?: string
+          posture_assessment?: string
+          movement_assessment?: string
           pain_status?: string
           exercise_progress?: string
           goals?: string
@@ -774,6 +792,15 @@ export type Database = {
           consulted_at?: string
           trainer_id?: string | null
           trainer_name?: string | null
+          visit_purpose?: string
+          occupation_work_pattern?: string
+          sitting_activity_time?: string
+          current_discomfort?: string
+          injury_treatment_history?: string
+          sleep_diet?: string
+          exercise_experience?: string
+          posture_assessment?: string
+          movement_assessment?: string
           pain_status?: string
           exercise_progress?: string
           goals?: string
