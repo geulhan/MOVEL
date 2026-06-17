@@ -107,7 +107,8 @@ export function MemberGrowthSection({ memberId, refreshToken = 0 }: Props) {
           Supabase에서 migration_078_platform_growth_mvp.sql,
           migration_081_growth_events_auto_earn.sql,
           migration_083_growth_achievements_notifications.sql,
-          migration_084_center_challenges.sql 실행 후 다시 시도해 주세요.
+          migration_084_center_challenges.sql,
+          migration_085_garden_mvp.sql 실행 후 다시 시도해 주세요.
         </p>
         <button
           type="button"
@@ -170,7 +171,7 @@ export function MemberGrowthSection({ memberId, refreshToken = 0 }: Props) {
             <p className="mt-0.5 text-lg font-bold tabular-nums text-charcoal">
               {formatGrowth(profile.current_acorns)}
             </p>
-            <p className="mt-0.5 text-[10px] text-muted">정원·마을 재화</p>
+            <p className="mt-0.5 text-[10px] text-muted">정원 상점 재화</p>
           </div>
         </div>
       </section>
@@ -390,11 +391,6 @@ export function MemberGrowthSection({ memberId, refreshToken = 0 }: Props) {
             ))}
           </ul>
         )}
-      </section>
-
-      <section className="rounded-xl border border-dashed border-gold/40 bg-white/70 px-4 py-3 text-center text-xs text-muted">
-        <p className="font-medium text-charcoal/70">정원 · 마을 (준비 중)</p>
-        <p className="mt-1">도토리로 공간을 꾸밀 수 있게 될 예정이에요</p>
       </section>
 
       <p className="text-center text-xs text-muted">

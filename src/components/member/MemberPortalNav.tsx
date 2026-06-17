@@ -17,7 +17,7 @@ const NAV_ITEMS: { id: TabId; lines: string[] }[] = [
   { id: 'journal', lines: ['운동', '일지'] },
   { id: 'inbody', lines: ['인바디'] },
   { id: 'payment', lines: ['결제'] },
-  { id: 'growth', lines: ['성장'] },
+  { id: 'growth', lines: ['성장', '정원'] },
   { id: 'rewards', lines: ['리워드'] },
   { id: 'mypage', lines: ['마이', '페이지'] },
 ]

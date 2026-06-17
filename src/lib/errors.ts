@@ -46,6 +46,10 @@ export function formatSupabaseError(err: unknown): string {
     return authRpcSetupMessage(kind, `${msg}${details}`)
   }
 
+  if (msg.includes('INSUFFICIENT_ACORNS')) {
+    return '도토리가 부족합니다. 운동으로 성장치를 쌓고 도토리를 모아보세요.'
+  }
+
   if (
     msg.includes('user_growth_balances') ||
     msg.includes('growth_transactions') ||
@@ -57,6 +61,9 @@ export function formatSupabaseError(err: unknown): string {
     msg.includes('center_challenges') ||
     msg.includes('user_challenge_progress') ||
     msg.includes('sync_center_challenges_for_member') ||
+    msg.includes('garden_shop_items') ||
+    msg.includes('get_garden_state') ||
+    msg.includes('purchase_garden_shop_item') ||
     msg.includes('get_growth_profile') ||
     msg.includes('post_growth_event')
   ) {
@@ -64,7 +71,7 @@ export function formatSupabaseError(err: unknown): string {
       '성장 시스템 DB가 아직 설정되지 않았습니다. ' +
       'Supabase SQL Editor에서 supabase/migration_078_platform_growth_mvp.sql, ' +
       'migration_080_growth_reward_balance.sql, migration_081_growth_events_auto_earn.sql, ' +
-      'migration_083_growth_achievements_notifications.sql, migration_084_center_challenges.sql 을 실행해 주세요.'
+      'migration_083_growth_achievements_notifications.sql, migration_084_center_challenges.sql, migration_085_garden_mvp.sql 을 실행해 주세요.'
     )
   }
 

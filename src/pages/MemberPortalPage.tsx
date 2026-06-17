@@ -44,7 +44,7 @@ import { MEMBER_STATUS_LABELS } from '../types/database'
 import { MemberCenterPassSection } from '../components/member/MemberCenterPassSection'
 import { MemberPaymentSection } from '../components/member/MemberPaymentSection'
 import { MemberRewardsSection } from '../components/MemberRewardsSection'
-import { MemberGrowthSection } from '../components/member/growth/MemberGrowthSection'
+import { MemberGrowthGardenShell } from '../components/member/growth/MemberGrowthGardenShell'
 import { PullToRefresh } from '../components/PullToRefresh'
 import { MemberScheduleSection } from '../components/MemberScheduleSection'
 import { MemberClassBookingSection } from '../components/member/MemberClassBookingSection'
@@ -641,7 +641,7 @@ export default function MemberPortalPage() {
         )}
 
         {tab === 'growth' && member && (
-          <MemberGrowthSection
+          <MemberGrowthGardenShell
             memberId={member.id}
             refreshToken={refreshToken}
           />
