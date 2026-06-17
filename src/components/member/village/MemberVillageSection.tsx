@@ -12,6 +12,7 @@ import { SLG_TIER_LABELS } from '../../../types/slgVillage'
 import { btnOutline, btnPrimary, cardClass } from '../../../styles/theme'
 import { GardenPixelSprite, resolveTreeSpriteKey } from '../garden/GardenPixelSprite'
 import { SlgVillagePixelSprite } from './SlgVillagePixelSprite'
+import { VillageGrassTile } from './VillageGrassTile'
 
 type Props = {
   memberId: string
@@ -145,7 +146,7 @@ export function MemberVillageSection({ memberId, refreshToken = 0 }: Props) {
 
   const width = state.village.width
   const height = state.village.height
-  const tileSize = 32
+  const tileSize = 36
 
   return (
     <div className="space-y-4">
@@ -184,16 +185,20 @@ export function MemberVillageSection({ memberId, refreshToken = 0 }: Props) {
           </p>
         )}
 
-        <div className="mt-4 overflow-x-auto">
+        <div className="mt-4 overflow-x-auto pb-1">
           <div
-            className="mx-auto rounded-xl border-4 border-[#5a3e1b]/30 bg-[#8ed16e]/30 p-2 shadow-inner"
-            style={{ width: width * tileSize + 16 }}
+            className="mx-auto rounded-2xl p-2.5 shadow-md ring-1 ring-[#4a6f3d]/25"
+            style={{
+              width: width * tileSize + 20,
+              background: 'linear-gradient(180deg, #8fcf7e 0%, #6ba85c 100%)',
+            }}
           >
             <div
-              className="grid gap-0"
+              className="grid gap-[2px] overflow-hidden rounded-xl"
               style={{
                 gridTemplateColumns: `repeat(${width}, ${tileSize}px)`,
                 gridTemplateRows: `repeat(${height}, ${tileSize}px)`,
+                background: '#4a7c3f',
               }}
             >
               {Array.from({ length: height }, (_, y) =>
@@ -204,6 +209,8 @@ export function MemberVillageSection({ memberId, refreshToken = 0 }: Props) {
                   const isSelected = selectedPlacement?.id === placed?.id
                   const isMoveTarget =
                     mode.kind === 'move' && mode.placementId === placed?.id
+                  const canPlace =
+                    mode.kind !== 'view' && !isPlaza && !placed
 
                   return (
                     <button
@@ -211,27 +218,38 @@ export function MemberVillageSection({ memberId, refreshToken = 0 }: Props) {
                       type="button"
                       disabled={actionLoading}
                       onClick={() => handleTileClick(x, y)}
-                      className={`relative flex items-center justify-center border border-[#4a7c3f]/20 transition ${
+                      className={`relative overflow-hidden transition duration-150 ${
                         isSelected || isMoveTarget
-                          ? 'ring-2 ring-inset ring-amber-400'
-                          : mode.kind !== 'view' && !isPlaza && !placed
-                            ? 'hover:bg-white/30'
+                          ? 'z-10 ring-2 ring-inset ring-amber-300 ring-offset-1 ring-offset-amber-100'
+                          : canPlace
+                            ? 'hover:brightness-110'
                             : ''
                       }`}
                       style={{ width: tileSize, height: tileSize }}
                       aria-label={`타일 ${x + 1},${y + 1}`}
                     >
-                      {isPlaza ? (
-                        <>
-                          <SlgVillagePixelSprite spriteKey="slg_plaza" scale={2} />
-                          <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                            <GardenPixelSprite spriteKey={treeSprite} scale={2} />
-                          </span>
-                        </>
-                      ) : placed ? (
-                        <SlgVillagePixelSprite spriteKey={placed.sprite_key} scale={2} />
-                      ) : (
-                        <GardenPixelSprite spriteKey="grass" scale={2} />
+                      <VillageGrassTile
+                        x={x}
+                        y={y}
+                        kind={isPlaza ? 'plaza' : 'grass'}
+                        className="absolute inset-0"
+                      />
+                      {isPlaza && (
+                        <span className="pointer-events-none absolute inset-0 flex items-end justify-center pb-1">
+                          <GardenPixelSprite
+                            spriteKey={treeSprite}
+                            scale={2}
+                            className="drop-shadow-sm"
+                          />
+                        </span>
+                      )}
+                      {placed && (
+                        <span className="pointer-events-none absolute inset-0 flex items-center justify-center pb-0.5">
+                          <SlgVillagePixelSprite
+                            spriteKey={placed.sprite_key}
+                            scale={2}
+                          />
+                        </span>
                       )}
                     </button>
                   )

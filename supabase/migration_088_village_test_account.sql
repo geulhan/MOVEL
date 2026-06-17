@@ -66,10 +66,13 @@ begin
       password_hash = extensions.crypt(v_password, extensions.gen_salt('bf')),
       updated_at = now();
 
-    insert into public.reward_balances (member_id, move_score, move_mile)
-    values (v_member_id, 0, 10000)
+    insert into public.reward_balances (member_id, center_id, move_score, move_mile)
+    values (v_member_id, v_center.id, 0, 10000)
     on conflict (member_id) do update
-    set move_mile = 10000, updated_at = now();
+    set
+      center_id = excluded.center_id,
+      move_mile = 10000,
+      updated_at = now();
 
     v_user_id := public.ensure_platform_user_for_member(v_member_id);
 
