@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase'
+import type { ActiveCenterChallenge } from '../../types/challenges'
 import type {
   GrowthAchievement,
   GrowthEventType,
@@ -31,6 +32,7 @@ type RpcGrowthProfile = {
   growth_notifications?: GrowthNotification[]
   unread_notification_count?: number
   achievements?: GrowthAchievement[]
+  active_challenges?: ActiveCenterChallenge[]
   reward_rules?: GrowthRewardRule[]
   tree_stages?: GrowthTreeStageRow[]
 }
@@ -119,6 +121,29 @@ function normalizeNotifications(raw: unknown): GrowthNotification[] {
   })
 }
 
+function normalizeActiveChallenges(raw: unknown): ActiveCenterChallenge[] {
+  if (!Array.isArray(raw)) return []
+  return raw.map((row) => {
+    const item = row as Record<string, unknown>
+    return {
+      id: String(item.id ?? ''),
+      title: String(item.title ?? ''),
+      description: String(item.description ?? ''),
+      challenge_type: String(item.challenge_type ?? 'ATTENDANCE') as ActiveCenterChallenge['challenge_type'],
+      target_value: Number(item.target_value) || 0,
+      reward_growth: Number(item.reward_growth) || 0,
+      reward_acorn: Number(item.reward_acorn) || 0,
+      start_date: String(item.start_date ?? '').slice(0, 10),
+      end_date: String(item.end_date ?? '').slice(0, 10),
+      current_value: Number(item.current_value) || 0,
+      progress_target: Number(item.progress_target) || Number(item.target_value) || 0,
+      completed_at: item.completed_at != null ? String(item.completed_at) : null,
+      reward_claimed: Boolean(item.reward_claimed),
+      is_completed: Boolean(item.is_completed),
+    }
+  })
+}
+
 function normalizeAchievements(raw: unknown): GrowthAchievement[] {
   if (!Array.isArray(raw)) return []
   return raw.map((row) => {
@@ -170,6 +195,7 @@ function normalizeProfile(raw: RpcGrowthProfile): GrowthProfile {
     growth_notifications: normalizeNotifications(raw.growth_notifications),
     unread_notification_count: Number(raw.unread_notification_count) || 0,
     achievements: normalizeAchievements(raw.achievements),
+    active_challenges: normalizeActiveChallenges(raw.active_challenges),
     reward_rules: normalizeRewardRules(raw.reward_rules),
     tree_stages: normalizeTreeStages(raw.tree_stages),
   }

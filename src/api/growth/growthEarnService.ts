@@ -115,7 +115,7 @@ export async function earnGrowthOnBodyComposition(
   })
 }
 
-/** 센터 챌린지 완료 시 */
+/** @deprecated 센터 챌린지 보상은 DB `sync_center_challenges_for_member`가 자동 지급합니다. */
 export async function earnGrowthOnChallengeComplete(
   memberId: string,
   challengeId: string,

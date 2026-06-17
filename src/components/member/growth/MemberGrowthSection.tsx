@@ -7,6 +7,7 @@ import {
 } from '../../../types/growth'
 import type { GrowthProfile, GrowthRewardRule } from '../../../types/growth'
 import { useGrowthProfile } from '../../../hooks/useGrowthProfile'
+import { MemberChallengesSection } from './MemberChallengesSection'
 import { cardClass } from '../../../styles/theme'
 
 type Props = {
@@ -105,7 +106,8 @@ export function MemberGrowthSection({ memberId, refreshToken = 0 }: Props) {
         <p className="mt-2 text-xs text-red-600/80">
           Supabase에서 migration_078_platform_growth_mvp.sql,
           migration_081_growth_events_auto_earn.sql,
-          migration_083_growth_achievements_notifications.sql 실행 후 다시 시도해 주세요.
+          migration_083_growth_achievements_notifications.sql,
+          migration_084_center_challenges.sql 실행 후 다시 시도해 주세요.
         </p>
         <button
           type="button"
@@ -278,6 +280,8 @@ export function MemberGrowthSection({ memberId, refreshToken = 0 }: Props) {
           })}
         </ul>
       </section>
+
+      <MemberChallengesSection challenges={profile.active_challenges ?? []} />
 
       <section className={`${cardClass} p-4`}>
         <h3 className="text-base font-semibold text-charcoal">업적</h3>

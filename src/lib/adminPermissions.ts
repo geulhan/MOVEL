@@ -84,6 +84,14 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     featureKeys: ['mileage'],
   },
   {
+    to: '/admin/challenges',
+    end: false,
+    label: '센터 챌린지',
+    icon: '🎯',
+    roles: ['admin'],
+    featureKeys: ['mileage'],
+  },
+  {
     to: '/admin/payments',
     end: false,
     label: '결제 관리',
@@ -127,6 +135,7 @@ const PATH_FEATURE_RULES: Array<{
   { prefix: '/admin/trainers', check: (f) => f.pt || isClassFeatureEnabled(f) },
   { prefix: '/admin/facility', check: isFacilityFeatureEnabled },
   { prefix: '/admin/rewards', check: (f) => f.mileage },
+  { prefix: '/admin/challenges', check: (f) => f.mileage },
   { prefix: '/admin/messages', check: (f) => f.notifications },
   { prefix: '/admin/payments', check: (f) => f.membership },
   { prefix: '/admin/members', check: (f) => f.membership },

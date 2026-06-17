@@ -1,3 +1,5 @@
+import type { ActiveCenterChallenge } from './challenges'
+
 export type GrowthEventType =
   | 'PT_ATTENDANCE'
   | 'GROUP_CLASS_ATTENDANCE'
@@ -124,6 +126,7 @@ export type GrowthProfile = {
   growth_notifications: GrowthNotification[]
   unread_notification_count: number
   achievements: GrowthAchievement[]
+  active_challenges: ActiveCenterChallenge[]
   reward_rules: GrowthRewardRule[]
   tree_stages: GrowthTreeStageRow[]
 }
