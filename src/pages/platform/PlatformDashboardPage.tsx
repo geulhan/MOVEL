@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { fetchPlatformDashboard } from '../../api/platformDashboard'
+import { getErrorMessage } from '../../lib/errors'
+import { PlatformSessionExpiredError } from '../../lib/platformRpc'
 import type { PlatformDashboardSnapshot } from '../../types/platformOps'
 import {
   formatKrw,
@@ -16,6 +18,7 @@ function formatWhen(iso: string): string {
 }
 
 export default function PlatformDashboardPage() {
+  const navigate = useNavigate()
   const [data, setData] = useState<PlatformDashboardSnapshot | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -26,11 +29,15 @@ export default function PlatformDashboardPage() {
     try {
       setData(await fetchPlatformDashboard())
     } catch (err) {
-      setError(err instanceof Error ? err.message : '대시보드를 불러올 수 없습니다.')
+      if (err instanceof PlatformSessionExpiredError) {
+        navigate('/platform/login', { replace: true })
+        return
+      }
+      setError(getErrorMessage(err))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [navigate])
 
   useEffect(() => {
     void load()
@@ -47,7 +54,8 @@ export default function PlatformDashboardPage() {
           {error ?? '데이터 없음'}
         </p>
         <p className="text-xs text-cream/50">
-          Supabase에서 migration_075_platform_super_admin.sql 실행 후 다시 시도하세요.
+          오류가 계속되면 Supabase에서 migration_077_platform_dashboard_fix.sql 실행 후
+          플랫폼 로그아웃 → 다시 로그인해 보세요.
         </p>
         <button type="button" onClick={() => void load()} className={btnOutline}>
           다시 시도

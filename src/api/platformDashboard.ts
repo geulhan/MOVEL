@@ -1,4 +1,6 @@
 import { getPlatformSession } from '../lib/platformSession'
+import { assertPlatformRpcOk, parsePlatformRpcRow } from '../lib/platformRpc'
+import { getErrorMessage } from '../lib/errors'
 import { supabase } from '../lib/supabase'
 import type { Json } from '../types/database'
 import type { PlatformDashboardSnapshot } from '../types/platformOps'
@@ -10,13 +12,8 @@ function requirePlatformToken(): string {
 }
 
 function parseSnapshot(data: Json): PlatformDashboardSnapshot {
-  if (!data || typeof data !== 'object' || Array.isArray(data)) {
-    throw new Error('대시보드 데이터 형식이 올바르지 않습니다.')
-  }
-  const row = data as Record<string, Json | undefined>
-  if (row.ok !== true) {
-    throw new Error('대시보드를 불러올 수 없습니다.')
-  }
+  const row = parsePlatformRpcRow(data, '대시보드 데이터 형식이 올바르지 않습니다.')
+  assertPlatformRpcOk(row, '대시보드를 불러올 수 없습니다')
   return {
     kpi: row.kpi as PlatformDashboardSnapshot['kpi'],
     monthly: row.monthly as PlatformDashboardSnapshot['monthly'],
@@ -30,7 +27,7 @@ export async function fetchPlatformDashboard(): Promise<PlatformDashboardSnapsho
   const { data, error } = await supabase.rpc('get_platform_dashboard_snapshot', {
     p_session_token: requirePlatformToken(),
   })
-  if (error) throw error
+  if (error) throw new Error(getErrorMessage(error))
   return parseSnapshot(data as Json)
 }
 
@@ -38,11 +35,8 @@ export async function fetchBetaCentersForPlatform() {
   const { data, error } = await supabase.rpc('list_beta_centers_for_platform', {
     p_session_token: requirePlatformToken(),
   })
-  if (error) throw error
-  if (!data || typeof data !== 'object' || Array.isArray(data)) {
-    throw new Error('베타 센터 목록을 불러올 수 없습니다.')
-  }
-  const row = data as Record<string, Json | undefined>
-  if (row.ok !== true) throw new Error('베타 센터 목록을 불러올 수 없습니다.')
+  if (error) throw new Error(getErrorMessage(error))
+  const row = parsePlatformRpcRow(data as Json, '베타 센터 목록 형식 오류')
+  assertPlatformRpcOk(row, '베타 센터 목록을 불러올 수 없습니다')
   return (row.centers ?? []) as import('../types/platformOps').BetaCenterRow[]
 }

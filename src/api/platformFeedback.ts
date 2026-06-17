@@ -1,4 +1,6 @@
 import { getPlatformSession } from '../lib/platformSession'
+import { assertPlatformRpcOk, parsePlatformRpcRow } from '../lib/platformRpc'
+import { getErrorMessage } from '../lib/errors'
 import { supabase } from '../lib/supabase'
 import type { Json } from '../types/database'
 import type {
@@ -29,12 +31,9 @@ export async function submitPlatformFeedback(input: {
     p_title: input.title.trim(),
     p_content: input.content.trim(),
   })
-  if (error) throw error
-  if (!data || typeof data !== 'object' || Array.isArray(data)) {
-    throw new Error('피드백 전송에 실패했습니다.')
-  }
-  const row = data as Record<string, Json | undefined>
-  if (row.ok !== true) throw new Error('피드백 전송에 실패했습니다.')
+  if (error) throw new Error(getErrorMessage(error))
+  const row = parsePlatformRpcRow(data as Json, '피드백 전송 응답 오류')
+  assertPlatformRpcOk(row, '피드백 전송에 실패했습니다.')
 }
 
 export async function fetchPlatformFeedback(filters?: {
@@ -46,10 +45,9 @@ export async function fetchPlatformFeedback(filters?: {
     p_type: filters?.type ?? null,
     p_status: filters?.status ?? null,
   })
-  if (error) throw error
-  if (!data || typeof data !== 'object' || Array.isArray(data)) return []
-  const row = data as Record<string, Json | undefined>
-  if (row.ok !== true) throw new Error('피드백 목록을 불러올 수 없습니다.')
+  if (error) throw new Error(getErrorMessage(error))
+  const row = parsePlatformRpcRow(data as Json, '피드백 목록 형식 오류')
+  assertPlatformRpcOk(row, '피드백 목록을 불러올 수 없습니다.')
   return (row.items ?? []) as PlatformFeedbackItem[]
 }
 
@@ -62,10 +60,7 @@ export async function updatePlatformFeedbackStatus(
     p_feedback_id: feedbackId,
     p_status: status,
   })
-  if (error) throw error
-  if (!data || typeof data !== 'object' || Array.isArray(data)) {
-    throw new Error('상태 변경에 실패했습니다.')
-  }
-  const row = data as Record<string, Json | undefined>
-  if (row.ok !== true) throw new Error('상태 변경에 실패했습니다.')
+  if (error) throw new Error(getErrorMessage(error))
+  const row = parsePlatformRpcRow(data as Json, '상태 변경 응답 오류')
+  assertPlatformRpcOk(row, '상태 변경에 실패했습니다.')
 }

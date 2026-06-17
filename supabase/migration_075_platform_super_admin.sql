@@ -295,7 +295,7 @@ begin
         'total_admins', coalesce((
           select count(*)::int from public.center_users cu
           join public.centers cc on cc.id = cu.center_id and cc.deleted_at is null
-          where cu.role = 'admin' and cu.is_active = true
+          where cu.role = 'center_admin' and cu.status = 'active'
         ), 0),
         'total_trainers', coalesce((
           select count(*)::int from public.trainers t
