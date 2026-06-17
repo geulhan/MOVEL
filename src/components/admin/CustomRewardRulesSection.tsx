@@ -195,27 +195,9 @@ export function CustomRewardRulesSection({ rules, onChange, disabled }: Props) {
                     ))}
                   </select>
                 </label>
-                <label className="block text-sm">
+                <label className="block text-sm sm:col-span-2">
                   <span className="mb-1 block font-medium text-charcoal/70">
-                    SCORE
-                  </span>
-                  <input
-                    type="number"
-                    min={0}
-                    step={1}
-                    value={rule.score}
-                    disabled={disabled}
-                    onChange={(e) =>
-                      updateRule(index, {
-                        score: Math.max(0, Number(e.target.value) || 0),
-                      })
-                    }
-                    className={`${inputClass} tabular-nums`}
-                  />
-                </label>
-                <label className="block text-sm">
-                  <span className="mb-1 block font-medium text-charcoal/70">
-                    {rule.value_type === 'payment_percent' ? 'MILE (%)' : 'MILE'}
+                    {rule.value_type === 'payment_percent' ? '마일리지 (%)' : '마일리지 (M)'}
                   </span>
                   <input
                     type="number"
@@ -264,8 +246,7 @@ export function CustomRewardRulesSection({ rules, onChange, disabled }: Props) {
 
               {!paymentTrigger && (
                 <p className="text-xs text-muted">
-                  이 시점에는 고정 SCORE·MILE만 적용됩니다. (결제 구분·비율 적립
-                  없음)
+                  이 시점에는 고정 마일리지만 적용됩니다. (결제 구분·비율 적립 없음)
                 </p>
               )}
 

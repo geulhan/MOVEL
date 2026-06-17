@@ -38,9 +38,6 @@ export default function RewardsPage() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [historyTab, setHistoryTab] = useState<HistoryTab>('earn')
 
-  const [adjustCurrency, setAdjustCurrency] = useState<'move_score' | 'move_mile'>(
-    'move_mile',
-  )
   const [adjustAmount, setAdjustAmount] = useState('')
   const [adjustNote, setAdjustNote] = useState('')
   const [adjustSaving, setAdjustSaving] = useState(false)
@@ -90,12 +87,23 @@ export default function RewardsPage() {
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase()
-    if (!term) return summaries
-    return summaries.filter((s) => s.member_name.toLowerCase().includes(term))
+    const rows = term
+      ? summaries.filter((s) => s.member_name.toLowerCase().includes(term))
+      : summaries
+    return [...rows].sort((a, b) => b.move_mile - a.move_mile)
   }, [summaries, search])
 
+  const displayedEarnTxns = useMemo(
+    () => earnTxns.filter((t) => t.currency === 'move_mile'),
+    [earnTxns],
+  )
+  const displayedSpendTxns = useMemo(
+    () => spendTxns.filter((t) => t.currency === 'move_mile'),
+    [spendTxns],
+  )
+
   const selectedMember = members.find((m) => m.id === selectedId)
-  const displayedTxns = historyTab === 'earn' ? earnTxns : spendTxns
+  const displayedTxns = historyTab === 'earn' ? displayedEarnTxns : displayedSpendTxns
 
   async function handleAdjust(sign: 1 | -1) {
     if (!selectedId) return
@@ -113,7 +121,7 @@ export default function RewardsPage() {
     try {
       await manualRewardAdjust({
         memberId: selectedId,
-        currency: adjustCurrency,
+        currency: 'move_mile',
         amount: amount * sign,
         note: adjustNote.trim(),
         adminLabel: 'admin',
@@ -139,7 +147,7 @@ export default function RewardsPage() {
     <div className="space-y-6">
       <PageHeader
         title="마일리지 관리"
-        description="회원별 MOVE MILE · SCORE 조회, 적립 포인트 설정, 걸음·센터 인증 검수"
+        description="회원별 마일리지 조회·수동 조정, 적립 규칙, 걸음·센터 인증 검수"
       />
 
       <nav className="chip-scroll -mx-1 px-1">
@@ -148,7 +156,7 @@ export default function RewardsPage() {
           onClick={() => setAdminTab('balances')}
           className={`chip ${adminTab === 'balances' ? 'chip-active' : 'chip-inactive'}`}
         >
-          잔액 · 수동 조정
+          잔액 · 조정
         </button>
         <button
           type="button"
@@ -193,7 +201,7 @@ export default function RewardsPage() {
       <div className="grid gap-6 lg:grid-cols-5">
         <section className={`${cardClass} overflow-hidden lg:col-span-2`}>
           <div className="card-header">
-            <h3 className="text-sm font-bold text-charcoal">회원별 잔액</h3>
+            <h3 className="text-sm font-bold text-charcoal">회원별 마일리지</h3>
             <input
               type="search"
               placeholder="이름 검색"
@@ -210,8 +218,7 @@ export default function RewardsPage() {
                 <thead className="table-head sticky top-0 bg-cream/95">
                   <tr>
                     <th className="px-4 py-2 text-left">회원</th>
-                    <th className="px-2 py-2 text-right">SCORE</th>
-                    <th className="px-4 py-2 text-right">MILE</th>
+                    <th className="px-4 py-2 text-right">마일리지</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -223,12 +230,8 @@ export default function RewardsPage() {
                         selectedId === row.member_id ? 'bg-gold/10' : ''
                       }`}
                     >
-                      <td className="px-4 py-2.5">
-                        <p className="font-bold text-charcoal">{row.member_name}</p>
-                        <p className="text-[11px] text-muted">{row.tier}</p>
-                      </td>
-                      <td className="px-2 py-2.5 text-right font-bold tabular-nums">
-                        {row.move_score.toLocaleString()}
+                      <td className="px-4 py-2.5 font-bold text-charcoal">
+                        {row.member_name}
                       </td>
                       <td className="px-4 py-2.5 text-right font-bold tabular-nums">
                         {row.move_mile.toLocaleString()}M
@@ -250,27 +253,21 @@ export default function RewardsPage() {
             <p className="p-10 text-center text-sm text-muted">불러오는 중…</p>
           ) : (
             <div className="space-y-5 p-5 sm:p-6">
-              <div>
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <h3 className="text-lg font-bold text-charcoal">
                   {selectedMember?.name ?? '회원'}
                 </h3>
                 {balance && (
-                  <div className="mt-3 flex flex-wrap gap-6">
-                    <div>
-                      <p className="text-xs text-muted">MOVE SCORE</p>
-                      <p className="text-2xl font-bold tabular-nums">
-                        {balance.move_score.toLocaleString()}
-                        <span className="ml-2 text-sm font-bold text-gold-dark">
-                          {balance.tier}
-                        </span>
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted">MOVE MILE</p>
-                      <p className="text-2xl font-bold tabular-nums">
-                        {balance.move_mile.toLocaleString()}M
-                      </p>
-                    </div>
+                  <div className="rounded-xl border border-gold/40 bg-gold/10 px-4 py-2 text-right">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gold-dark">
+                      마일리지
+                    </p>
+                    <p className="text-2xl font-bold tabular-nums text-charcoal">
+                      {balance.move_mile.toLocaleString()}
+                      <span className="ml-0.5 text-base font-semibold text-charcoal/50">
+                        M
+                      </span>
+                    </p>
                   </div>
                 )}
               </div>
@@ -278,25 +275,12 @@ export default function RewardsPage() {
               <div className="rounded-xl border border-gold/25 bg-cream/40 p-4 space-y-3">
                 <h4 className="text-sm font-bold text-charcoal">수동 적립 / 차감</h4>
                 <p className="text-xs text-muted">
-                  걸음수 인증은 회원 OCR 자동 검수로 처리됩니다. 관리자는
-                  마일리지만 수동 조정할 수 있습니다.
+                  걸음수 인증은 회원 OCR 자동 검수로 처리됩니다. 마일리지만
+                  수동으로 조정할 수 있습니다.
                 </p>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="block text-sm">
-                    <span className="mb-1 block text-muted">유형</span>
-                    <select
-                      value={adjustCurrency}
-                      onChange={(e) =>
-                        setAdjustCurrency(e.target.value as 'move_score' | 'move_mile')
-                      }
-                      className={inputClass}
-                    >
-                      <option value="move_mile">MOVE MILE</option>
-                      <option value="move_score">MOVE SCORE</option>
-                    </select>
-                  </label>
-                  <label className="block text-sm">
-                    <span className="mb-1 block text-muted">금액</span>
+                  <label className="block text-sm sm:col-span-2">
+                    <span className="mb-1 block text-muted">금액 (M)</span>
                     <input
                       type="number"
                       min={1}
@@ -384,8 +368,7 @@ export default function RewardsPage() {
                           }`}
                         >
                           {txn.amount > 0 ? '+' : ''}
-                          {txn.amount.toLocaleString()}
-                          {txn.currency === 'move_mile' ? 'M' : '점'}
+                          {txn.amount.toLocaleString()}M
                         </span>
                       </li>
                     ))

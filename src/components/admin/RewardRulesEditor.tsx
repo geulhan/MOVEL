@@ -80,17 +80,13 @@ export function RewardRulesEditor() {
     })()
   }, [])
 
-  function updateRule(
-    key: RuleKey,
-    field: 'score' | 'mile',
-    value: string,
-  ) {
+  function updateRule(key: RuleKey, value: string) {
     const parsed = Number(value.replace(/,/g, ''))
     setRules((prev) => ({
       ...prev,
       [key]: {
         ...prev[key],
-        [field]: Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : 0,
+        mile: Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : 0,
       },
     }))
   }
@@ -141,8 +137,8 @@ export function RewardRulesEditor() {
         <div className="card-header">
           <h3 className="text-base font-semibold text-charcoal">적립 포인트 설정</h3>
           <p className="mt-1 text-sm text-muted">
-            활동별 MOVE SCORE · MOVE MILE 지급량을 설정합니다. 변경 사항은 저장
-            이후 새로 발생하는 적립에만 적용됩니다.
+            활동별 마일리지 지급량을 설정합니다. 변경 사항은 저장 이후 새로
+            발생하는 적립에만 적용됩니다.
           </p>
         </div>
 
@@ -151,8 +147,7 @@ export function RewardRulesEditor() {
             <thead className="table-head">
               <tr>
                 <th className="px-4 py-2.5 text-left">활동</th>
-                <th className="px-3 py-2.5 text-right">SCORE</th>
-                <th className="px-4 py-2.5 text-right">MILE</th>
+                <th className="px-4 py-2.5 text-right">마일리지 (M)</th>
               </tr>
             </thead>
             <tbody>
@@ -164,24 +159,14 @@ export function RewardRulesEditor() {
                     </p>
                     <p className="mt-0.5 text-xs text-muted">{row.description}</p>
                   </td>
-                  <td className="px-3 py-3">
-                    <input
-                      type="number"
-                      min={0}
-                      step={1}
-                      value={rules[row.key].score}
-                      onChange={(e) => updateRule(row.key, 'score', e.target.value)}
-                      className={`${inputClass} w-24 text-right tabular-nums`}
-                    />
-                  </td>
                   <td className="px-4 py-3">
                     <input
                       type="number"
                       min={0}
                       step={1}
                       value={rules[row.key].mile}
-                      onChange={(e) => updateRule(row.key, 'mile', e.target.value)}
-                      className={`${inputClass} w-28 text-right tabular-nums`}
+                      onChange={(e) => updateRule(row.key, e.target.value)}
+                      className={`${inputClass} ml-auto w-28 text-right tabular-nums`}
                     />
                   </td>
                 </tr>
@@ -194,7 +179,6 @@ export function RewardRulesEditor() {
                     회원)
                   </p>
                 </td>
-                <td className="px-3 py-3 text-center text-xs text-muted">-</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-1">
                     <input
