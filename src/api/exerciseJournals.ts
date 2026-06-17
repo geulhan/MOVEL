@@ -1,5 +1,7 @@
 import { getCurrentCenterId, resolveCenterIdForMember } from '../lib/center'
 import { supabase } from '../lib/supabase'
+import { awardGrowthOnWorkoutLog } from './growth'
+import { awardCustomRulesOnExerciseJournal } from './rewards'
 import { logPlatformActivity } from './platformActivity'
 
 export type ExerciseJournalCreatedBy = 'member' | 'trainer' | 'admin'
@@ -157,6 +159,16 @@ export async function createExerciseJournal(
           : 'admin',
     metadata: { journal_id: data.id, member_id: memberId },
   })
+
+  if (input.created_by === 'member') {
+    void awardGrowthOnWorkoutLog(memberId, data.id)
+  }
+
+  try {
+    await awardCustomRulesOnExerciseJournal(memberId, data.id)
+  } catch (rewardErr) {
+    console.warn('추가 적립 규칙 처리 실패:', rewardErr)
+  }
 
   return normalize(data as ExerciseJournal)
 }

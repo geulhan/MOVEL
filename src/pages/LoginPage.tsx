@@ -3,7 +3,7 @@ import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react
 import { loginAdmin } from '../api/adminAuth'
 import { MotionHubAuthShell } from '../components/layouts/MotionHubAuthShell'
 import { getErrorMessage } from '../lib/errors'
-import { isSupabaseConfigured, getSupabaseProjectRef } from '../lib/supabase'
+import { isSupabaseConfigured } from '../lib/supabase'
 import {
   clearAdminAuth,
   getAdminSession,
@@ -128,12 +128,10 @@ export default function LoginPage() {
     }
   }
 
-  const supabaseProjectRef = getSupabaseProjectRef()
-
   return (
     <MotionHubAuthShell
       title="관리자 · 트레이너 로그인"
-      subtitle="MotionHub에 등록한 아이디와 비밀번호만 입력하세요."
+      subtitle="모션허브에 등록한 아이디와 비밀번호만 입력하세요."
     >
       <section className={`${cardClass} card-pad`}>
         {!isSupabaseConfigured && (
@@ -207,14 +205,6 @@ export default function LoginPage() {
           </button>
 
           {error && <p className="text-sm text-red-700">{error}</p>}
-          {supabaseProjectRef && (
-            <p className="text-[11px] text-muted">
-              연결 DB: <span className="font-mono">{supabaseProjectRef}</span>
-              <span className="block mt-0.5">
-                SQL Editor 프로젝트 URL의 ID와 같아야 합니다.
-              </span>
-            </p>
-          )}
         </form>
       </section>
 

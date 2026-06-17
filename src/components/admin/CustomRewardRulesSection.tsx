@@ -1,8 +1,11 @@
 import {
+  CUSTOM_REWARD_TRIGGERS,
   createEmptyCustomRewardRule,
   CUSTOM_REWARD_TRIGGER_LABELS,
   CUSTOM_REWARD_VALUE_TYPE_LABELS,
+  isPaymentCustomRewardTrigger,
   type CustomRewardRule,
+  type CustomRewardTrigger,
   type CustomRewardValueType,
 } from '../../constants/rewards'
 import {
@@ -58,8 +61,9 @@ export function CustomRewardRulesSection({ rules, onChange, disabled }: Props) {
         <div className="min-w-0">
           <h3 className="text-base font-semibold text-charcoal">추가 적립 항목</h3>
           <p className="mt-1 text-sm text-muted">
-            센터별 맞춤 규칙을 추가할 수 있습니다. 예: 결제 완료 시 결제금액의
-            5% MILE 자동 적립. 비활성화하거나 항목을 비우면 적용되지 않습니다.
+            센터별 맞춤 규칙을 추가할 수 있습니다. 결제·출입·출석·운동일지 등
+            시점에 맞춰 MILE을 자동 적립합니다. 비활성화하거나 항목을 비우면
+            적용되지 않습니다.
           </p>
         </div>
         <button
@@ -78,7 +82,10 @@ export function CustomRewardRulesSection({ rules, onChange, disabled }: Props) {
         </p>
       ) : (
         <ul className="divide-y divide-gold/15">
-          {rules.map((rule, index) => (
+          {rules.map((rule, index) => {
+            const paymentTrigger = isPaymentCustomRewardTrigger(rule.trigger)
+
+            return (
             <li key={rule.id} className="space-y-4 px-5 py-5 sm:px-6">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <label className="flex items-center gap-2 text-sm font-semibold text-charcoal">
@@ -139,12 +146,24 @@ export function CustomRewardRulesSection({ rules, onChange, disabled }: Props) {
                   <select
                     value={rule.trigger}
                     disabled={disabled}
-                    onChange={() => undefined}
+                    onChange={(e) => {
+                      const trigger = e.target.value as CustomRewardTrigger
+                      const patch: Partial<CustomRewardRule> = { trigger }
+                      if (
+                        !isPaymentCustomRewardTrigger(trigger) &&
+                        rule.value_type === 'payment_percent'
+                      ) {
+                        patch.value_type = 'fixed'
+                      }
+                      updateRule(index, patch)
+                    }}
                     className={inputClass}
                   >
-                    <option value="payment_completed">
-                      {CUSTOM_REWARD_TRIGGER_LABELS.payment_completed}
-                    </option>
+                    {CUSTOM_REWARD_TRIGGERS.map((trigger) => (
+                      <option key={trigger} value={trigger}>
+                        {CUSTOM_REWARD_TRIGGER_LABELS[trigger]}
+                      </option>
+                    ))}
                   </select>
                 </label>
                 <label className="block text-sm">
@@ -161,12 +180,15 @@ export function CustomRewardRulesSection({ rules, onChange, disabled }: Props) {
                     }
                     className={inputClass}
                   >
-                    {(
-                      Object.entries(CUSTOM_REWARD_VALUE_TYPE_LABELS) as [
-                        CustomRewardValueType,
-                        string,
-                      ][]
-                    ).map(([value, label]) => (
+                    {(Object.entries(CUSTOM_REWARD_VALUE_TYPE_LABELS) as [
+                      CustomRewardValueType,
+                      string,
+                    ][])
+                      .filter(
+                        ([value]) =>
+                          paymentTrigger || value !== 'payment_percent',
+                      )
+                      .map(([value, label]) => (
                       <option key={value} value={value}>
                         {label}
                       </option>
@@ -212,31 +234,40 @@ export function CustomRewardRulesSection({ rules, onChange, disabled }: Props) {
                 </label>
               </div>
 
-              <div>
-                <p className="mb-2 text-sm font-medium text-charcoal/70">
-                  적용 결제 구분
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {PAYMENT_CATEGORIES.map((category) => (
-                    <label
-                      key={category}
-                      className="inline-flex items-center gap-2 rounded-lg border border-gold/25 bg-white px-3 py-2 text-sm"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isCategoryChecked(rule, category)}
-                        disabled={disabled}
-                        onChange={() => toggleCategory(index, category)}
-                        className="size-4 rounded border-gold/40"
-                      />
-                      {PAYMENT_CATEGORY_LABELS[category]}
-                    </label>
-                  ))}
+              {paymentTrigger && (
+                <div>
+                  <p className="mb-2 text-sm font-medium text-charcoal/70">
+                    적용 결제 구분
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {PAYMENT_CATEGORIES.map((category) => (
+                      <label
+                        key={category}
+                        className="inline-flex items-center gap-2 rounded-lg border border-gold/25 bg-white px-3 py-2 text-sm"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isCategoryChecked(rule, category)}
+                          disabled={disabled}
+                          onChange={() => toggleCategory(index, category)}
+                          className="size-4 rounded border-gold/40"
+                        />
+                        {PAYMENT_CATEGORY_LABELS[category]}
+                      </label>
+                    ))}
+                  </div>
+                  <p className="mt-1.5 text-xs text-muted">
+                    모두 선택 시 전체 결제에 적용됩니다.
+                  </p>
                 </div>
-                <p className="mt-1.5 text-xs text-muted">
-                  모두 선택 시 전체 결제에 적용됩니다.
+              )}
+
+              {!paymentTrigger && (
+                <p className="text-xs text-muted">
+                  이 시점에는 고정 SCORE·MILE만 적용됩니다. (결제 구분·비율 적립
+                  없음)
                 </p>
-              </div>
+              )}
 
               <label className="flex items-center gap-2 text-sm text-charcoal">
                 <input
@@ -251,7 +282,7 @@ export function CustomRewardRulesSection({ rules, onChange, disabled }: Props) {
                 회원당 1회만 적립
               </label>
             </li>
-          ))}
+          )})}
         </ul>
       )}
     </div>

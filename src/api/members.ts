@@ -4,7 +4,7 @@ import { normalizeMember } from '../lib/memberNormalize'
 import type { Member, MemberInsert, MemberStatus } from '../types/database'
 import { notifyMemberWelcome, notifyPaymentDone } from './notifications'
 import { logPlatformActivity } from './platformActivity'
-import { awardReferralOnPayment } from './rewards'
+import { awardCustomRulesOnMemberRegistered, awardReferralOnPayment } from './rewards'
 import { calcSessionExpiry } from '../utils/period'
 
 export { normalizeMember }
@@ -98,6 +98,12 @@ export async function createMember(input: {
   }
 
   notifyMemberWelcome(data.id)
+
+  try {
+    await awardCustomRulesOnMemberRegistered(data.id)
+  } catch (rewardErr) {
+    console.warn('추가 적립 규칙 처리 실패:', rewardErr)
+  }
 
   void logPlatformActivity('member_created', {
     centerId,

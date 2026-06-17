@@ -1,7 +1,7 @@
 import { getCurrentCenterId } from '../lib/center'
 import { supabase } from '../lib/supabase'
 import { todayDateString } from './members'
-import { awardCenterPhoto } from './rewards'
+import { awardCenterPhoto, awardCustomRulesOnCenterPhotoApproved } from './rewards'
 
 export type CenterPhotoStatus = 'pending' | 'approved' | 'rejected'
 
@@ -186,6 +186,16 @@ export async function approveCenterPhotoSubmission(
     .single()
 
   if (error) throw error
+
+  try {
+    await awardCustomRulesOnCenterPhotoApproved(
+      submission.member_id,
+      submission.id,
+    )
+  } catch (rewardErr) {
+    console.warn('추가 적립 규칙 처리 실패:', rewardErr)
+  }
+
   return data as CenterPhotoSubmission
 }
 

@@ -1,6 +1,7 @@
 import {
   CUSTOM_REWARD_TRIGGER_LABELS,
   DEFAULT_REWARD_RULES,
+  isPaymentCustomRewardTrigger,
   type RewardEarnRules,
   MILE_EXPIRY_MONTHS,
   REDEMPTION_MAX_PERCENT,
@@ -123,7 +124,9 @@ export function buildMemberRewardGuide(
         title: rule.label,
         description:
           rule.description.trim() ||
-          `${CUSTOM_REWARD_TRIGGER_LABELS[rule.trigger]} · ${formatCustomRuleCategories(rule.payment_categories)}`,
+          (isPaymentCustomRewardTrigger(rule.trigger)
+            ? `${CUSTOM_REWARD_TRIGGER_LABELS[rule.trigger]} · ${formatCustomRuleCategories(rule.payment_categories)}`
+            : CUSTOM_REWARD_TRIGGER_LABELS[rule.trigger]),
         score: formatCustomRuleScore(rule),
         mile: formatCustomRuleMile(rule),
       })),

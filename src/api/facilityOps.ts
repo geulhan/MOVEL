@@ -1,5 +1,6 @@
 import { getCurrentCenterId } from '../lib/center'
 import { supabase } from '../lib/supabase'
+import { awardCustomRulesOnFacilityCheckin } from './rewards'
 import { todayDateString } from './members'
 
 export type LockerStatus = 'active' | 'expired' | 'cancelled'
@@ -170,7 +171,15 @@ export async function checkInFacility(input: {
     .single()
 
   if (error) throw error
-  return data as FacilityCheckin
+  const checkin = data as FacilityCheckin
+
+  try {
+    await awardCustomRulesOnFacilityCheckin(input.member_id, checkin.id)
+  } catch (rewardErr) {
+    console.warn('추가 적립 규칙 처리 실패:', rewardErr)
+  }
+
+  return checkin
 }
 
 export async function fetchFacilityStats(): Promise<{

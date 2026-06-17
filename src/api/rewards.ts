@@ -1,5 +1,6 @@
 import { getCurrentCenterId } from '../lib/center'
 import {
+  CUSTOM_REWARD_TRIGGERS,
   DEFAULT_REWARD_RULES,
   getTierFromScore,
   MILE_EXPIRY_MONTHS,
@@ -8,6 +9,7 @@ import {
   STEP_REWARD_TIERS,
   STREAK_DAYS,
   type CustomRewardRule,
+  type CustomRewardTrigger,
   type RewardEarnRules,
   type RewardEventType,
   type RewardTier,
@@ -56,6 +58,24 @@ function clampNonNegInt(value: unknown, fallback: number): number {
   return Math.max(0, Math.round(parsed))
 }
 
+const CUSTOM_REWARD_TRIGGER_SET = new Set<string>(CUSTOM_REWARD_TRIGGERS)
+
+const CUSTOM_RULE_REFERENCE_TYPES: Record<CustomRewardTrigger, string> = {
+  payment_completed: 'payment_history',
+  facility_checkin: 'facility_checkins',
+  attendance_completed: 'attendance_logs',
+  exercise_journal: 'exercise_journals',
+  center_photo_approved: 'center_photo_submissions',
+  member_registered: 'members',
+}
+
+function parseCustomRewardTrigger(value: unknown): CustomRewardTrigger {
+  const raw = String(value ?? 'payment_completed')
+  return CUSTOM_REWARD_TRIGGER_SET.has(raw)
+    ? (raw as CustomRewardTrigger)
+    : 'payment_completed'
+}
+
 function normalizeEarnRule(value: unknown, fallback: EarnRule): EarnRule {
   if (!value || typeof value !== 'object') return fallback
   const row = value as Record<string, unknown>
@@ -88,7 +108,7 @@ function normalizeCustomRule(
     id: String(row.id ?? `custom_${index + 1}`).trim() || `custom_${index + 1}`,
     label,
     description: String(row.description ?? '').trim(),
-    trigger: 'payment_completed',
+    trigger: parseCustomRewardTrigger(row.trigger),
     value_type: row.value_type === 'payment_percent' ? 'payment_percent' : 'fixed',
     score: clampNonNegInt(row.score, 0),
     mile: clampNonNegInt(row.mile, 0),
@@ -155,6 +175,11 @@ function validateCustomRules(rules: CustomRewardRule[]): void {
     }
     if (rule.value_type === 'payment_percent' && rule.mile <= 0 && rule.score <= 0) {
       throw new Error(`"${rule.label}" 결제 비율 또는 SCORE를 입력해 주세요.`)
+    }
+    if (rule.value_type === 'payment_percent' && rule.trigger !== 'payment_completed') {
+      throw new Error(
+        `"${rule.label}" 결제금액 비율은 결제 완료 시점에만 사용할 수 있습니다.`,
+      )
     }
     if (rule.value_type === 'payment_percent' && rule.mile > 100) {
       throw new Error(`"${rule.label}" 결제 비율은 100% 이하여야 합니다.`)
@@ -618,6 +643,11 @@ export async function awardPtAttendance(
       has_pt_attendance: true,
     })
     await checkStreakReward(memberId)
+    try {
+      await awardCustomRulesOnAttendance(memberId, attendanceId)
+    } catch (rewardErr) {
+      console.warn('추가 적립 규칙 처리 실패:', rewardErr)
+    }
   } catch (err) {
     if (err instanceof Error && err.message === 'ALREADY_AWARDED') return
     throw err
@@ -933,37 +963,45 @@ function calcCustomRuleAward(
   }
 }
 
-/** 관리자 정의 추가 적립 규칙 (결제 완료 등) */
-export async function awardCustomRulesOnPayment(
+async function awardMatchingCustomRules(
   memberId: string,
-  paymentId: string,
-  paymentAmount: number,
-  category: PaymentCategory = 'pt',
+  trigger: CustomRewardTrigger,
+  referenceId: string,
+  options?: {
+    paymentAmount?: number
+    category?: PaymentCategory
+  },
 ): Promise<void> {
   const rules = await fetchRewardEarnRules()
 
   for (const rule of rules.custom_rules) {
-    if (!rule.is_active) continue
-    if (rule.trigger !== 'payment_completed') continue
-    if (
-      rule.payment_categories &&
-      rule.payment_categories.length > 0 &&
-      !rule.payment_categories.includes(category)
-    ) {
+    if (!rule.is_active || rule.trigger !== trigger) continue
+
+    if (trigger === 'payment_completed') {
+      const category = options?.category ?? 'pt'
+      if (
+        rule.payment_categories &&
+        rule.payment_categories.length > 0 &&
+        !rule.payment_categories.includes(category)
+      ) {
+        continue
+      }
+    } else if (rule.value_type === 'payment_percent') {
       continue
     }
 
+    const paymentAmount = options?.paymentAmount ?? 0
     const { score, mile, note } = calcCustomRuleAward(rule, paymentAmount)
     if (score <= 0 && mile <= 0) continue
 
     const eventKey = rule.once_per_member
       ? `custom_once:${rule.id}:${memberId}`
-      : `custom:${rule.id}:${paymentId}`
+      : `custom:${rule.id}:${trigger}:${referenceId}`
 
     try {
       await awardPair(memberId, 'custom_reward', eventKey, score, mile, {
-        reference_type: 'payment_history',
-        reference_id: paymentId,
+        reference_type: CUSTOM_RULE_REFERENCE_TYPES[trigger],
+        reference_id: referenceId,
         note,
         created_by: 'system',
       })
@@ -972,6 +1010,57 @@ export async function awardCustomRulesOnPayment(
       throw err
     }
   }
+}
+
+/** 관리자 정의 추가 적립 규칙 (결제 완료 등) */
+export async function awardCustomRulesOnPayment(
+  memberId: string,
+  paymentId: string,
+  paymentAmount: number,
+  category: PaymentCategory = 'pt',
+): Promise<void> {
+  await awardMatchingCustomRules(memberId, 'payment_completed', paymentId, {
+    paymentAmount,
+    category,
+  })
+}
+
+export async function awardCustomRulesOnFacilityCheckin(
+  memberId: string,
+  checkinId: string,
+): Promise<void> {
+  await awardMatchingCustomRules(memberId, 'facility_checkin', checkinId)
+}
+
+export async function awardCustomRulesOnAttendance(
+  memberId: string,
+  attendanceId: string,
+): Promise<void> {
+  await awardMatchingCustomRules(memberId, 'attendance_completed', attendanceId)
+}
+
+export async function awardCustomRulesOnExerciseJournal(
+  memberId: string,
+  journalId: string,
+): Promise<void> {
+  await awardMatchingCustomRules(memberId, 'exercise_journal', journalId)
+}
+
+export async function awardCustomRulesOnCenterPhotoApproved(
+  memberId: string,
+  submissionId: string,
+): Promise<void> {
+  await awardMatchingCustomRules(
+    memberId,
+    'center_photo_approved',
+    submissionId,
+  )
+}
+
+export async function awardCustomRulesOnMemberRegistered(
+  memberId: string,
+): Promise<void> {
+  await awardMatchingCustomRules(memberId, 'member_registered', memberId)
 }
 
 /** 재등록 결제 시 MILE 사용 */

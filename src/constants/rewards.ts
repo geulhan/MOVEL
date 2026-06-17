@@ -38,7 +38,22 @@ export function getNextTier(score: number): {
 export const MIN_STEPS_FOR_VERIFICATION = 7000
 
 /** 관리자가 추가하는 맞춤 적립 규칙 */
-export type CustomRewardTrigger = 'payment_completed'
+export type CustomRewardTrigger =
+  | 'payment_completed'
+  | 'facility_checkin'
+  | 'attendance_completed'
+  | 'exercise_journal'
+  | 'center_photo_approved'
+  | 'member_registered'
+
+export const CUSTOM_REWARD_TRIGGERS: CustomRewardTrigger[] = [
+  'payment_completed',
+  'facility_checkin',
+  'attendance_completed',
+  'exercise_journal',
+  'center_photo_approved',
+  'member_registered',
+]
 
 export type CustomRewardValueType = 'fixed' | 'payment_percent'
 
@@ -59,6 +74,17 @@ export type CustomRewardRule = {
 
 export const CUSTOM_REWARD_TRIGGER_LABELS: Record<CustomRewardTrigger, string> = {
   payment_completed: '결제 완료 시',
+  facility_checkin: '출입 완료 시',
+  attendance_completed: '출석 완료 시',
+  exercise_journal: '운동일지 작성 시',
+  center_photo_approved: '센터 인증 승인 시',
+  member_registered: '회원 등록 시',
+}
+
+export function isPaymentCustomRewardTrigger(
+  trigger: CustomRewardTrigger,
+): boolean {
+  return trigger === 'payment_completed'
 }
 
 export const CUSTOM_REWARD_VALUE_TYPE_LABELS: Record<
