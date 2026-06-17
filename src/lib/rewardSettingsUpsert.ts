@@ -8,10 +8,7 @@ type UpsertCenterRewardSettingInput = {
   description?: string | null
 }
 
-/**
- * 센터별 reward_settings 저장.
- * branch_id = center_id 로 넣어 전역 unique index(reward_settings_global_key_uidx) 충돌을 피합니다.
- */
+/** 센터별 reward_settings 저장 (center_id + setting_key 기준, branch_id 는 null 유지) */
 export async function upsertCenterRewardSetting(
   input: UpsertCenterRewardSettingInput,
 ): Promise<void> {
@@ -20,7 +17,6 @@ export async function upsertCenterRewardSetting(
     setting_value: input.settingValue,
     description: input.description ?? null,
     updated_at: new Date().toISOString(),
-    branch_id: centerId,
   }
 
   const { data: existingRows, error: fetchError } = await supabase
@@ -49,7 +45,7 @@ export async function upsertCenterRewardSetting(
 
   const { error } = await supabase.from('reward_settings').insert({
     center_id: centerId,
-    branch_id: centerId,
+    branch_id: null,
     setting_key: input.settingKey,
     setting_value: input.settingValue,
     description: input.description ?? null,

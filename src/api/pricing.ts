@@ -125,7 +125,6 @@ export async function saveSessionPassPricing(
     setting_value: { packages } as const,
     description: `${label} 기본 가격`,
     updated_at: new Date().toISOString(),
-    branch_id: centerId,
   }
 
   const { data: existingRows, error: fetchError } = await supabase
@@ -154,7 +153,6 @@ export async function saveSessionPassPricing(
 
   const { error } = await supabase.from('reward_settings').insert({
     center_id: centerId,
-    branch_id: centerId,
     setting_key: settingKey,
     setting_value: payload.setting_value,
     description: payload.description,
