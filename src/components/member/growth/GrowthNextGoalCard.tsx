@@ -55,7 +55,7 @@ export function GrowthNextGoalCard({ profile }: Props) {
         </p>
       )}
       <p className="mt-3 text-xs text-muted">
-        PT · 수업 · 운동일지 · 걸음 인증으로 성장치를 모을 수 있어요
+        성장치는 PT · 수업 · 운동일지 · 걸음 인증 등 실제 운동으로만 쌓여요
       </p>
     </div>
   )

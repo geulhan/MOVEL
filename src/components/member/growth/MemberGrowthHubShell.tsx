@@ -9,7 +9,7 @@ type Props = {
   refreshToken?: number
 }
 
-export function MemberGrowthGardenShell({ memberId, refreshToken = 0 }: Props) {
+export function MemberGrowthHubShell({ memberId, refreshToken = 0 }: Props) {
   const [subTab, setSubTab] = useState<SubTab>('hub')
 
   return (

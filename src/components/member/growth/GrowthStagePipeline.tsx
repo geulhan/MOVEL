@@ -31,7 +31,7 @@ export function GrowthStagePipeline({ profile, stages }: Props) {
   return (
     <div className={`${cardClass} p-4`}>
       <p className="text-center text-sm font-semibold text-charcoal">
-        운동 → 성장치 → 운동나무 성장 → 마을 발전
+        운동 → 성장치 → 운동나무 → 마을 건설 · 강화 → 수거
       </p>
       <div className="mt-4 overflow-x-auto pb-1">
         <ol className="flex min-w-[320px] items-start justify-between gap-1 px-1">

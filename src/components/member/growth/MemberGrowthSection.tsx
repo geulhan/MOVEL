@@ -7,6 +7,7 @@ import {
 import type { GrowthProfile, GrowthRewardRule } from '../../../types/growth'
 import { useGrowthProfile } from '../../../hooks/useGrowthProfile'
 import { MemberChallengesSection } from './MemberChallengesSection'
+import { GrowthLoopExplainer } from './GrowthLoopExplainer'
 import { GrowthNextGoalCard } from './GrowthNextGoalCard'
 import { GrowthStagePipeline } from './GrowthStagePipeline'
 import { MemberVillageSection } from '../village/MemberVillageSection'
@@ -117,11 +118,14 @@ export function MemberGrowthSection({ memberId, refreshToken = 0 }: Props) {
     <div className="space-y-4">
       <div className="rounded-xl border border-[#5A9E6F]/25 bg-gradient-to-br from-[#5A9E6F]/12 to-white px-4 py-3 text-center">
         <p className="text-base font-bold leading-snug text-charcoal">
-          운동하면 운동나무가 자라고
-          <br />
-          내 마을이 함께 발전해요
+          운동 습관이 내 운동 세계를 키웁니다
+        </p>
+        <p className="mt-1 text-sm text-muted">
+          성장치는 운동으로만 얻고, 마을 발전은 그 결과예요
         </p>
       </div>
+
+      <GrowthLoopExplainer />
 
       {profile.unread_notification_count > 0 && profile.growth_notifications.length > 0 && (
         <section className="rounded-xl border border-[#5A9E6F]/40 bg-[#5A9E6F]/10 px-4 py-3">

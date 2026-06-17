@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
   buildSlgVillageSlot,
+  collectSlgVillageProduction,
   upgradeSlgVillageSlot,
 } from '../../../api/slgVillage'
 import { formatSupabaseError } from '../../../lib/errors'
@@ -122,10 +123,54 @@ export function MemberVillageSection({ memberId, refreshToken = 0 }: Props) {
 
       <div className="p-4">
         <p className="text-center text-sm leading-relaxed text-charcoal/90">
-          운동의 결과로 자라난 세계예요.
+          운동으로 키운 나만의 운동 세계예요.
           <br />
-          <span className="text-muted">나무가 성장할수록 마을도 함께 커집니다.</span>
+          <span className="text-muted">
+            나무가 자라 건물이 열리고, 운동할 때 시설이 도토리를 모아둡니다.
+          </span>
         </p>
+
+        {state.production.built_facility_count > 0 && (
+          <div
+            className={`mt-4 rounded-xl border px-4 py-3 ${
+              state.production.pending_acorns > 0
+                ? 'border-amber-300/60 bg-amber-50'
+                : 'border-gold/20 bg-cream/40'
+            }`}
+          >
+            <p className="text-xs font-semibold text-charcoal">시설 운영 (보조 수익)</p>
+            {state.production.pending_acorns > 0 ? (
+              <>
+                <p className="mt-1 text-sm font-bold text-amber-900">
+                  수거 가능 도토리 {state.production.pending_acorns.toLocaleString()}개
+                </p>
+                <p className="mt-1 text-xs text-muted">
+                  운동 {state.production.exercise_events_since_collect}회로{' '}
+                  {state.production.allowed_production_hours}시간 생산됐어요
+                </p>
+                <button
+                  type="button"
+                  className={`${btnPrimary} mt-3 w-full bg-amber-600 hover:bg-amber-700`}
+                  disabled={actionLoading}
+                  onClick={() =>
+                    void runAction(async () => {
+                      const result = await collectSlgVillageProduction(memberId)
+                      setState(result.state)
+                    })
+                  }
+                >
+                  마을 보상 수거하기
+                </button>
+              </>
+            ) : (
+              <p className="mt-1 text-xs leading-relaxed text-muted">
+                {state.production.exercise_events_since_collect > 0
+                  ? `운동 기록이 있어요. 시설이 도토리를 모으는 중입니다 (${state.production.allowed_production_hours}/${state.production.hours_elapsed}시간).`
+                  : '운동을 하면 시설이 도토리를 모아둡니다. 방치만으로는 쌓이지 않아요.'}
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="mt-4">
           <MotionHubVillageScene
@@ -199,7 +244,11 @@ export function MemberVillageSection({ memberId, refreshToken = 0 }: Props) {
                   <p className="text-xs text-muted">
                     {status === 'locked'
                       ? `${UNLOCK_STAGE_LABELS[slot.unlock_stage_key] ?? ''} 단계에 해금`
-                      : STATUS_LABEL[status]}
+                      : status === 'built' || status === 'maxed'
+                        ? slot.production_rate_per_hour != null
+                          ? `시간당 🌰${slot.production_rate_per_hour} (운동 연동)`
+                          : STATUS_LABEL[status]
+                        : STATUS_LABEL[status]}
                   </p>
                 </div>
                 <span

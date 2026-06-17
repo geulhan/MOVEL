@@ -29,6 +29,7 @@ export type SlgBuildingCatalogItem = {
   slot_key: string
   grid_x: number
   grid_y: number
+  production_acorns_per_hour: number
   is_unlocked: boolean
 }
 
@@ -47,6 +48,8 @@ export type SlgVillageSlot = {
   upgrade_cost_acorns: number
   max_level: number
   unlock_stage_key: string
+  production_acorns_per_hour: number
+  production_rate_per_hour: number | null
   is_unlocked: boolean
   slot_building_id: string | null
   level: number
@@ -56,12 +59,22 @@ export type SlgVillageSlot = {
   build_cost_now: number | null
 }
 
+export type SlgVillageProduction = {
+  pending_acorns: number
+  exercise_events_since_collect: number
+  allowed_production_hours: number
+  hours_elapsed: number
+  built_facility_count: number
+  last_collected_at: string | null
+}
+
 export type SlgVillageInfo = {
   id: string
   width: number
   height: number
   plaza_x: number
   plaza_y: number
+  last_collected_at?: string | null
 }
 
 export type SlgVillageState = {
@@ -73,6 +86,7 @@ export type SlgVillageState = {
   tree_stage_key: string
   tree_stage_name: string
   tree_stage_rank: number
+  production: SlgVillageProduction
   catalog: SlgBuildingCatalogItem[]
   slots: SlgVillageSlot[]
 }

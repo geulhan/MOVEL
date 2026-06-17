@@ -1,11 +1,13 @@
 import type { SlgVillageState } from '../types/slgVillage'
 import {
   buildSlgVillageSlotRpc,
+  collectSlgVillageProductionRpc,
   fetchSlgVillageStateRpc,
   upgradeSlgVillageSlotRpc,
 } from './slgVillage/slgVillageRepository'
 
 export type { SlgVillageState }
+export type { CollectVillageProductionResult } from './slgVillage/slgVillageRepository'
 
 export async function getSlgVillageState(memberId: string): Promise<SlgVillageState> {
   return fetchSlgVillageStateRpc(memberId)
@@ -23,4 +25,8 @@ export async function upgradeSlgVillageSlot(
   slotKey: string,
 ): Promise<SlgVillageState> {
   return upgradeSlgVillageSlotRpc(memberId, slotKey)
+}
+
+export async function collectSlgVillageProduction(memberId: string) {
+  return collectSlgVillageProductionRpc(memberId)
 }

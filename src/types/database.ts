@@ -1616,6 +1616,10 @@ export type Database = {
         Args: { p_member_id: string }
         Returns: Json
       }
+      collect_slg_village_production: {
+        Args: { p_member_id: string }
+        Returns: Json
+      }
       purchase_slg_building: {
         Args: { p_member_id: string; p_building_id: string }
         Returns: Json
