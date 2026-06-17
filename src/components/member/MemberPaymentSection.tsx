@@ -24,6 +24,7 @@ import { CONTRACT_STATUS_LABELS } from '../../constants/contractTerms'
 import type { PaymentRequest } from '../../types/database'
 import { btnGold, cardClass } from '../../styles/theme'
 import { MemberContractSignModal } from '../contracts/MemberContractSignModal'
+import { MemberPaymentHistorySection } from './MemberPaymentHistorySection'
 
 type Props = {
   memberId: string
@@ -211,6 +212,8 @@ export function MemberPaymentSection({ memberId }: Props) {
           )
         })
       )}
+
+      <MemberPaymentHistorySection memberId={memberId} compact />
 
       <section className="rounded-xl border border-dashed border-gold/40 bg-white/60 px-4 py-3 text-xs text-muted">
         결제·할인·MILE 사용은 센터에서 최종 확인 후 반영됩니다.
