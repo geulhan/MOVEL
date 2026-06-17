@@ -275,6 +275,12 @@ export async function resetMemberPasswordToDefault(
     switch (row.error) {
       case 'not_found':
         throw new Error('회원을 찾을 수 없습니다.')
+      case 'center_not_configured':
+        throw new Error(
+          row.message != null
+            ? String(row.message)
+            : '회원 소속 센터를 확인할 수 없습니다.',
+        )
       default:
         throw new Error('비밀번호 초기화에 실패했습니다.')
     }

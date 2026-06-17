@@ -9,6 +9,45 @@ import { calcSessionExpiry } from '../utils/period'
 
 export { normalizeMember }
 
+export const DUPLICATE_MEMBER_PHONE_MESSAGE = '이미 등록된 전화번호입니다.'
+
+function duplicateMemberPhoneError(): Error {
+  const err = new Error(DUPLICATE_MEMBER_PHONE_MESSAGE)
+  ;(err as Error & { code: string }).code = '23505'
+  return err
+}
+
+export async function findMemberIdByPhoneInCenter(
+  centerId: string,
+  phone: string,
+): Promise<string | null> {
+  const { data, error } = await supabase.rpc('find_member_by_phone_in_center', {
+    p_center_id: centerId,
+    p_phone: normalizePhone(phone),
+  })
+
+  if (error) {
+    if (
+      error.code === 'PGRST202' ||
+      error.message?.includes('find_member_by_phone_in_center')
+    ) {
+      const { data: rows, error: fallbackError } = await supabase
+        .from('members')
+        .select('id, phone')
+        .eq('center_id', centerId)
+
+      if (fallbackError) throw fallbackError
+
+      const digits = normalizePhone(phone)
+      const match = (rows ?? []).find((row) => normalizePhone(row.phone) === digits)
+      return match?.id ?? null
+    }
+    throw error
+  }
+
+  return data ? String(data) : null
+}
+
 function escapeIlikePattern(term: string): string {
   return term.replace(/[%_\\,().]/g, '\\$&')
 }
@@ -47,12 +86,22 @@ export async function createMember(input: {
   status?: MemberStatus
 }): Promise<Member> {
   const centerId = await getCurrentCenterId()
+  const normalizedPhone = normalizePhone(input.phone)
+
+  const existingMemberId = await findMemberIdByPhoneInCenter(
+    centerId,
+    normalizedPhone,
+  )
+  if (existingMemberId) {
+    throw duplicateMemberPhoneError()
+  }
+
   const expires_at = calcSessionExpiry(input.registered_at, input.total_sessions)
 
   const payload: MemberInsert = {
     center_id: centerId,
     name: input.name.trim(),
-    phone: normalizePhone(input.phone),
+    phone: normalizedPhone,
     total_sessions: input.total_sessions,
     remaining_sessions: input.total_sessions,
     payment_amount: input.payment_amount,

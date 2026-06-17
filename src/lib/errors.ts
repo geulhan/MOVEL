@@ -20,6 +20,24 @@ export function formatSupabaseError(err: unknown): string {
   const msg = e.message ?? ''
   const details = e.details ? `\n${e.details}` : ''
 
+  if (
+    e.code === '23505' ||
+    msg.includes('duplicate key') ||
+    msg.includes('members_center_phone_uidx')
+  ) {
+    return '이미 등록된 전화번호입니다.'
+  }
+
+  if (
+    msg.includes('member_credentials') &&
+    (msg.includes('center_id') || msg.includes('23502'))
+  ) {
+    return (
+      '회원 로그인 정보 저장에 실패했습니다. ' +
+      'Supabase SQL Editor에서 supabase/migration_079_fix_member_credentials_center_id.sql 을 실행해 주세요.'
+    )
+  }
+
   if (isAuthRpcSetupError(msg, e.code)) {
     const kind =
       msg.includes('verify_member_login') || msg.includes('member_credentials')

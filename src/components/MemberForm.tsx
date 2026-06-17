@@ -1,5 +1,10 @@
 import { useMemo, useState, type FormEvent } from 'react'
-import { createMember, formatDate, todayDateString } from '../api/members'
+import {
+  createMember,
+  DUPLICATE_MEMBER_PHONE_MESSAGE,
+  formatDate,
+  todayDateString,
+} from '../api/members'
 import { getErrorMessage } from '../lib/errors'
 import { SESSION_DAYS_PER_SESSION } from '../constants/session'
 import { btnPrimary, cardClass, inputClass } from '../styles/theme'
@@ -106,7 +111,7 @@ export function MemberForm({ trainers, members = [], onCreated }: Props) {
         msg.includes('duplicate') ||
         msg.includes('unique')
       ) {
-        setError('이미 등록된 전화번호입니다.')
+        setError(DUPLICATE_MEMBER_PHONE_MESSAGE)
       } else {
         setError(msg)
       }

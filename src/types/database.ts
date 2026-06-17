@@ -1458,6 +1458,13 @@ export type Database = {
         }
         Returns: Json
       }
+      find_member_by_phone_in_center: {
+        Args: {
+          p_center_id: string
+          p_phone: string
+        }
+        Returns: string | null
+      }
       reset_member_password_to_default: {
         Args: {
           p_member_id: string
