@@ -1,13 +1,15 @@
-import { useMemo } from 'react'
-import { formatDate } from '../../../api/members'
+import { useMemo, useState } from 'react'
 import {
   DEFAULT_GROWTH_REWARD_RULES,
   GROWTH_EVENT_LABELS,
+  GROWTH_TREE_EMOJI,
 } from '../../../types/growth'
 import type { GrowthProfile, GrowthRewardRule } from '../../../types/growth'
-import { VILLAGE_UNLOCK_BY_STAGE } from '../../../types/slgVillage'
 import { useGrowthProfile } from '../../../hooks/useGrowthProfile'
 import { MemberChallengesSection } from './MemberChallengesSection'
+import { GrowthNextGoalCard } from './GrowthNextGoalCard'
+import { GrowthStagePipeline } from './GrowthStagePipeline'
+import { MemberVillageSection } from '../village/MemberVillageSection'
 import { MotionHubTreeScene } from '../pixel/MotionHubVillageScene'
 import { cardClass } from '../../../styles/theme'
 
@@ -30,16 +32,6 @@ function growthProgressPercent(profile: GrowthProfile): number {
   return Math.min(100, Math.max(0, Math.round(p)))
 }
 
-function formatRewardLimit(rule: GrowthRewardRule): string | null {
-  if (rule.limit_period === 'monthly' && rule.limit_count) {
-    return `월 ${rule.limit_count}회`
-  }
-  if (rule.limit_period === 'rolling_30d' && rule.limit_count) {
-    return '30일 1회'
-  }
-  return null
-}
-
 const EARN_RULE_ORDER = [
   'PT_ATTENDANCE',
   'GROUP_CLASS_ATTENDANCE',
@@ -49,6 +41,11 @@ const EARN_RULE_ORDER = [
   'CHALLENGE_COMPLETE',
   'STREAK_7_DAYS',
   'STREAK_30_DAYS',
+  'STEPS_3000',
+  'STEPS_5000',
+  'STEPS_7000',
+  'STEPS_10000',
+  'STEPS_15000',
 ]
 
 function sortRewardRules(rules: GrowthRewardRule[]): GrowthRewardRule[] {
@@ -64,6 +61,7 @@ export function MemberGrowthSection({ memberId, refreshToken = 0 }: Props) {
     memberId,
     refreshToken,
   )
+  const [detailsOpen, setDetailsOpen] = useState(false)
 
   const progress = useMemo(
     () => (profile ? growthProgressPercent(profile) : 0),
@@ -100,12 +98,6 @@ export function MemberGrowthSection({ memberId, refreshToken = 0 }: Props) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
         <p>{error}</p>
-        <p className="mt-2 text-xs text-red-600/80">
-          Supabase에서 migration_078_platform_growth_mvp.sql,
-          migration_081_growth_events_auto_earn.sql,
-          migration_083_growth_achievements_notifications.sql,
-          migration_084_center_challenges.sql 실행 후 다시 시도해 주세요.
-        </p>
         <button
           type="button"
           onClick={() => void reload()}
@@ -119,276 +111,165 @@ export function MemberGrowthSection({ memberId, refreshToken = 0 }: Props) {
 
   if (!profile) return null
 
+  const treeEmoji = GROWTH_TREE_EMOJI[profile.current_stage_key] ?? '🌱'
+
   return (
     <div className="space-y-4">
+      <div className="rounded-xl border border-[#5A9E6F]/25 bg-gradient-to-br from-[#5A9E6F]/12 to-white px-4 py-3 text-center">
+        <p className="text-base font-bold leading-snug text-charcoal">
+          운동하면 운동나무가 자라고
+          <br />
+          내 마을이 함께 발전해요
+        </p>
+      </div>
+
       {profile.unread_notification_count > 0 && profile.growth_notifications.length > 0 && (
         <section className="rounded-xl border border-[#5A9E6F]/40 bg-[#5A9E6F]/10 px-4 py-3">
           <p className="text-sm font-semibold text-charcoal">새 성장 알림</p>
           <ul className="mt-2 space-y-2">
             {profile.growth_notifications
               .filter((n) => !n.is_read)
-              .slice(0, 3)
+              .slice(0, 2)
               .map((n) => (
                 <li key={n.id} className="text-sm text-charcoal/90">
                   <span className="mr-1">{n.icon}</span>
                   <span className="font-medium">{n.title}</span>
-                  {n.body ? <span className="text-charcoal/75"> · {n.body}</span> : null}
-                  {(n.growth_amount > 0 || n.acorn_amount > 0) && (
-                    <span className="mt-0.5 block text-xs text-[#5A9E6F]">
-                      {n.growth_amount > 0 ? `+${n.growth_amount} 성장치` : ''}
-                      {n.growth_amount > 0 && n.acorn_amount > 0 ? ' · ' : ''}
-                      {n.acorn_amount > 0 ? `+${n.acorn_amount} 도토리` : ''}
-                    </span>
-                  )}
                 </li>
               ))}
           </ul>
         </section>
       )}
 
-      <section className={`${cardClass} p-4`}>
-        <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-xl border border-[#5A9E6F]/30 bg-white px-3 py-2.5">
-            <p className="text-[11px] font-semibold text-muted">성장치</p>
-            <p className="mt-0.5 text-lg font-bold tabular-nums text-charcoal">
-              {formatGrowth(profile.total_growth)}
-            </p>
-            <p className="mt-0.5 text-[10px] text-muted">운동할수록 빠르게 쌓여요</p>
-          </div>
-          <div className="rounded-xl border border-gold/25 bg-white px-3 py-2.5">
-            <p className="text-[11px] font-semibold text-muted">마일</p>
-            <p className="mt-0.5 text-lg font-bold tabular-nums text-charcoal">
-              {formatGrowth(profile.current_mile)}
-            </p>
-            <p className="mt-0.5 text-[10px] text-muted">센터 혜택 포인트</p>
-          </div>
-          <div className="rounded-xl border border-amber-200/80 bg-white px-3 py-2.5">
-            <p className="text-[11px] font-semibold text-muted">도토리</p>
-            <p className="mt-0.5 text-lg font-bold tabular-nums text-charcoal">
-              {formatGrowth(profile.current_acorns)}
-            </p>
-            <p className="mt-0.5 text-[10px] text-muted">마을 발전 재화</p>
-          </div>
-        </div>
-      </section>
-
-      <section className={`${cardClass} overflow-hidden p-4`}>
-        <MotionHubTreeScene treeStageKey={profile.current_stage_key} />
-        <div className="mt-2 flex flex-col items-center">
-          <p className="text-lg font-bold text-charcoal">
+      <section className={`${cardClass} overflow-hidden`}>
+        <div className="bg-charcoal px-4 py-3 text-center">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-cream/60">
+            내 운동나무
+          </p>
+          <p className="mt-1 flex items-center justify-center gap-2 text-xl font-bold text-cream">
+            <span aria-hidden>{treeEmoji}</span>
             {profile.current_stage_name}
           </p>
+          <p className="mt-1 text-sm text-cream/80">
+            성장치{' '}
+            <span className="font-bold tabular-nums">
+              {formatGrowth(profile.total_growth)}
+            </span>
+          </p>
+        </div>
+
+        <div className="p-4">
+          <MotionHubTreeScene treeStageKey={profile.current_stage_key} />
           {!profile.is_max_stage && profile.next_stage_name && (
-            <>
-              <div className="mt-4 h-3 w-full max-w-xs overflow-hidden rounded-full bg-white/60">
+            <div className="mt-4">
+              <div className="flex items-center justify-between text-xs text-muted">
+                <span>{profile.current_stage_name}</span>
+                <span>{profile.next_stage_name}</span>
+              </div>
+              <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-charcoal/10">
                 <div
                   className="h-full rounded-full bg-[#5A9E6F] transition-all duration-500"
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              <p className="mt-2 text-center text-sm text-charcoal/80">
-                다음 단계 <strong>{profile.next_stage_name}</strong>까지{' '}
-                <strong className="tabular-nums">
-                  {formatGrowth(profile.growth_until_next)}
-                </strong>
-                성장치 남음
-              </p>
-            </>
-          )}
-          {profile.is_max_stage && (
-            <p className="mt-2 text-sm font-medium text-charcoal/75">
-              최고 단계에 도달했어요
-            </p>
+            </div>
           )}
         </div>
       </section>
 
-      <section className={`${cardClass} p-4`}>
-        <h3 className="text-base font-semibold text-charcoal">운동나무 단계</h3>
-        <p className="mt-1 text-xs text-muted">
-          단계가 오를수록 마을 탭에서 새 건물을 건설할 수 있어요
-        </p>
-        <ul className="mt-3 space-y-2">
-          {treeStages.map((stage) => {
-            const isCurrent = profile.current_stage_key === stage.stage_key
-            const villageUnlock =
-              VILLAGE_UNLOCK_BY_STAGE[stage.stage_key] ?? null
-            return (
-              <li
-                key={stage.stage_key}
-                className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm ${
-                  isCurrent
-                    ? 'bg-[#5A9E6F]/10 font-semibold text-charcoal'
-                    : 'text-charcoal/80'
-                }`}
-              >
-                <div>
-                  <span>{stage.display_name_ko}</span>
-                  {villageUnlock && (
-                    <p className="text-[11px] text-muted">마을 · {villageUnlock}</p>
-                  )}
-                </div>
-                <span className="tabular-nums text-muted">
-                  {formatGrowth(stage.min_growth)} 성장치
-                </span>
-              </li>
-            )
-          })}
-        </ul>
-      </section>
+      <GrowthNextGoalCard profile={profile} />
 
-      <section className={`${cardClass} p-4`}>
-        <h3 className="text-base font-semibold text-charcoal">성장 보상</h3>
-        <p className="mt-1 text-xs text-muted">
-          성장치는 후하게, 도토리는 소중하게 적립돼요
-        </p>
-        <ul className="mt-3 divide-y divide-gold/15">
-          {rewardRules.map((rule) => {
-            const limit = formatRewardLimit(rule)
-            return (
-              <li
-                key={rule.event_type}
-                className="flex items-start justify-between gap-3 py-3 text-sm"
-              >
-                <div className="min-w-0">
-                  <p className="font-medium text-charcoal">
-                    {rule.display_name_ko ||
-                      GROWTH_EVENT_LABELS[rule.event_type] ||
-                      rule.event_type}
-                  </p>
-                  {limit && (
-                    <p className="mt-0.5 text-xs text-muted">{limit}</p>
-                  )}
-                </div>
-                <div className="shrink-0 text-right text-xs leading-relaxed">
-                  <p className="font-bold tabular-nums text-[#5A9E6F]">
-                    +{rule.growth_reward} 성장치
-                  </p>
-                  {rule.acorn_reward > 0 && (
-                    <p className="tabular-nums text-amber-700">
-                      +{rule.acorn_reward} 도토리
-                    </p>
-                  )}
-                </div>
-              </li>
-            )
-          })}
-        </ul>
-      </section>
+      <GrowthStagePipeline profile={profile} stages={treeStages} />
 
       <MemberChallengesSection challenges={profile.active_challenges ?? []} />
 
-      <section className={`${cardClass} p-4`}>
-        <h3 className="text-base font-semibold text-charcoal">업적</h3>
-        <p className="mt-1 text-xs text-muted">운동 습관을 쌓으며 배지를 모아보세요</p>
-        <ul className="mt-3 space-y-3">
-          {profile.achievements.map((item) => {
-            const progress = item.is_unlocked
-              ? 100
-              : Math.min(
-                  100,
-                  Math.round((item.current_value / item.target_value) * 100),
-                )
-            return (
-              <li
-                key={item.code}
-                className={`rounded-xl border px-3 py-3 ${
-                  item.is_unlocked
-                    ? 'border-[#5A9E6F]/40 bg-[#5A9E6F]/5'
-                    : 'border-gold/20 bg-white'
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <span className="text-2xl leading-none" aria-hidden>
-                    {item.icon}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-semibold text-charcoal">{item.title}</p>
-                      {item.is_unlocked && (
-                        <span className="shrink-0 text-[10px] font-bold text-[#5A9E6F]">
-                          달성
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-0.5 text-xs text-muted">{item.description}</p>
-                    {!item.is_unlocked && (
-                      <>
-                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-charcoal/10">
-                          <div
-                            className="h-full rounded-full bg-[#5A9E6F]"
-                            style={{ width: `${progress}%` }}
-                          />
-                        </div>
-                        <p className="mt-1 text-[11px] text-muted tabular-nums">
-                          {item.current_value} / {item.target_value}
-                        </p>
-                      </>
-                    )}
-                    {(item.reward_growth > 0 || item.reward_acorn > 0) && (
-                      <p className="mt-1.5 text-[11px] text-charcoal/70">
-                        보상: +{item.reward_growth} 성장치
-                        {item.reward_acorn > 0 ? ` · +${item.reward_acorn} 도토리` : ''}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </li>
-            )
-          })}
-        </ul>
-      </section>
+      <MemberVillageSection memberId={memberId} refreshToken={refreshToken} />
 
       <section className={`${cardClass} p-4`}>
-        <h3 className="text-base font-semibold text-charcoal">성장 타임라인</h3>
-        <p className="mt-1 text-xs text-muted">최근 활동 · 업적 · 나무 성장 기록</p>
-        {profile.growth_timeline.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">
-            아직 기록이 없어요. PT 완료, 그룹수업, 운동일지를 하면 타임라인이 채워져요.
-          </p>
-        ) : (
-          <ul className="mt-3 divide-y divide-gold/15">
-            {profile.growth_timeline.map((row) => (
-              <li
-                key={`${row.kind}-${row.id}`}
-                className="flex items-center justify-between gap-3 py-3 text-sm"
-              >
-                <div className="min-w-0">
-                  <p className="font-medium text-charcoal">
-                    {row.icon ? <span className="mr-1">{row.icon}</span> : null}
-                    {row.title}
-                  </p>
-                  {row.subtitle && (
-                    <p className="mt-0.5 text-xs font-medium text-charcoal/80">
-                      {row.subtitle}
-                    </p>
-                  )}
-                  <p className="mt-0.5 text-xs text-muted">
-                    {formatDate(row.created_at.slice(0, 10))}
-                  </p>
-                </div>
-                {(row.growth_amount > 0 || row.acorn_amount > 0) && (
-                  <div className="shrink-0 text-right text-xs leading-relaxed">
-                    {row.growth_amount > 0 && (
-                      <p className="font-bold tabular-nums text-[#5A9E6F]">
-                        +{row.growth_amount} 성장치
-                      </p>
-                    )}
-                    {row.acorn_amount > 0 && (
-                      <p className="tabular-nums text-amber-700">
-                        +{row.acorn_amount} 도토리
-                      </p>
-                    )}
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
+        <button
+          type="button"
+          className="flex w-full items-center justify-between text-left"
+          onClick={() => setDetailsOpen((v) => !v)}
+        >
+          <div>
+            <h3 className="text-base font-semibold text-charcoal">성장 기록 · 보상 안내</h3>
+            <p className="mt-0.5 text-xs text-muted">
+              업적, 타임라인, 운동별 성장치
+            </p>
+          </div>
+          <span className="text-sm text-muted">{detailsOpen ? '▲' : '▼'}</span>
+        </button>
+
+        {detailsOpen && (
+          <div className="mt-4 space-y-6 border-t border-gold/15 pt-4">
+            <div>
+              <h4 className="text-sm font-bold text-charcoal">운동별 성장 보상</h4>
+              <ul className="mt-2 divide-y divide-gold/15">
+                {rewardRules.slice(0, 8).map((rule) => (
+                  <li
+                    key={rule.event_type}
+                    className="flex items-center justify-between gap-2 py-2 text-sm"
+                  >
+                    <span className="text-charcoal">
+                      {rule.display_name_ko ||
+                        GROWTH_EVENT_LABELS[rule.event_type] ||
+                        rule.event_type}
+                    </span>
+                    <span className="shrink-0 font-bold text-[#5A9E6F]">
+                      +{rule.growth_reward}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {profile.achievements.length > 0 && (
+              <div>
+                <h4 className="text-sm font-bold text-charcoal">업적</h4>
+                <ul className="mt-2 space-y-2">
+                  {profile.achievements.slice(0, 5).map((item) => (
+                    <li
+                      key={item.code}
+                      className={`rounded-lg px-3 py-2 text-sm ${
+                        item.is_unlocked ? 'bg-[#5A9E6F]/8' : 'bg-cream/50'
+                      }`}
+                    >
+                      <span className="mr-1">{item.icon}</span>
+                      {item.title}
+                      {item.is_unlocked && (
+                        <span className="ml-2 text-xs text-[#5A9E6F]">달성</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {profile.growth_timeline.length > 0 && (
+              <div>
+                <h4 className="text-sm font-bold text-charcoal">최근 활동</h4>
+                <ul className="mt-2 divide-y divide-gold/15">
+                  {profile.growth_timeline.slice(0, 5).map((row) => (
+                    <li
+                      key={`${row.kind}-${row.id}`}
+                      className="flex justify-between gap-2 py-2 text-sm"
+                    >
+                      <span className="min-w-0 truncate text-charcoal">{row.title}</span>
+                      {row.growth_amount > 0 && (
+                        <span className="shrink-0 font-bold text-[#5A9E6F]">
+                          +{row.growth_amount}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
         )}
       </section>
 
       <p className="text-center text-xs text-muted">
-        센터를 옮겨도 운동나무는 계속 자라요
+        마일리지 혜택은 리워드 탭에서 확인할 수 있어요
       </p>
     </div>
   )

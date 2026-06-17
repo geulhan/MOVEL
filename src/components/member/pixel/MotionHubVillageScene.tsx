@@ -90,12 +90,16 @@ export function MotionHubVillageScene({
       <PixelArtboard
         ariaLabel="MotionHub 마을"
         className="rounded-xl"
-        onClick={({ x, y }) => {
-          const sceneKey = hitTestSlot(x, y, SLOT_HIT_AREAS)
-          if (!sceneKey) return
-          const slot = slotBySceneKey.get(sceneKey)
-          if (slot && onSlotClick) onSlotClick(slot.slot_key)
-        }}
+        onClick={
+          onSlotClick
+            ? ({ x, y }) => {
+                const sceneKey = hitTestSlot(x, y, SLOT_HIT_AREAS)
+                if (!sceneKey) return
+                const slot = slotBySceneKey.get(sceneKey)
+                if (slot) onSlotClick(slot.slot_key)
+              }
+            : undefined
+        }
       >
         <SceneBackground />
 

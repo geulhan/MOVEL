@@ -162,9 +162,13 @@ export function buildEmptySlotMarker(cx: number, cy: number, unlocked: boolean):
   }
 
   if (unlocked) {
-    const gold = '#e6b422'
-    rects.push({ x: cx - 3, y: cy - 22, width: 6, height: 44, fill: gold })
-    rects.push({ x: cx - 22, y: cy - 3, width: 44, height: 6, fill: gold })
+    const wood = '#8d6e4a'
+    const beam = '#a1887f'
+    for (let i = -1; i <= 1; i += 1) {
+      rects.push({ x: cx + i * 18 - 3, y: cy - 28, width: 6, height: 36, fill: wood })
+      rects.push({ x: cx - 28, y: cy + i * 10 - 3, width: 56, height: 6, fill: beam })
+    }
+    rects.push({ x: cx - 18, y: cy + 8, width: 36, height: 8, fill: '#c9ad82' })
   } else {
     rects.push({ x: cx - 10, y: cy - 14, width: 20, height: 16, fill: '#757a80' })
     rects.push({ x: cx - 6, y: cy - 10, width: 12, height: 10, fill: '#9aa0a6' })
