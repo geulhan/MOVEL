@@ -24,7 +24,11 @@ import type { Member } from '../../types/database'
 type HistoryTab = 'earn' | 'spend'
 type RewardsAdminTab = 'balances' | 'rules' | 'steps' | 'center_photo'
 
-export default function RewardsPage() {
+type Props = {
+  embedded?: boolean
+}
+
+export default function RewardsPage({ embedded = false }: Props) {
   const [adminTab, setAdminTab] = useState<RewardsAdminTab>('balances')
   const [summaries, setSummaries] = useState<MemberRewardSummary[]>([])
   const [members, setMembers] = useState<Member[]>([])
@@ -145,10 +149,12 @@ export default function RewardsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="마일리지 관리"
-        description="회원별 마일리지 조회·수동 조정, 적립 규칙, 걸음·센터 인증 검수"
-      />
+      {!embedded && (
+        <PageHeader
+          title="마일리지 관리"
+          description="회원별 마일리지 조회·수동 조정, 적립 규칙, 걸음·센터 인증 검수"
+        />
+      )}
 
       <nav className="chip-scroll -mx-1 px-1">
         <button

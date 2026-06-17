@@ -3,12 +3,12 @@ import { formatDate } from '../../../api/members'
 import {
   DEFAULT_GROWTH_REWARD_RULES,
   GROWTH_EVENT_LABELS,
-  GROWTH_TREE_EMOJI,
 } from '../../../types/growth'
 import type { GrowthProfile, GrowthRewardRule } from '../../../types/growth'
 import { VILLAGE_UNLOCK_BY_STAGE } from '../../../types/slgVillage'
 import { useGrowthProfile } from '../../../hooks/useGrowthProfile'
 import { MemberChallengesSection } from './MemberChallengesSection'
+import { MotionHubTreeScene } from '../pixel/MotionHubVillageScene'
 import { cardClass } from '../../../styles/theme'
 
 type Props = {
@@ -92,10 +92,6 @@ export function MemberGrowthSection({ memberId, refreshToken = 0 }: Props) {
     return profile.tree_stages
   }, [profile])
 
-  const treeEmoji = profile
-    ? GROWTH_TREE_EMOJI[profile.current_stage_key] ?? '🌱'
-    : '🌱'
-
   if (loading) {
     return <p className="text-sm text-muted">성장 정보를 불러오는 중…</p>
   }
@@ -176,22 +172,10 @@ export function MemberGrowthSection({ memberId, refreshToken = 0 }: Props) {
         </div>
       </section>
 
-      <section
-        className={`${cardClass} overflow-hidden`}
-        style={{
-          background:
-            'linear-gradient(180deg, #B8D4E8 0%, #9DCE8E 35%, #7CB86A 100%)',
-        }}
-      >
-        <div className="flex flex-col items-center px-4 py-8">
-          <span
-            className="select-none text-[5.5rem] leading-none drop-shadow-sm"
-            role="img"
-            aria-label={profile.current_stage_name}
-          >
-            {treeEmoji}
-          </span>
-          <p className="mt-3 text-lg font-bold text-charcoal">
+      <section className={`${cardClass} overflow-hidden p-4`}>
+        <MotionHubTreeScene treeStageKey={profile.current_stage_key} />
+        <div className="mt-2 flex flex-col items-center">
+          <p className="text-lg font-bold text-charcoal">
             {profile.current_stage_name}
           </p>
           {!profile.is_max_stage && profile.next_stage_name && (

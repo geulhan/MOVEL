@@ -12,9 +12,8 @@ import {
   VILLAGE_UNLOCK_BY_STAGE,
 } from '../../../types/slgVillage'
 import { btnOutline, btnPrimary, cardClass } from '../../../styles/theme'
-import { GardenPixelSprite, resolveTreeSpriteKey } from '../garden/GardenPixelSprite'
+import { MotionHubVillageScene } from '../pixel/MotionHubVillageScene'
 import { SlgVillagePixelSprite } from './SlgVillagePixelSprite'
-import { VillageGrassTile } from './VillageGrassTile'
 
 type Props = {
   memberId: string
@@ -54,20 +53,10 @@ export function MemberVillageSection({ memberId, refreshToken = 0 }: Props) {
   const [actionLoading, setActionLoading] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
 
-  const slotMap = useMemo(() => {
-    const map = new Map<string, SlgVillageSlot>()
-    for (const slot of state?.slots ?? []) {
-      map.set(`${slot.grid_x},${slot.grid_y}`, slot)
-    }
-    return map
-  }, [state?.slots])
-
   const selectedSlot = useMemo(
     () => state?.slots.find((s) => s.slot_key === selectedSlotKey) ?? null,
     [state?.slots, selectedSlotKey],
   )
-
-  const treeSprite = resolveTreeSpriteKey(state?.tree_stage_key ?? 'seed')
 
   async function runAction(action: () => Promise<void>) {
     setActionLoading(true)
@@ -110,10 +99,14 @@ export function MemberVillageSection({ memberId, refreshToken = 0 }: Props) {
     )
   }
 
-  const width = state.village.width
-  const height = state.village.height
-  const tileSize = 44
   const built = builtCount(state.slots)
+  const sceneSlots = state.slots.map((slot) => ({
+    slot_key: slot.slot_key,
+    sprite_key: slot.sprite_key,
+    is_built: slot.is_built,
+    is_unlocked: slot.is_unlocked,
+    level: slot.level,
+  }))
 
   return (
     <div className="space-y-4">
@@ -139,107 +132,17 @@ export function MemberVillageSection({ memberId, refreshToken = 0 }: Props) {
           열립니다. 도토리로 건설하고 업그레이드해 마을을 발전시켜 보세요.
         </p>
 
-        <div className="mt-4 overflow-x-auto pb-1">
-          <div
-            className="mx-auto rounded-2xl p-3 shadow-md ring-1 ring-[#4a6f3d]/25"
-            style={{
-              width: width * tileSize + 24,
-              background: 'linear-gradient(180deg, #8fcf7e 0%, #6ba85c 100%)',
-            }}
-          >
-            <div
-              className="grid gap-[3px] overflow-hidden rounded-xl"
-              style={{
-                gridTemplateColumns: `repeat(${width}, ${tileSize}px)`,
-                gridTemplateRows: `repeat(${height}, ${tileSize}px)`,
-                background: '#4a7c3f',
-              }}
-            >
-              {Array.from({ length: height }, (_, y) =>
-                Array.from({ length: width }, (_, x) => {
-                  const isPlaza =
-                    x === state.village.plaza_x && y === state.village.plaza_y
-                  const slot = slotMap.get(`${x},${y}`)
-                  const isSelected = slot?.slot_key === selectedSlotKey
-                  const showBuilding = slot?.is_built
-
-                  return (
-                    <button
-                      key={`${x}-${y}`}
-                      type="button"
-                      disabled={actionLoading || !slot}
-                      onClick={() => {
-                        if (slot) setSelectedSlotKey(slot.slot_key)
-                      }}
-                      className={`relative overflow-hidden transition duration-150 ${
-                        isSelected
-                          ? 'z-10 ring-2 ring-inset ring-amber-300 ring-offset-1 ring-offset-amber-100'
-                          : slot
-                            ? 'hover:brightness-110'
-                            : ''
-                      }`}
-                      style={{ width: tileSize, height: tileSize }}
-                      aria-label={
-                        isPlaza
-                          ? '운동나무'
-                          : slot
-                            ? `${slot.title} 슬롯`
-                            : `빈 땅 ${x + 1},${y + 1}`
-                      }
-                    >
-                      <VillageGrassTile
-                        x={x}
-                        y={y}
-                        kind={isPlaza ? 'plaza' : 'grass'}
-                        className="absolute inset-0"
-                      />
-                      {isPlaza && (
-                        <span className="pointer-events-none absolute inset-0 flex items-end justify-center pb-1">
-                          <GardenPixelSprite
-                            spriteKey={treeSprite}
-                            scale={2}
-                            className="drop-shadow-sm"
-                          />
-                        </span>
-                      )}
-                      {slot && !isPlaza && (
-                        <>
-                          {!showBuilding && (
-                            <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                              <span
-                                className={`flex h-8 w-8 items-center justify-center rounded-lg border-2 border-dashed text-lg ${
-                                  slot.is_unlocked
-                                    ? 'border-amber-400/80 bg-amber-50/90 text-amber-700'
-                                    : 'border-gray-300/80 bg-gray-100/80 text-gray-400'
-                                }`}
-                              >
-                                {slot.is_unlocked ? '+' : '🔒'}
-                              </span>
-                            </span>
-                          )}
-                          {showBuilding && (
-                            <span className="pointer-events-none absolute inset-0 flex flex-col items-center justify-end pb-1">
-                              <SlgVillagePixelSprite
-                                spriteKey={slot.sprite_key}
-                                scale={2}
-                              />
-                              <span className="mt-0.5 rounded bg-charcoal/75 px-1 text-[9px] font-bold text-cream">
-                                Lv.{slot.level}
-                              </span>
-                            </span>
-                          )}
-                        </>
-                      )}
-                    </button>
-                  )
-                }),
-              )}
-            </div>
-          </div>
+        <div className="mt-4">
+          <MotionHubVillageScene
+            treeStageKey={state.tree_stage_key}
+            slots={sceneSlots}
+            selectedSlotKey={selectedSlotKey}
+            onSlotClick={setSelectedSlotKey}
+          />
         </div>
 
         <p className="mt-2 text-center text-[11px] text-muted">
-          가운데 운동나무를 중심으로 건물 슬롯이 열립니다
+          슬롯을 탭해 건설·업그레이드하세요
         </p>
       </section>
 

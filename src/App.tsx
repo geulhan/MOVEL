@@ -17,7 +17,8 @@ import AttendancePage from './pages/admin/AttendancePage'
 import TrainersPage from './pages/admin/TrainersPage'
 import SeasonPassPage from './pages/admin/SeasonPassPage'
 import ChallengesPage from './pages/admin/ChallengesPage'
-import RewardsPage from './pages/admin/RewardsPage'
+import MotionHubAdminPage from './pages/admin/MotionHubAdminPage'
+import RewardsPageRedirect from './pages/admin/RewardsPageRedirect'
 import MessagesPage from './pages/admin/MessagesPage'
 import PaymentsPage from './pages/admin/PaymentsPage'
 import CenterSettingsPage from './pages/admin/CenterSettingsPage'
@@ -85,7 +86,8 @@ export default function App() {
             <Route path="classes" element={<ClassesPage />} />
             <Route path="attendance" element={<AttendancePage />} />
             <Route path="trainers" element={<TrainersPage />} />
-            <Route path="rewards" element={<RewardsPage />} />
+            <Route path="motionhub" element={<MotionHubAdminPage />} />
+            <Route path="rewards" element={<RewardsPageRedirect />} />
             <Route path="challenges" element={<ChallengesPage />} />
             <Route path="season-pass" element={<SeasonPassPage />} />
             <Route path="messages" element={<MessagesPage />} />
