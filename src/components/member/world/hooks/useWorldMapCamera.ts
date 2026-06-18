@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getVillageBounds } from '../data/worldEnvironment'
-import { WORLD_SIZE } from '../data/worldLayout'
+import { TREE_WORLD } from '../data/worldLayout'
 
 type Camera = {
   scale: number
@@ -8,8 +8,9 @@ type Camera = {
   y: number
 }
 
-const MIN_SCALE = 0.45
-const MAX_SCALE = 2.4
+const MIN_SCALE = 0.5
+const MAX_SCALE = 2.6
+const INITIAL_FOCUS_BIAS_Y = 18
 
 function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n))
@@ -30,27 +31,39 @@ export function useWorldMapCamera() {
     scale: number
   } | null>(null)
 
+  const fitToKingdomCenter = useCallback(() => {
+    const el = viewportRef.current
+    if (!el) return
+    const w = el.clientWidth
+    const h = el.clientHeight
+    const bounds = getVillageBounds()
+    const scale = clamp(Math.min(w, h) / bounds.width, 0.95, MAX_SCALE)
+    const focusY = TREE_WORLD.cy + INITIAL_FOCUS_BIAS_Y
+    const x = w / 2 - TREE_WORLD.cx * scale
+    const y = h / 2 - focusY * scale
+    setCamera({ scale, x, y })
+  }, [])
+
   const fitToVillage = useCallback(() => {
     const el = viewportRef.current
     if (!el) return
     const w = el.clientWidth
     const h = el.clientHeight
     const bounds = getVillageBounds()
-    const span = Math.max(bounds.width, bounds.height)
-    const scale = clamp(Math.min(w, h) / span, MIN_SCALE, MAX_SCALE)
+    const scale = clamp(Math.min(w, h) / (bounds.width * 1.08), MIN_SCALE, MAX_SCALE)
     const x = w / 2 - bounds.cx * scale
     const y = h / 2 - bounds.cy * scale
     setCamera({ scale, x, y })
   }, [])
 
   useEffect(() => {
-    fitToVillage()
+    fitToKingdomCenter()
     const el = viewportRef.current
     if (!el) return
-    const ro = new ResizeObserver(() => fitToVillage())
+    const ro = new ResizeObserver(() => fitToKingdomCenter())
     ro.observe(el)
     return () => ro.disconnect()
-  }, [fitToVillage])
+  }, [fitToKingdomCenter])
 
   const screenToWorld = useCallback(
     (clientX: number, clientY: number) => {
@@ -150,6 +163,7 @@ export function useWorldMapCamera() {
     viewportRef,
     camera,
     fitToVillage,
+    fitToKingdomCenter,
     screenToWorld,
     handlers: {
       onPointerDown,
@@ -161,6 +175,5 @@ export function useWorldMapCamera() {
       onTouchMove,
       onTouchEnd,
     },
-    worldSize: WORLD_SIZE,
   }
 }

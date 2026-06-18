@@ -13,23 +13,27 @@ export function MemberGrowthHubShell({ memberId, refreshToken = 0 }: Props) {
   const [subTab, setSubTab] = useState<SubTab>('hub')
 
   return (
-    <div className="space-y-2">
-      <div className="grid grid-cols-2 gap-1 rounded-xl border border-gold/20 bg-white p-1">
+    <div className={subTab === 'hub' ? 'space-y-1' : 'space-y-2'}>
+      <div
+        className={`grid grid-cols-2 gap-0.5 rounded-lg border border-charcoal/10 bg-white p-0.5 ${
+          subTab === 'hub' ? 'mx-0' : ''
+        }`}
+      >
         <button
           type="button"
           onClick={() => setSubTab('hub')}
-          className={`rounded-lg py-2 text-sm font-bold transition ${
+          className={`rounded-md py-1.5 text-xs font-bold transition ${
             subTab === 'hub'
               ? 'bg-charcoal text-cream shadow-sm'
               : 'text-charcoal hover:bg-cream/80'
           }`}
         >
-          내 마을
+          내 왕국
         </button>
         <button
           type="button"
           onClick={() => setSubTab('season')}
-          className={`rounded-lg py-2 text-sm font-bold transition ${
+          className={`rounded-md py-1.5 text-xs font-bold transition ${
             subTab === 'season'
               ? 'bg-charcoal text-cream shadow-sm'
               : 'text-charcoal hover:bg-cream/80'

@@ -12,6 +12,7 @@ type Props = {
   onSelect: (target: SelectedWorldTarget | null) => void
   isWorldActive?: boolean
   exerciseEventsSinceCollect?: number
+  className?: string
 }
 
 const TAP_MOVE_THRESHOLD = 12
@@ -27,8 +28,9 @@ export function WorldMapViewport({
   onSelect,
   isWorldActive = false,
   exerciseEventsSinceCollect = 0,
+  className = '',
 }: Props) {
-  const { viewportRef, camera, fitToVillage, screenToWorld, handlers } =
+  const { viewportRef, camera, fitToKingdomCenter, screenToWorld, handlers } =
     useWorldMapCamera()
   const pointerStart = useRef<{ x: number; y: number } | null>(null)
 
@@ -59,7 +61,7 @@ export function WorldMapViewport({
   return (
     <div
       ref={viewportRef}
-      className="relative h-[min(80dvh,720px)] min-h-[420px] w-full overflow-hidden rounded-2xl bg-[#1a2f1a] shadow-inner ring-1 ring-[#5a9e6f]/30"
+      className={`relative w-full overflow-hidden rounded-2xl bg-[#1a2f1a] shadow-inner ring-1 ring-[#5a9e6f]/30 ${className}`}
       style={{ touchAction: 'none' }}
       onWheel={handlers.onWheel}
       onTouchStart={handlers.onTouchStart}
@@ -81,7 +83,7 @@ export function WorldMapViewport({
         }
       }}
       onPointerCancel={handlers.onPointerCancel}
-      onDoubleClick={() => fitToVillage()}
+      onDoubleClick={() => fitToKingdomCenter()}
     >
       <div
         className="absolute left-0 top-0 origin-top-left will-change-transform"
@@ -98,8 +100,8 @@ export function WorldMapViewport({
         />
       </div>
 
-      <p className="pointer-events-none absolute bottom-2 left-0 right-0 text-center text-[10px] text-white/50">
-        드래그·핀치로 이동 · 두 번 탭으로 왕국 중심
+      <p className="pointer-events-none absolute bottom-1.5 left-0 right-0 text-center text-[9px] text-white/40">
+        드래그·핀치 이동 · 두 번 탭으로 왕국 중심
       </p>
     </div>
   )

@@ -2,7 +2,7 @@
  * 운동 왕국 캠퍼스 장식 — 최소 배치 (부지·건물 우선)
  */
 
-import { CAMPUS_RADIUS, TREE_WORLD, WORLD_BUILDINGS, WORLD_SIZE } from './worldLayout'
+import { CAMPUS_RADIUS, PLAZA_HUB, TREE_WORLD, WORLD_BUILDINGS, WORLD_SIZE } from './worldLayout'
 import { VILLAGE_ROAD_NETWORK } from './campusRoads'
 import { getTrackGymWalkPath } from './campusRoads'
 
@@ -70,9 +70,12 @@ function nearRoad(x: number, y: number, width = 42): boolean {
 }
 
 function inExclusionZone(x: number, y: number): boolean {
-  if (Math.hypot(x - TREE_WORLD.cx, y - TREE_WORLD.cy) < CAMPUS_RADIUS - 40) {
+  if (Math.hypot(x - TREE_WORLD.cx, y - TREE_WORLD.cy) < CAMPUS_RADIUS - 50) {
     return true
   }
+  const pdx = (x - PLAZA_HUB.cx) / (PLAZA_HUB.rx + 24)
+  const pdy = (y - PLAZA_HUB.cy) / (PLAZA_HUB.ry + 20)
+  if (pdx * pdx + pdy * pdy <= 1.1) return true
   for (const b of WORLD_BUILDINGS) {
     const dx = (x - b.cx) / (b.plotRx + 20)
     const dy = (y - (b.cy + 14)) / (b.plotRy + 16)
@@ -89,6 +92,11 @@ const PROP_TYPES: EnvPropType[] = [
 ]
 
 let cachedProps: EnvProp[] | null = null
+
+/** 레이아웃 변경 시 캐시 초기화 */
+export function resetWorldEnvironmentCache() {
+  cachedProps = null
+}
 
 export function generateWorldEnvironment(): EnvProp[] {
   if (cachedProps) return cachedProps
@@ -134,11 +142,10 @@ export function generateWorldEnvironment(): EnvProp[] {
 export const TRACK_GYM_WALK_PATH = getTrackGymWalkPath()
 
 export function getVillageBounds() {
-  const span = CAMPUS_RADIUS + 200
   return {
     cx: TREE_WORLD.cx,
-    cy: TREE_WORLD.cy,
-    width: span * 2.1,
-    height: span * 2.1,
+    cy: TREE_WORLD.cy + 18,
+    width: 560,
+    height: 560,
   }
 }

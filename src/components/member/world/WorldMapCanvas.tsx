@@ -29,8 +29,8 @@ type Props = {
   exerciseEventsSinceCollect?: number
 }
 
-/** 통일 스케일 — 이전 대비 1.5배 추가 확대 */
-const BUILDING_SCALE = 2.59
+/** 건물 스케일 — 기존 대비 약 25% 축소 */
+const BUILDING_SCALE = 1.94
 
 type BuildingLayer = {
   key: string
@@ -124,8 +124,13 @@ export function WorldMapCanvas({
           <stop offset="100%" stopColor="#8ecf7a" />
         </linearGradient>
         <radialGradient id="kingdom-glow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#fff9e6" stopOpacity={0.35} />
+          <stop offset="0%" stopColor="#fff9e6" stopOpacity={0.45} />
           <stop offset="100%" stopColor="#8ecf7a" stopOpacity={0} />
+        </radialGradient>
+        <radialGradient id="meadow-bright" cx="50%" cy="52%" r="48%">
+          <stop offset="0%" stopColor="#e8ffb8" stopOpacity={0.42} />
+          <stop offset="50%" stopColor="#b8f090" stopOpacity={0.18} />
+          <stop offset="100%" stopColor="#6aab58" stopOpacity={0} />
         </radialGradient>
         <filter
           id="wm-building-shadow"
@@ -162,9 +167,17 @@ export function WorldMapCanvas({
 
       <ellipse
         cx={TREE_WORLD.cx}
-        cy={TREE_WORLD.cy}
-        rx={155}
-        ry={125}
+        cy={TREE_WORLD.cy + 24}
+        rx={228}
+        ry={182}
+        fill="url(#meadow-bright)"
+      />
+
+      <ellipse
+        cx={TREE_WORLD.cx}
+        cy={TREE_WORLD.cy + 8}
+        rx={185}
+        ry={148}
         fill="url(#kingdom-glow)"
       />
 

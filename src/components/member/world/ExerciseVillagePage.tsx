@@ -23,7 +23,7 @@ export function ExerciseVillagePage({ memberId, refreshToken = 0 }: Props) {
 
   if (world.loading) {
     return (
-      <div className="flex h-[min(80dvh,520px)] items-center justify-center rounded-2xl bg-[#1a2f1a]/80 text-sm text-cream/70">
+      <div className="flex h-[min(85dvh,720px)] items-center justify-center rounded-2xl bg-[#1a2f1a]/80 text-sm text-cream/70">
         운동 마을을 불러오는 중…
       </div>
     )
@@ -50,40 +50,48 @@ export function ExerciseVillagePage({ memberId, refreshToken = 0 }: Props) {
       : null
 
   return (
-    <div className="relative flex flex-col gap-2">
-      <VillageHudBar
+    <div className="relative flex h-[min(86dvh,900px)] min-h-[460px] flex-col">
+      <WorldMapViewport
+        className="h-full min-h-0 flex-1"
         treeStageKey={world.treeStageKey}
-        treeStageName={world.treeStageName}
-        totalGrowth={world.totalGrowth}
-        progressPercent={world.progressPercent}
-        nextStageName={world.nextStageName}
-        growthUntilNext={world.growthUntilNext}
-        builtFacilityCount={world.builtFacilityCount}
+        buildings={world.buildings}
+        selected={selected}
+        onSelect={setSelected}
+        isWorldActive={world.exerciseEventsSinceCollect > 0}
         exerciseEventsSinceCollect={world.exerciseEventsSinceCollect}
       />
 
-      <div className="relative flex-1">
-        <WorldMapViewport
-          treeStageKey={world.treeStageKey}
-          buildings={world.buildings}
-          selected={selected}
-          onSelect={setSelected}
-          isWorldActive={world.exerciseEventsSinceCollect > 0}
-          exerciseEventsSinceCollect={world.exerciseEventsSinceCollect}
-        />
-        <CollectFloatingButton
-          pendingAcorns={world.pendingAcorns}
-          visible={world.pendingAcorns > 0}
-        />
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 px-1.5 pt-1.5">
+        <div className="pointer-events-auto">
+          <VillageHudBar
+            treeStageKey={world.treeStageKey}
+            treeStageName={world.treeStageName}
+            totalGrowth={world.totalGrowth}
+            progressPercent={world.progressPercent}
+            nextStageName={world.nextStageName}
+            growthUntilNext={world.growthUntilNext}
+            builtFacilityCount={world.builtFacilityCount}
+            exerciseEventsSinceCollect={world.exerciseEventsSinceCollect}
+          />
+        </div>
       </div>
 
-      <FacilityOperationStrip
-        buildings={world.buildings}
-        exerciseEventsSinceCollect={world.exerciseEventsSinceCollect}
-        selectedBuildingKey={selectedBuilding?.key ?? null}
-        onSelectBuilding={(key) =>
-          setSelected({ type: 'building', key: key as WorldBuildingKey })
-        }
+      <div className="pointer-events-none absolute inset-x-0 bottom-6 z-10 px-1.5">
+        <div className="pointer-events-auto">
+          <FacilityOperationStrip
+            buildings={world.buildings}
+            exerciseEventsSinceCollect={world.exerciseEventsSinceCollect}
+            selectedBuildingKey={selectedBuilding?.key ?? null}
+            onSelectBuilding={(key) =>
+              setSelected({ type: 'building', key: key as WorldBuildingKey })
+            }
+          />
+        </div>
+      </div>
+
+      <CollectFloatingButton
+        pendingAcorns={world.pendingAcorns}
+        visible={world.pendingAcorns > 0}
       />
 
       <BuildingDetailSheet

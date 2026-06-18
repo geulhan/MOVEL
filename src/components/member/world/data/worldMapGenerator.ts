@@ -4,7 +4,7 @@
 
 import type { PixelRect } from '../../pixel/pixelTypes'
 import { VILLAGE_ROAD_NETWORK } from './campusRoads'
-import { TREE_WORLD, WORLD_BUILDINGS, WORLD_SIZE, stageRank } from './worldLayout'
+import { PLAZA_HUB, TREE_WORLD, WORLD_BUILDINGS, WORLD_SIZE, stageRank } from './worldLayout'
 
 const TILE = 16
 
@@ -67,23 +67,32 @@ export type WorldTerrainLayers = {
   groundShadows: PixelRect[]
 }
 
-function grassColor(elev: number, variant: number): string {
-  const base = elev > 0.62 ? '#95d47a' : elev > 0.48 ? '#7ec46e' : '#6aab58'
-  if (variant % 5 === 0) return elev > 0.55 ? '#a8e08a' : '#72b85e'
-  if (variant % 7 === 0) return elev > 0.5 ? '#88cc6a' : '#5f9e52'
-  return base
+function grassColor(elev: number, variant: number, cx: number, cy: number): string {
+  const dist = Math.hypot(cx - TREE_WORLD.cx, cy - TREE_WORLD.cy)
+  const meadow =
+    dist < 190 ? 1.22 : dist < 300 ? 1.08 : dist < 380 ? 0.98 : 0.82
+  const bases =
+    elev > 0.62
+      ? ['#a8e88a', '#9fe082', '#95d47a']
+      : elev > 0.48
+        ? ['#92dc7e', '#88d474', '#7ec46e']
+        : ['#7ec46e', '#72ba64', '#6aab58']
+  let pick = bases[variant % 3]
+  if (meadow > 1.1 && variant % 4 === 0) pick = elev > 0.5 ? '#b8f09a' : '#a0e080'
+  if (meadow < 0.9) pick = elev > 0.5 ? '#5f9e52' : '#4d8c45'
+  return pick
 }
 
 function inForestZone(x: number, y: number): boolean {
   const dist = Math.hypot(x - TREE_WORLD.cx, y - TREE_WORLD.cy)
-  if (dist > 400) return true
-  if (x < 50 || x > 974 || y < 40 || y > 984) return true
+  if (dist > 318) return true
+  if (x < 32 || x > 992 || y < 32 || y > 992) return true
   return false
 }
 
 function inCentralPlaza(x: number, y: number): boolean {
-  const dx = (x - TREE_WORLD.cx) / 138
-  const dy = (y - (TREE_WORLD.cy + 6)) / 112
+  const dx = (x - PLAZA_HUB.cx) / PLAZA_HUB.rx
+  const dy = (y - PLAZA_HUB.cy) / PLAZA_HUB.ry
   return dx * dx + dy * dy <= 1
 }
 
@@ -126,7 +135,7 @@ export function buildCompleteWorldTerrain(treeStageKey: string): WorldTerrainLay
         y,
         width: TILE,
         height: TILE,
-        fill: grassColor(elev, variant),
+        fill: grassColor(elev, variant, cx, cy),
       })
 
       if (elev < 0.42) {
@@ -188,10 +197,11 @@ export function buildCompleteWorldTerrain(treeStageKey: string): WorldTerrainLay
       }
 
       if (inCentralPlaza(cx, cy)) {
-        const ring =
-          ((cx - TREE_WORLD.cx) / 138) ** 2 + ((cy - TREE_WORLD.cy - 6) / 112) ** 2
-        const isEdge = ring > 0.5 && ring <= 1
-        const isInner = ring <= 0.5
+        const dx = (cx - PLAZA_HUB.cx) / PLAZA_HUB.rx
+        const dy = (cy - PLAZA_HUB.cy) / PLAZA_HUB.ry
+        const ring = dx * dx + dy * dy
+        const isEdge = ring > 0.55 && ring <= 1
+        const isInner = ring <= 0.55
         plaza.push({
           x,
           y,
@@ -199,11 +209,11 @@ export function buildCompleteWorldTerrain(treeStageKey: string): WorldTerrainLay
           height: TILE,
           fill: isInner
             ? hash2(tx, ty) % 2 === 0
-              ? '#e8dcc8'
-              : '#ddd0b8'
+              ? '#f0e6d4'
+              : '#e5d8c0'
             : isEdge
-              ? '#b8a888'
-              : '#d4c4a8',
+              ? '#c4b090'
+              : '#d8c8a8',
         })
       }
 
@@ -253,8 +263,19 @@ export function buildCompleteWorldTerrain(treeStageKey: string): WorldTerrainLay
     [940, 100],
     [55, 900],
     [930, 880],
-    [512, 55],
+    [512, 48],
+    [48, 512],
+    [976, 512],
+    [512, 976],
   ]
+  for (let i = 0; i < 16; i += 1) {
+    const angle = (i / 16) * Math.PI * 2 - Math.PI / 2
+    const rx = 470 + (hash2(i, 99) % 40)
+    treeSpots.push([
+      Math.round(TREE_WORLD.cx + rx * Math.cos(angle)),
+      Math.round(TREE_WORLD.cy + rx * 0.82 * Math.sin(angle)),
+    ])
+  }
   for (const [tx, ty] of treeSpots) {
     if (inCentralPlaza(tx, ty)) continue
     const trunk = '#5d4037'
