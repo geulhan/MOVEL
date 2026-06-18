@@ -9,7 +9,6 @@ import {
 } from './data/worldMapGenerator'
 import { generateWorldEnvironment } from './data/worldEnvironment'
 import {
-  resolveTreeAsset,
   VILLAGE_BUILDING_EXTERIOR,
 } from './data/villageAssets'
 import { TREE_WORLD, WORLD_BUILDINGS } from './data/worldLayout'
@@ -20,6 +19,7 @@ import { VillageNpcLayer } from './VillageNpcLayer'
 import { VillageFloatingRewards } from './VillageFloatingRewards'
 import { BuildingPlotGraphic } from './WorldBuildingPlotLayer'
 import { WorldBuildingExteriorGraphic } from './WorldBuildingExteriorGraphic'
+import { WorldKingdomTreeGraphic } from './WorldKingdomTreeGraphic'
 
 type Props = {
   treeStageKey: string
@@ -105,7 +105,6 @@ export function WorldMapCanvas({
     return layers
   }, [buildings])
 
-  const treeAsset = resolveTreeAsset(treeStageKey)
   const treeSize = TREE_WORLD.drawSize
   const showRewards = isWorldActive && exerciseEventsSinceCollect > 0
 
@@ -142,6 +141,17 @@ export function WorldMapCanvas({
         >
           <feDropShadow dx="0" dy="8" stdDeviation="6" floodColor="#0f2010" floodOpacity="0.5" />
           <feDropShadow dx="0" dy="3" stdDeviation="2.5" floodColor="#000000" floodOpacity="0.28" />
+        </filter>
+        <filter
+          id="wm-tree-shadow"
+          x="-40%"
+          y="-30%"
+          width="180%"
+          height="170%"
+          colorInterpolationFilters="sRGB"
+        >
+          <feDropShadow dx="0" dy="10" stdDeviation="8" floodColor="#142810" floodOpacity="0.45" />
+          <feDropShadow dx="0" dy="4" stdDeviation="3" floodColor="#000000" floodOpacity="0.22" />
         </filter>
       </defs>
 
@@ -287,15 +297,13 @@ export function WorldMapCanvas({
         })}
       </g>
 
-      {drawTreeShadow(TREE_WORLD.cx, TREE_WORLD.cy + 10, treeSize * 0.5)}
+      {drawTreeShadow(TREE_WORLD.cx, TREE_WORLD.cy + 10, treeSize * 0.52)}
       <g id="hero-tree">
-        <image
-          href={treeAsset}
-          x={TREE_WORLD.cx - treeSize / 2}
-          y={TREE_WORLD.cy - treeSize * 0.72}
-          width={treeSize}
-          height={treeSize}
-          preserveAspectRatio="xMidYMax meet"
+        <WorldKingdomTreeGraphic
+          cx={TREE_WORLD.cx}
+          cy={TREE_WORLD.cy}
+          size={treeSize}
+          stageKey={treeStageKey}
         />
       </g>
 

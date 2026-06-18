@@ -2,7 +2,7 @@ import type { WorldBuildingKey } from './worldLayout'
 
 const base = '/assets/village'
 
-/** 베타용 AI 임시 에셋 — 스타일 통일 우선 */
+/** @deprecated 월드맵은 WorldKingdomTreeGraphic(SVG) 사용 — PNG는 레거시 */
 export const VILLAGE_TREE_ASSETS: Record<string, string> = {
   seed: `${base}/trees/seed.png`,
   sprout: `${base}/trees/sprout.png`,
