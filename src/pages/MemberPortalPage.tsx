@@ -322,18 +322,18 @@ export default function MemberPortalPage() {
   if (!member) {
     return (
       <MemberLayout>
-        <section className={`${cardClass} p-6`}>
-          <div className="flex rounded-lg border border-charcoal/10 bg-cream/50 p-1">
+        <section className={`${cardClass} relative z-10 p-6 shadow-lg shadow-charcoal/8`}>
+          <div className="flex rounded-xl border border-charcoal/8 bg-motionhub-light/40 p-1">
             <button
               type="button"
               onClick={() => {
                 setAuthMode('login')
                 setLoginError(null)
               }}
-              className={`flex-1 rounded-md py-2 text-sm font-semibold transition ${
+              className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition ${
                 authMode === 'login'
                   ? 'bg-white text-charcoal shadow-sm'
-                  : 'text-muted'
+                  : 'text-muted hover:text-charcoal'
               }`}
             >
               로그인
@@ -344,10 +344,10 @@ export default function MemberPortalPage() {
                 setAuthMode('signup')
                 setLoginError(null)
               }}
-              className={`flex-1 rounded-md py-2 text-sm font-semibold transition ${
+              className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition ${
                 authMode === 'signup'
                   ? 'bg-white text-charcoal shadow-sm'
-                  : 'text-muted'
+                  : 'text-muted hover:text-charcoal'
               }`}
             >
               회원가입
@@ -404,7 +404,7 @@ export default function MemberPortalPage() {
                     checked={rememberLogin}
                     onChange={(e) => setRememberLogin(e.target.checked)}
                     disabled={loginLoading}
-                    className="h-4 w-4 rounded border-gold/50 text-charcoal focus:ring-gold/40"
+                    className="h-4 w-4 rounded border-charcoal/20 text-motionhub-dark focus:ring-motionhub/30"
                   />
                   아이디·비밀번호 기억하기
                 </label>
@@ -498,7 +498,7 @@ export default function MemberPortalPage() {
                     checked={rememberLogin}
                     onChange={(e) => setRememberLogin(e.target.checked)}
                     disabled={loginLoading}
-                    className="h-4 w-4 rounded border-gold/50 text-charcoal focus:ring-gold/40"
+                    className="h-4 w-4 rounded border-charcoal/20 text-motionhub-dark focus:ring-motionhub/30"
                   />
                   아이디·비밀번호 기억하기
                 </label>

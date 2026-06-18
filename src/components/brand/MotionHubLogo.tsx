@@ -25,8 +25,8 @@ function resolveSrc(
 
   if (variant === 'vertical') {
     return tone === 'light'
-      ? MOTIONHUB_BRAND_ASSETS.logoVerticalLight
-      : MOTIONHUB_BRAND_ASSETS.logoDark
+      ? MOTIONHUB_BRAND_ASSETS.logoDark
+      : MOTIONHUB_BRAND_ASSETS.logoVerticalLight
   }
 
   if (tone === 'light') {
