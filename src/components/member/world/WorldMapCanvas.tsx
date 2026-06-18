@@ -1,17 +1,19 @@
 import { useMemo } from 'react'
 import { PixelRects } from '../pixel/PixelArtboard'
 import { drawTreeShadow } from '../pixel/SceneBackground'
-import { drawSpriteCentered } from '../pixel/pixelUtils'
-import { resolveVillageTreeSprite } from '../pixel/villageSprites'
 import { ARTBOARD_SIZE } from '../pixel/pixelTypes'
 import {
   buildCompleteWorldTerrain,
   buildConstructionSite,
   buildLockedMist,
 } from './data/worldMapGenerator'
-import { resolveWorldBuildingSprite } from './data/worldSprites'
+import {
+  resolveTreeAsset,
+  VILLAGE_BUILDING_EXTERIOR,
+} from './data/villageAssets'
 import { TREE_WORLD } from './data/worldLayout'
 import type { WorldBuildingState } from './hooks/useVillageWorldState'
+import type { WorldBuildingKey } from './data/worldLayout'
 
 type Props = {
   treeStageKey: string
@@ -19,7 +21,19 @@ type Props = {
   selectedBuildingKey: string | null
 }
 
-const BUILDING_SCALE = 1.1
+const BUILDING_SCALE = 1.15
+
+type BuildingLayer = {
+  key: string
+  cx: number
+  cy: number
+  size: number
+  built: boolean
+  buildingKey: WorldBuildingKey
+  imageUrl?: string
+  pixelRects?: ReturnType<typeof buildLockedMist>
+  imageOpacity?: number
+}
 
 export function WorldMapCanvas({ treeStageKey, buildings, selectedBuildingKey }: Props) {
   const terrain = useMemo(
@@ -27,16 +41,8 @@ export function WorldMapCanvas({ treeStageKey, buildings, selectedBuildingKey }:
     [treeStageKey],
   )
 
-  const buildingLayers = useMemo(() => {
-    const layers: {
-      key: string
-      rects: ReturnType<typeof drawSpriteCentered>
-      cx: number
-      cy: number
-      size: number
-      built: boolean
-      buildingKey: string
-    }[] = []
+  const buildingLayers = useMemo((): BuildingLayer[] => {
+    const layers: BuildingLayer[] = []
 
     for (const b of buildings) {
       const size = Math.round(b.drawSize * BUILDING_SCALE)
@@ -44,7 +50,7 @@ export function WorldMapCanvas({ treeStageKey, buildings, selectedBuildingKey }:
       if (!b.isUnlocked) {
         layers.push({
           key: `${b.key}-locked`,
-          rects: buildLockedMist(b.cx, b.cy),
+          pixelRects: buildLockedMist(b.cx, b.cy),
           cx: b.cx,
           cy: b.cy,
           size,
@@ -57,7 +63,9 @@ export function WorldMapCanvas({ treeStageKey, buildings, selectedBuildingKey }:
       if (!b.isBuilt) {
         layers.push({
           key: `${b.key}-site`,
-          rects: buildConstructionSite(b.cx, b.cy),
+          pixelRects: buildConstructionSite(b.cx, b.cy),
+          imageUrl: VILLAGE_BUILDING_EXTERIOR[b.key],
+          imageOpacity: 0.45,
           cx: b.cx,
           cy: b.cy,
           size,
@@ -67,31 +75,21 @@ export function WorldMapCanvas({ treeStageKey, buildings, selectedBuildingKey }:
         continue
       }
 
-      const sprite = resolveWorldBuildingSprite(b.spriteKey)
-      if (sprite) {
-        layers.push({
-          key: b.key,
-          rects: drawSpriteCentered(sprite, b.cx, b.cy - 6, size),
-          cx: b.cx,
-          cy: b.cy,
-          size,
-          built: true,
-          buildingKey: b.key,
-        })
-      }
+      layers.push({
+        key: b.key,
+        imageUrl: VILLAGE_BUILDING_EXTERIOR[b.key],
+        cx: b.cx,
+        cy: b.cy,
+        size,
+        built: true,
+        buildingKey: b.key,
+      })
     }
     return layers
   }, [buildings])
 
-  const treeSprite = useMemo(() => {
-    const tree = resolveVillageTreeSprite(treeStageKey)
-    return drawSpriteCentered(
-      tree,
-      TREE_WORLD.cx,
-      TREE_WORLD.cy - 20,
-      TREE_WORLD.drawSize,
-    )
-  }, [treeStageKey])
+  const treeAsset = resolveTreeAsset(treeStageKey)
+  const treeSize = TREE_WORLD.drawSize
 
   return (
     <svg
@@ -99,7 +97,6 @@ export function WorldMapCanvas({ treeStageKey, buildings, selectedBuildingKey }:
       height={ARTBOARD_SIZE}
       viewBox={`0 0 ${ARTBOARD_SIZE} ${ARTBOARD_SIZE}`}
       className="block touch-none"
-      style={{ imageRendering: 'pixelated' }}
       aria-label="운동 마을 월드맵"
     >
       <defs>
@@ -151,9 +148,13 @@ export function WorldMapCanvas({ treeStageKey, buildings, selectedBuildingKey }:
       <g id="buildings">
         {buildingLayers.map((layer) => {
           const b = buildings.find((x) => x.key === layer.buildingKey)
+          const imgW = layer.size * 1.35
+          const imgH = layer.size * 1.35
+          const imgX = layer.cx - imgW / 2
+          const imgY = layer.cy - imgH * 0.82
+
           return (
             <g key={layer.key}>
-              {/* 건물 받침대 */}
               {(b?.isBuilt || b?.isUnlocked) && (
                 <ellipse
                   cx={layer.cx}
@@ -174,19 +175,31 @@ export function WorldMapCanvas({ treeStageKey, buildings, selectedBuildingKey }:
                   opacity={0.3}
                 />
               )}
-              <PixelRects rects={layer.rects} />
-              {/* 운영 중 표시 */}
+              {layer.imageUrl && (
+                <image
+                  href={layer.imageUrl}
+                  x={imgX}
+                  y={imgY}
+                  width={imgW}
+                  height={imgH}
+                  opacity={layer.imageOpacity ?? 1}
+                  preserveAspectRatio="xMidYMax meet"
+                />
+              )}
+              {layer.pixelRects && (
+                <g style={{ imageRendering: 'pixelated' }}>
+                  <PixelRects rects={layer.pixelRects} />
+                </g>
+              )}
               {b?.isOperating && (
-                <>
-                  <circle cx={layer.cx} cy={layer.cy - layer.size * 0.38} r={6} fill="#5a9e6f">
-                    <animate
-                      attributeName="opacity"
-                      values="1;0.4;1"
-                      dur="1.5s"
-                      repeatCount="indefinite"
-                    />
-                  </circle>
-                </>
+                <circle cx={layer.cx} cy={layer.cy - layer.size * 0.38} r={6} fill="#5a9e6f">
+                  <animate
+                    attributeName="opacity"
+                    values="1;0.4;1"
+                    dur="1.5s"
+                    repeatCount="indefinite"
+                  />
+                </circle>
               )}
               {b?.isBuilt && (
                 <g>
@@ -228,9 +241,16 @@ export function WorldMapCanvas({ treeStageKey, buildings, selectedBuildingKey }:
         })}
       </g>
 
-      {drawTreeShadow(TREE_WORLD.cx, TREE_WORLD.cy + 10, TREE_WORLD.drawSize * 0.48)}
+      {drawTreeShadow(TREE_WORLD.cx, TREE_WORLD.cy + 10, treeSize * 0.48)}
       <g id="hero-tree">
-        <PixelRects rects={treeSprite} />
+        <image
+          href={treeAsset}
+          x={TREE_WORLD.cx - treeSize / 2}
+          y={TREE_WORLD.cy - treeSize * 0.72}
+          width={treeSize}
+          height={treeSize}
+          preserveAspectRatio="xMidYMax meet"
+        />
       </g>
 
       {buildings.some((b) => b.isOperating) && (
