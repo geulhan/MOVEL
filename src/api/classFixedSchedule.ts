@@ -104,7 +104,8 @@ export async function createClassFixedSchedule(input: {
     .single()
 
   if (classError) throw classError
-  const durationMinutes = input.duration_minutes ?? Number(cls.duration_minutes) || 60
+  const durationMinutes =
+    input.duration_minutes ?? (Number(cls.duration_minutes) || 60)
 
   const { data: fixedRow, error: fixedError } = await supabase
     .from('class_fixed_schedules')
@@ -220,27 +221,33 @@ export async function fetchMonthClassTrainerSessions(
   const centerId = await getCurrentCenterId()
   const { data: schedules, error } = await supabase
     .from('class_schedules')
-    .select(
-      'id, starts_at, classes(name, trainer_id, trainers(name)), class_reservations(member_id, status)',
-    )
+    .select('id, starts_at, class_id, classes(name, trainer_id, trainers(name))')
     .eq('center_id', centerId)
     .gte('starts_at', startIso)
     .lte('starts_at', endIso)
     .neq('status', 'cancelled')
 
   if (error) throw error
+  if (!schedules || schedules.length === 0) return []
 
+  const scheduleIds = schedules.map((row) => String(row.id))
+  const { data: reservations, error: reservationError } = await supabase
+    .from('class_reservations')
+    .select('schedule_id, member_id, status')
+    .in('schedule_id', scheduleIds)
+    .eq('status', 'attended')
+
+  if (reservationError) throw reservationError
+
+  const reservationsBySchedule = new Map<string, Array<{ member_id: string }>>()
   const memberIds = new Set<string>()
-  for (const row of schedules ?? []) {
-    const reservations = (row.class_reservations ?? []) as Array<{
-      member_id: string
-      status: string
-    }>
-    for (const reservation of reservations) {
-      if (reservation.status === 'attended') {
-        memberIds.add(reservation.member_id)
-      }
-    }
+  for (const row of reservations ?? []) {
+    const scheduleId = String(row.schedule_id)
+    const memberId = String(row.member_id)
+    memberIds.add(memberId)
+    const list = reservationsBySchedule.get(scheduleId) ?? []
+    list.push({ member_id: memberId })
+    reservationsBySchedule.set(scheduleId, list)
   }
 
   let memberById = new Map<string, { payment_amount: number; total_sessions: number }>()
@@ -264,18 +271,16 @@ export async function fetchMonthClassTrainerSessions(
 
   const sessions: ClassTrainerSessionPayroll[] = []
 
-  for (const row of schedules ?? []) {
+  for (const row of schedules) {
+    const scheduleId = String(row.id)
+    const attended = reservationsBySchedule.get(scheduleId) ?? []
+    if (attended.length === 0) continue
+
     const cls = row.classes as {
       name?: string
       trainer_id?: string | null
       trainers?: { name?: string } | null
     } | null
-    const reservations = (row.class_reservations ?? []) as Array<{
-      member_id: string
-      status: string
-    }>
-    const attended = reservations.filter((item) => item.status === 'attended')
-    if (attended.length === 0) continue
 
     let grossAmount = 0
     for (const reservation of attended) {
@@ -289,7 +294,7 @@ export async function fetchMonthClassTrainerSessions(
     }
 
     sessions.push({
-      scheduleId: String(row.id),
+      scheduleId,
       trainerId: cls?.trainer_id ?? null,
       trainerName: cls?.trainers?.name?.trim() || '미지정',
       className: cls?.name?.trim() || '그룹수업',

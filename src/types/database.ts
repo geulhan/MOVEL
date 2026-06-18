@@ -618,8 +618,22 @@ export type Database = {
       >
       trainers: TableDef<
         Trainer,
-        { name: string; is_active?: boolean; center_id?: string; settlement_rate?: number | null },
-        { name?: string; is_active?: boolean; center_id?: string; settlement_rate?: number | null }
+        {
+          name: string
+          is_active?: boolean
+          center_id?: string
+          settlement_mode?: TrainerSettlementMode
+          settlement_rate?: number | null
+          settlement_fixed_amount?: number | null
+        },
+        {
+          name?: string
+          is_active?: boolean
+          center_id?: string
+          settlement_mode?: TrainerSettlementMode
+          settlement_rate?: number | null
+          settlement_fixed_amount?: number | null
+        }
       >
       period_extensions: TableDef<
         PeriodExtension,
@@ -1194,6 +1208,43 @@ export type Database = {
         Record<string, unknown>,
         Record<string, unknown>,
         Record<string, unknown>
+      >
+      class_fixed_schedules: TableDef<
+        {
+          id: string
+          center_id: string
+          class_id: string
+          day_of_week: number
+          days_of_week: number[] | null
+          time_of_day: string
+          capacity: number | null
+          weeks_ahead: number
+          note: string | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        },
+        {
+          center_id: string
+          class_id: string
+          day_of_week: number
+          days_of_week?: number[] | null
+          time_of_day: string
+          capacity?: number | null
+          weeks_ahead?: number
+          note?: string | null
+          is_active?: boolean
+        },
+        {
+          day_of_week?: number
+          days_of_week?: number[] | null
+          time_of_day?: string
+          capacity?: number | null
+          weeks_ahead?: number
+          note?: string | null
+          is_active?: boolean
+          updated_at?: string
+        }
       >
       class_reservations: TableDef<
         Record<string, unknown>,
