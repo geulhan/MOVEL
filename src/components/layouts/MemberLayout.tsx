@@ -46,7 +46,7 @@ export function MemberLayout({
 
   return (
     <div
-      className={themed ? 'min-h-screen' : 'min-h-screen bg-cream'}
+      className={themed ? 'min-h-screen' : 'min-h-screen bg-surface'}
       style={
         themed
           ? {
@@ -83,7 +83,7 @@ export function MemberLayout({
             )}
             <Link
               to="/login"
-              className={`text-xs hover:underline ${themed ? '' : 'text-teal-700'}`}
+              className={`text-xs hover:underline ${themed ? '' : 'text-motionhub-dark'}`}
               style={themed ? { color: 'var(--center-accent)' } : undefined}
             >
               관리자 →

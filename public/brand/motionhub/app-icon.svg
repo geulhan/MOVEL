@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" fill="none" role="img" aria-label="MotionHub app icon">
+  <title>MotionHub App Icon</title>
+  <rect width="1024" height="1024" rx="224" fill="#0B0F14"/>
+  <circle cx="512" cy="512" r="300" stroke="#2FF3D6" stroke-width="16" opacity="0.35"/>
+  <line x1="512" y1="128" x2="512" y2="248" stroke="#2FF3D6" stroke-width="22" stroke-linecap="round"/>
+  <line x1="512" y1="776" x2="512" y2="896" stroke="#2FF3D6" stroke-width="22" stroke-linecap="round"/>
+  <line x1="128" y1="512" x2="248" y2="512" stroke="#2FF3D6" stroke-width="22" stroke-linecap="round"/>
+  <line x1="776" y1="512" x2="896" y2="512" stroke="#2FF3D6" stroke-width="22" stroke-linecap="round"/>
+  <circle cx="512" cy="128" r="36" fill="#2FF3D6"/>
+  <circle cx="512" cy="896" r="36" fill="#2FF3D6"/>
+  <circle cx="128" cy="512" r="36" fill="#2FF3D6"/>
+  <circle cx="896" cy="512" r="36" fill="#2FF3D6"/>
+  <path d="M352 704V352l96 144 60-96 60 96 96-144v352" stroke="#2FF3D6" stroke-width="38" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

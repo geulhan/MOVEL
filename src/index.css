@@ -9,6 +9,12 @@
   --color-cream-dark: #e8e0d4;
   --color-gold: #c8b882;
   --color-gold-dark: #a89868;
+  --color-motionhub: #2ee8d6;
+  --color-motionhub-dark: #1fc4b5;
+  --color-motionhub-deep: #0f1419;
+  --color-motionhub-light: #e6faf7;
+  --color-motionhub-muted: #94a3b8;
+  --color-surface: #f8fafc;
 }
 
 html {
@@ -17,7 +23,7 @@ html {
 }
 
 body {
-  @apply m-0 min-h-screen bg-cream text-charcoal antialiased;
+  @apply m-0 min-h-screen bg-surface text-charcoal antialiased;
   font-family: var(--font-sans);
   overscroll-behavior-y: auto;
 }
@@ -28,7 +34,7 @@ body {
 
 @layer components {
   .card {
-    @apply rounded-2xl border border-gold/35 bg-white shadow-sm;
+    @apply rounded-2xl border border-charcoal/8 bg-white shadow-sm shadow-charcoal/5;
   }
 
   .card-pad {
@@ -36,7 +42,7 @@ body {
   }
 
   .card-header {
-    @apply border-b border-gold/25 px-5 py-4 sm:px-6;
+    @apply border-b border-charcoal/8 px-5 py-4 sm:px-6;
   }
 
   .page-title {
@@ -48,48 +54,47 @@ body {
   }
 
   .input-field {
-    @apply w-full min-w-0 rounded-lg border border-gold/40 bg-white px-3 py-2.5 text-sm text-charcoal outline-none transition placeholder:text-charcoal/35 focus:border-gold focus:ring-2 focus:ring-gold/25;
+    @apply w-full min-w-0 rounded-lg border border-charcoal/12 bg-white px-3 py-2.5 text-sm text-charcoal outline-none transition placeholder:text-charcoal/35 focus:border-motionhub focus:ring-2 focus:ring-motionhub/20;
   }
 
   .select-compact {
-    @apply min-w-0 max-w-full rounded-lg border border-gold/40 bg-white px-2 py-1.5 text-xs text-charcoal outline-none focus:border-gold focus:ring-1 focus:ring-gold/25;
+    @apply min-w-0 max-w-full rounded-lg border border-charcoal/12 bg-white px-2 py-1.5 text-xs text-charcoal outline-none focus:border-motionhub focus:ring-1 focus:ring-motionhub/20;
   }
 
   .btn-primary {
-    @apply shrink-0 rounded-lg bg-charcoal px-5 py-2.5 text-sm font-bold whitespace-nowrap text-cream transition hover:bg-charcoal-light disabled:opacity-60;
+    @apply shrink-0 rounded-lg bg-motionhub px-5 py-2.5 text-sm font-bold whitespace-nowrap text-charcoal transition hover:bg-motionhub-dark disabled:opacity-60;
   }
 
   .btn-gold {
-    @apply shrink-0 rounded-lg bg-gold px-5 py-2.5 text-sm font-bold whitespace-nowrap text-charcoal transition hover:bg-gold-dark disabled:opacity-60;
+    @apply shrink-0 rounded-lg bg-motionhub px-5 py-2.5 text-sm font-bold whitespace-nowrap text-charcoal transition hover:bg-motionhub-dark disabled:opacity-60;
   }
 
   .btn-outline {
-    @apply shrink-0 rounded-lg border border-gold/50 bg-white px-3 py-1.5 text-xs font-bold whitespace-nowrap text-charcoal transition hover:border-gold hover:bg-cream disabled:cursor-not-allowed disabled:opacity-50;
+    @apply shrink-0 rounded-lg border border-charcoal/15 bg-white px-3 py-1.5 text-xs font-bold whitespace-nowrap text-charcoal transition hover:border-motionhub/40 hover:bg-motionhub-light/50 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-ghost {
-    @apply shrink-0 rounded-md px-2.5 py-1 text-xs font-bold whitespace-nowrap text-charcoal/80 transition hover:bg-cream hover:text-charcoal;
+    @apply shrink-0 rounded-md px-2.5 py-1 text-xs font-bold whitespace-nowrap text-charcoal/80 transition hover:bg-motionhub-light/60 hover:text-charcoal;
   }
 
-  /* 텍스트형 액션 (수정, 잔여 횟수 수정 등) */
   .btn-link {
-    @apply text-xs font-bold text-gold-dark transition hover:text-charcoal hover:underline;
+    @apply text-xs font-bold text-motionhub-dark transition hover:text-charcoal hover:underline;
   }
 
   .btn-link-sm {
-    @apply text-sm font-bold text-gold-dark transition hover:underline;
+    @apply text-sm font-bold text-motionhub-dark transition hover:underline;
   }
 
   .btn-nav-back {
-    @apply inline-flex items-center gap-1 text-sm font-bold whitespace-nowrap text-charcoal/75 transition hover:text-gold-dark;
+    @apply inline-flex items-center gap-1 text-sm font-bold whitespace-nowrap text-charcoal/75 transition hover:text-motionhub-dark;
   }
 
   .btn-inline-save {
-    @apply rounded bg-charcoal px-2.5 py-1 text-xs font-bold text-cream transition hover:bg-charcoal-light disabled:opacity-60;
+    @apply rounded bg-motionhub px-2.5 py-1 text-xs font-bold text-charcoal transition hover:bg-motionhub-dark disabled:opacity-60;
   }
 
   .btn-inline-cancel {
-    @apply rounded border border-gold/40 bg-white px-2.5 py-1 text-xs font-bold text-charcoal transition hover:border-gold hover:bg-cream;
+    @apply rounded border border-charcoal/15 bg-white px-2.5 py-1 text-xs font-bold text-charcoal transition hover:border-motionhub/35 hover:bg-motionhub-light/40;
   }
 
   .chip {
@@ -97,11 +102,11 @@ body {
   }
 
   .chip-active {
-    @apply border-charcoal bg-charcoal text-cream;
+    @apply border-motionhub-deep bg-motionhub-deep text-motionhub;
   }
 
   .chip-inactive {
-    @apply border-gold/40 bg-white text-charcoal hover:border-gold hover:bg-cream;
+    @apply border-charcoal/12 bg-white text-charcoal hover:border-motionhub/35 hover:bg-motionhub-light/40;
   }
 
   .stat-value {
@@ -109,7 +114,7 @@ body {
   }
 
   .link-name {
-    @apply max-w-[7rem] truncate text-sm font-bold text-gold-dark transition hover:text-charcoal hover:underline sm:max-w-[9rem];
+    @apply max-w-[7rem] truncate text-sm font-bold text-motionhub-dark transition hover:text-charcoal hover:underline sm:max-w-[9rem];
   }
 
   .text-muted {
@@ -117,7 +122,7 @@ body {
   }
 
   .table-head {
-    @apply bg-cream text-xs font-semibold whitespace-nowrap text-charcoal/50;
+    @apply bg-surface text-xs font-semibold whitespace-nowrap text-charcoal/50;
   }
 
   .table-scroll {
@@ -126,6 +131,12 @@ body {
 
   .chip-scroll {
     @apply flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden;
+  }
+
+  .motionhub-glow {
+    background:
+      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(46, 232, 214, 0.32), transparent),
+      radial-gradient(ellipse 50% 40% at 100% 50%, rgba(46, 232, 214, 0.08), transparent);
   }
 }
 

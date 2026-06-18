@@ -77,10 +77,10 @@ function AdminLayoutInner() {
         >
           <CenterBrandMark branding={branding} linkTo="/admin" />
           <p
-            className="mt-2 px-1 text-[10px] font-medium"
+            className="mt-2 px-1 text-[10px] font-medium leading-relaxed"
             style={{ color: 'var(--center-sidebar-muted)' }}
           >
-            센터 관리
+            모션허브 센터 관리
           </p>
         </div>
         <nav className="flex flex-1 flex-col gap-0.5 p-3">

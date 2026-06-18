@@ -69,7 +69,7 @@ function scrollToId(id: string) {
 
 function LandingNav() {
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-charcoal/90 backdrop-blur-md">
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-motionhub-deep/90 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>
           <MotionHubLogo tone="light" />
@@ -104,7 +104,7 @@ function LandingNav() {
           <button
             type="button"
             onClick={() => scrollToId('beta')}
-            className="rounded-lg bg-teal-500 px-4 py-2 text-sm font-bold text-charcoal transition hover:bg-teal-400"
+            className="rounded-lg bg-motionhub px-4 py-2 text-sm font-bold text-charcoal transition hover:bg-motionhub-dark"
           >
             베타 신청
           </button>
@@ -118,15 +118,8 @@ function HeroSection() {
   const demoUrl = getMotionHubDemoUrl()
 
   return (
-    <section className="relative overflow-hidden bg-charcoal pt-24 pb-20 sm:pt-28 sm:pb-28">
-      <div
-        className="pointer-events-none absolute inset-0 opacity-40"
-        aria-hidden
-        style={{
-          background:
-            'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(45,212,191,0.35), transparent), radial-gradient(ellipse 50% 40% at 100% 50%, rgba(200,184,130,0.12), transparent)',
-        }}
-      />
+    <section className="relative overflow-hidden bg-motionhub-deep pt-24 pb-20 sm:pt-28 sm:pb-28">
+      <div className="motionhub-glow pointer-events-none absolute inset-0 opacity-50" aria-hidden />
       <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
         <div className="max-w-3xl">
           <h1 className="mt-0">
@@ -146,7 +139,7 @@ function HeroSection() {
             <button
               type="button"
               onClick={() => scrollToId('beta')}
-              className="rounded-xl bg-teal-500 px-6 py-3.5 text-center text-sm font-bold text-charcoal transition hover:bg-teal-400"
+              className="rounded-xl bg-motionhub px-6 py-3.5 text-center text-sm font-bold text-charcoal transition hover:bg-motionhub-dark"
             >
               베타 신청하기
             </button>
@@ -170,7 +163,7 @@ function TrustSection() {
     <section className="border-b border-charcoal/8 bg-white py-14 sm:py-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="max-w-3xl">
-          <p className="inline-flex rounded-full border border-teal-500/30 bg-teal-50 px-3 py-1 text-xs font-bold tracking-wide text-teal-800">
+          <p className="inline-flex rounded-full border border-motionhub/30 bg-motionhub-light px-3 py-1 text-xs font-bold tracking-wide text-motionhub-deep">
             현재 베타 운영 중
           </p>
           <p className="mt-5 text-lg font-semibold leading-relaxed text-charcoal sm:text-xl">
@@ -197,10 +190,10 @@ function TrustSection() {
 
 function ProblemsSection() {
   return (
-    <section id="problems" className="bg-cream py-20 sm:py-24">
+    <section id="problems" className="bg-surface py-20 sm:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="max-w-2xl">
-          <p className="text-sm font-semibold tracking-widest text-teal-700 uppercase">
+          <p className="text-sm font-semibold tracking-widest text-motionhub-dark uppercase">
             Problem
           </p>
           <h2 className="mt-3 text-3xl font-bold tracking-tight text-charcoal sm:text-4xl">
@@ -243,7 +236,7 @@ function FeaturesSection() {
     <section id="features" className="bg-white py-20 sm:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="max-w-2xl">
-          <p className="text-sm font-semibold tracking-widest text-teal-700 uppercase">
+          <p className="text-sm font-semibold tracking-widest text-motionhub-dark uppercase">
             Solution
           </p>
           <h2 className="mt-3 text-3xl font-bold tracking-tight text-charcoal sm:text-4xl">
@@ -258,7 +251,7 @@ function FeaturesSection() {
           {FEATURES.map((feature) => (
             <li
               key={feature.title}
-              className="group rounded-2xl border border-charcoal/8 bg-cream/50 p-6 transition hover:border-teal-500/30 hover:bg-teal-50/40"
+              className="group rounded-2xl border border-charcoal/8 bg-cream/50 p-6 transition hover:border-motionhub/30 hover:bg-motionhub-light/40"
             >
               <span className="text-2xl">{feature.icon}</span>
               <h3 className="mt-4 text-lg font-bold text-charcoal">{feature.title}</h3>
@@ -273,17 +266,17 @@ function FeaturesSection() {
 
 function CaseStudySection() {
   return (
-    <section id="case-study" className="bg-charcoal py-20 sm:py-24">
+    <section id="case-study" className="bg-motionhub-deep py-20 sm:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="max-w-2xl">
-          <p className="text-sm font-semibold tracking-widest text-teal-300 uppercase">
+          <p className="text-sm font-semibold tracking-widest text-motionhub uppercase">
             Case Study
           </p>
           <h2 className="mt-3 text-3xl font-bold tracking-tight text-cream sm:text-4xl">
             실제 운영 사례
           </h2>
         </div>
-        <article className="mt-12 overflow-hidden rounded-3xl border border-gold/25 bg-charcoal-light p-8 sm:p-10">
+        <article className="mt-12 overflow-hidden rounded-3xl border border-motionhub/20 bg-motionhub-deep p-8 sm:p-10">
           <h3 className="text-2xl font-bold text-cream sm:text-3xl">
             모벨 퍼포먼스 트레이닝
           </h3>
@@ -350,11 +343,11 @@ function BetaSection() {
   }
 
   return (
-    <section id="beta" className="bg-cream py-20 sm:py-24">
+    <section id="beta" className="bg-surface py-20 sm:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="grid gap-12 lg:grid-cols-[1fr_1.1fr] lg:items-start">
           <div>
-            <p className="text-sm font-semibold tracking-widest text-teal-700 uppercase">
+            <p className="text-sm font-semibold tracking-widest text-motionhub-dark uppercase">
               Beta
             </p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight text-charcoal sm:text-4xl">
@@ -368,23 +361,23 @@ function BetaSection() {
               초기 파트너를 찾고 있습니다.
             </p>
 
-            <div className="mt-8 rounded-2xl border border-teal-500/25 bg-teal-50/80 p-5 sm:p-6">
+            <div className="mt-8 rounded-2xl border border-motionhub/25 bg-motionhub-light/80 p-5 sm:p-6">
               <h3 className="text-sm font-bold text-charcoal">베타 센터 혜택</h3>
               <ul className="mt-4 space-y-2.5 text-sm text-charcoal/75">
                 <li className="flex gap-2">
-                  <span className="font-bold text-teal-700">✓</span>
+                  <span className="font-bold text-motionhub-dark">✓</span>
                   초기 세팅 지원
                 </li>
                 <li className="flex gap-2">
-                  <span className="font-bold text-teal-700">✓</span>
+                  <span className="font-bold text-motionhub-dark">✓</span>
                   운영 피드백 우선 반영
                 </li>
                 <li className="flex gap-2">
-                  <span className="font-bold text-teal-700">✓</span>
+                  <span className="font-bold text-motionhub-dark">✓</span>
                   신규 기능 우선 제공
                 </li>
                 <li className="flex gap-2">
-                  <span className="font-bold text-teal-700">✓</span>
+                  <span className="font-bold text-motionhub-dark">✓</span>
                   모션허브 초기 파트너 혜택 제공
                 </li>
               </ul>
@@ -471,13 +464,13 @@ function BetaSection() {
             )}
             {success && (
               <div
-                className="mt-4 rounded-xl border border-teal-200 bg-teal-50 px-4 py-3.5"
+                className="mt-4 rounded-xl border border-motionhub/20 bg-motionhub-light px-4 py-3.5"
                 role="status"
               >
-                <p className="text-sm font-semibold text-teal-800">
+                <p className="text-sm font-semibold text-motionhub-deep">
                   베타 신청이 접수되었습니다.
                 </p>
-                <p className="mt-1 text-sm text-teal-700">
+                <p className="mt-1 text-sm text-motionhub-dark">
                   확인 후 순차적으로 연락드리겠습니다.
                 </p>
               </div>
@@ -486,7 +479,7 @@ function BetaSection() {
             <button
               type="submit"
               disabled={loading}
-              className="mt-6 w-full rounded-xl bg-teal-600 py-3.5 text-sm font-bold text-white transition hover:bg-teal-500 disabled:opacity-50"
+              className="mt-6 w-full rounded-xl bg-motionhub-dark py-3.5 text-sm font-bold text-white transition hover:bg-motionhub disabled:opacity-50"
             >
               {loading ? '접수 중…' : '신청하기'}
             </button>
@@ -502,7 +495,7 @@ function ContactSection() {
     <section id="contact" className="bg-white py-20 sm:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="max-w-2xl">
-          <p className="text-sm font-semibold tracking-widest text-teal-700 uppercase">
+          <p className="text-sm font-semibold tracking-widest text-motionhub-dark uppercase">
             Contact
           </p>
           <h2 className="mt-3 text-3xl font-bold tracking-tight text-charcoal sm:text-4xl">
@@ -517,7 +510,7 @@ function ContactSection() {
             href={getMotionHubKakaoUrl()}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-4 rounded-2xl border border-charcoal/10 bg-cream/40 p-6 transition hover:border-teal-500/40 hover:bg-teal-50/50"
+            className="flex items-center gap-4 rounded-2xl border border-charcoal/10 bg-cream/40 p-6 transition hover:border-motionhub/40 hover:bg-motionhub-light/50"
           >
             <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#FEE500] text-xl font-bold text-charcoal">
               Ch
@@ -531,7 +524,7 @@ function ContactSection() {
             href={MOTIONHUB_CONTACT.instagramUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-4 rounded-2xl border border-charcoal/10 bg-cream/40 p-6 transition hover:border-teal-500/40 hover:bg-teal-50/50"
+            className="flex items-center gap-4 rounded-2xl border border-charcoal/10 bg-cream/40 p-6 transition hover:border-motionhub/40 hover:bg-motionhub-light/50"
           >
             <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 text-xl text-white">
               ◎
@@ -551,7 +544,7 @@ function ContactSection() {
 
 function BottomCtaSection() {
   return (
-    <section className="border-t border-charcoal/10 bg-charcoal py-16 sm:py-20">
+    <section className="border-t border-charcoal/10 bg-motionhub-deep py-16 sm:py-20">
       <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
         <p className="text-lg font-bold text-cream sm:text-xl">현재 베타 센터 모집 중</p>
         <p className="mt-3 text-base text-cream/75">14일 무료 사용 가능</p>
@@ -562,7 +555,7 @@ function BottomCtaSection() {
           <button
             type="button"
             onClick={() => scrollToId('beta')}
-            className="rounded-xl bg-teal-500 px-6 py-3.5 text-sm font-bold text-charcoal transition hover:bg-teal-400"
+            className="rounded-xl bg-motionhub px-6 py-3.5 text-sm font-bold text-charcoal transition hover:bg-motionhub-dark"
           >
             베타 신청하기
           </button>
@@ -580,7 +573,7 @@ function BottomCtaSection() {
 
 function LandingFooter() {
   return (
-    <footer className="border-t border-charcoal/10 bg-charcoal py-12">
+    <footer className="border-t border-charcoal/10 bg-motionhub-deep py-12">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <MotionHubLogo tone="light" showTagline />
         <p className="mt-4 text-sm text-cream/55">운동센터 운영 플랫폼</p>
@@ -599,7 +592,7 @@ export default function MotionHubLandingPage() {
   useMotionHubSeo()
 
   return (
-    <div className="min-h-screen bg-cream">
+    <div className="min-h-screen bg-surface">
       <LandingNav />
       <main>
         <HeroSection />

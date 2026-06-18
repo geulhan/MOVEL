@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 140" fill="none" role="img" aria-label="MotionHub logo vertical">
+  <title>MotionHub Combination Vertical - Dark</title>
+  <g transform="translate(78, 8)">
+    <circle cx="32" cy="32" r="30" stroke="#2FF3D6" stroke-width="1.5" opacity="0.35"/>
+    <path d="M19 48V24l8 12 5-8 5 8 8-12v24" stroke="#2FF3D6" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="110" y="104" text-anchor="middle" font-family="'Segoe UI', 'Malgun Gothic', sans-serif" font-size="24" font-weight="600">
+    <tspan fill="#F8FAFC">Motion</tspan><tspan fill="#2FF3D6">Hub</tspan>
+  </text>
+  <text x="110" y="124" text-anchor="middle" font-family="'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif" font-size="10" fill="#8A94A6">운동센터 운영 SaaS 플랫폼</text>
+</svg>

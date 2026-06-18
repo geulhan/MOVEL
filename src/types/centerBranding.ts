@@ -19,15 +19,15 @@ export type CenterBranding = {
 }
 
 export const DEFAULT_CENTER_THEME: CenterTheme = {
-  sidebarBg: '#1c1c1c',
-  sidebarText: '#f5f0e8',
-  sidebarMuted: 'rgba(245,240,232,0.65)',
-  accent: '#c8b882',
-  accentDark: '#a89868',
-  mainBg: '#f5f0e8',
+  sidebarBg: '#0f1419',
+  sidebarText: '#f8fafc',
+  sidebarMuted: 'rgba(248,250,252,0.62)',
+  accent: '#2ee8d6',
+  accentDark: '#1fc4b5',
+  mainBg: '#f8fafc',
   mainText: '#1c1c1c',
-  tabActiveBg: 'rgba(200,184,130,0.22)',
-  tabActiveText: '#c8b882',
+  tabActiveBg: 'rgba(46,232,214,0.14)',
+  tabActiveText: '#2ee8d6',
 }
 
 export type ThemePreset = {
@@ -40,8 +40,8 @@ export type ThemePreset = {
 export const THEME_PRESETS: ThemePreset[] = [
   {
     id: 'classic',
-    name: '클래식 다크',
-    description: '차분한 다크 사이드바 + 골드 포인트',
+    name: '모션허브',
+    description: '다크 사이드바 + 시안 포인트 (기본)',
     theme: DEFAULT_CENTER_THEME,
   },
   {

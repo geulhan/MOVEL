@@ -1,11 +1,18 @@
+import {
+  MOTIONHUB_BRAND,
+  MOTIONHUB_BRAND_ASSETS,
+} from '../../constants/motionhubBrand'
+
 type Props = {
   className?: string
   tone?: 'light' | 'dark'
   showTagline?: boolean
   /** nav: 헤더·푸터, hero: 메인 타이틀 */
   size?: 'nav' | 'hero'
-  /** false면 영문 (MotionHub) 병기 숨김 */
+  /** false면 영문 (MotionHub) 병기 숨김 — 이미지 로고 사용 시 무시 */
   showEnglish?: boolean
+  /** symbol만 표시 */
+  variant?: 'combination' | 'symbol'
 }
 
 export function MotionHubLogo({
@@ -13,37 +20,49 @@ export function MotionHubLogo({
   tone = 'light',
   showTagline = false,
   size = 'nav',
-  showEnglish = true,
+  variant = 'combination',
 }: Props) {
-  const isLight = tone === 'light'
-  const wordmark = isLight ? 'text-cream' : 'text-charcoal'
-  const sub = isLight ? 'text-cream/55' : 'text-charcoal/50'
-  const tagline = isLight ? 'text-cream/50' : 'text-charcoal/45'
   const isHero = size === 'hero'
+  const onDark = tone === 'light'
+
+  if (variant === 'symbol') {
+    const src = onDark
+      ? MOTIONHUB_BRAND_ASSETS.symbolDark
+      : MOTIONHUB_BRAND_ASSETS.symbolLight
+    return (
+      <img
+        src={src}
+        alt="모션허브"
+        className={`object-contain ${isHero ? 'h-16 w-16 sm:h-20 sm:w-20' : 'h-8 w-8'} ${className}`}
+        decoding="async"
+      />
+    )
+  }
+
+  const src = onDark
+    ? MOTIONHUB_BRAND_ASSETS.combinationKoDark
+    : MOTIONHUB_BRAND_ASSETS.combinationKoLight
 
   return (
     <div className={`inline-flex flex-col items-start ${className}`}>
-      <span
-        className={`font-bold tracking-tight ${wordmark} ${
-          isHero ? 'text-4xl sm:text-5xl lg:text-6xl' : 'text-xl sm:text-2xl'
+      <img
+        src={src}
+        alt="모션허브 MotionHub"
+        className={`object-contain object-left ${
+          isHero
+            ? 'h-14 w-auto max-w-[min(100%,22rem)] sm:h-16'
+            : 'h-9 w-auto max-w-[11rem] sm:h-10 sm:max-w-[12rem]'
         }`}
-      >
-        모션허브
-        {showEnglish && !isHero && (
-          <span className={`ml-1.5 text-sm font-semibold ${sub}`}>(MotionHub)</span>
-        )}
-      </span>
-      {isHero && showEnglish && (
-        <span className={`mt-2 text-base font-medium sm:text-lg ${sub}`}>
-          MotionHub
-        </span>
-      )}
+        decoding="async"
+      />
       {showTagline && (
-        <span
-          className={`mt-0.5 text-[10px] font-semibold tracking-[0.2em] uppercase ${tagline}`}
+        <p
+          className={`mt-1 text-[11px] font-medium leading-snug ${
+            onDark ? 'text-cream/55' : 'text-charcoal/45'
+          }`}
         >
-          Fitness Center OS
-        </span>
+          {MOTIONHUB_BRAND.tagline}
+        </p>
       )}
     </div>
   )
