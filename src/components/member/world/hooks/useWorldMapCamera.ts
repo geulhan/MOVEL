@@ -36,7 +36,7 @@ export function useWorldMapCamera() {
     const w = el.clientWidth
     const h = el.clientHeight
     const bounds = getVillageBounds()
-    const span = Math.max(bounds.width, bounds.height) * 1.05
+    const span = Math.max(bounds.width, bounds.height)
     const scale = clamp(Math.min(w, h) / span, MIN_SCALE, MAX_SCALE)
     const x = w / 2 - bounds.cx * scale
     const y = h / 2 - bounds.cy * scale

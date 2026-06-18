@@ -1,5 +1,4 @@
-import { VILLAGE_ROAD_NETWORK } from './worldMapGenerator'
-import { TRACK_GYM_WALK_PATH } from './worldEnvironment'
+import { VILLAGE_ROAD_NETWORK, getTrackGymWalkPath } from './campusRoads'
 
 export type VillageNpcDef = {
   id: string
@@ -23,14 +22,14 @@ const NPC_COLORS = [
   { skin: '#ffcc80', shirt: '#ff7043', pants: '#0d47a1' },
 ]
 
-/** 트랙↔체육관 왕복 경로 */
 function trackGymLoop(): [number, number][] {
-  return [...TRACK_GYM_WALK_PATH, ...[...TRACK_GYM_WALK_PATH].reverse().slice(1)]
+  const path = getTrackGymWalkPath()
+  return [...path, ...[...path].reverse().slice(1)]
 }
 
-function roadSegment(startIdx: number, endIdx: number, roadIdx: number): [number, number][] {
-  const road = VILLAGE_ROAD_NETWORK[roadIdx] ?? VILLAGE_ROAD_NETWORK[0]
-  return road.slice(startIdx, endIdx + 1) as [number, number][]
+function spokePath(spokeIdx: number): [number, number][] {
+  const road = VILLAGE_ROAD_NETWORK[spokeIdx]
+  return road ?? VILLAGE_ROAD_NETWORK[0]
 }
 
 let cachedNpcs: VillageNpcDef[] | null = null
@@ -45,7 +44,7 @@ export function generateVillageNpcs(): VillageNpcDef[] {
       dur: 14,
       delay: 0,
       ...NPC_COLORS[0],
-      scale: 1.35,
+      scale: 1.45,
     },
     {
       id: 'npc-track-gym-2',
@@ -53,55 +52,55 @@ export function generateVillageNpcs(): VillageNpcDef[] {
       dur: 16,
       delay: 4,
       ...NPC_COLORS[1],
-      scale: 1.3,
+      scale: 1.4,
     },
     {
-      id: 'npc-east-road',
-      path: roadSegment(0, 4, 1),
+      id: 'npc-hall',
+      path: spokePath(0),
       dur: 12,
       delay: 1,
       ...NPC_COLORS[2],
-      scale: 1.2,
+      scale: 1.35,
     },
     {
-      id: 'npc-west-road',
-      path: roadSegment(0, 4, 2),
+      id: 'npc-track',
+      path: spokePath(1),
       dur: 13,
-      delay: 2.5,
+      delay: 2,
       ...NPC_COLORS[3],
-      scale: 1.2,
+      scale: 1.35,
     },
     {
-      id: 'npc-south-east',
-      path: roadSegment(0, 4, 3),
+      id: 'npc-gym',
+      path: spokePath(2),
       dur: 11,
       delay: 0.5,
       ...NPC_COLORS[4],
-      scale: 1.15,
+      scale: 1.35,
     },
     {
-      id: 'npc-south-west',
-      path: roadSegment(0, 4, 4),
+      id: 'npc-plaza',
+      path: spokePath(3),
       dur: 12,
       delay: 3,
       ...NPC_COLORS[5],
-      scale: 1.15,
+      scale: 1.35,
     },
     {
-      id: 'npc-cross',
-      path: roadSegment(2, 6, 5),
-      dur: 10,
+      id: 'npc-nutrition',
+      path: spokePath(4),
+      dur: 11,
       delay: 1.5,
       ...NPC_COLORS[6],
-      scale: 1.25,
+      scale: 1.3,
     },
     {
-      id: 'npc-north',
-      path: roadSegment(0, 4, 0),
-      dur: 11,
-      delay: 2,
+      id: 'npc-recovery',
+      path: spokePath(5),
+      dur: 12,
+      delay: 2.5,
       ...NPC_COLORS[7],
-      scale: 1.2,
+      scale: 1.3,
     },
   ]
 

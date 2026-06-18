@@ -1,10 +1,10 @@
 /**
- * 1024×1024 운동 마을 지형 생성기
- * 지형 70% · 건물 30% — CoC/부족전쟁식 초기 마을 느낌
+ * 1024×1024 운동 왕국 캠퍼스 지형
  */
 
 import type { PixelRect } from '../../pixel/pixelTypes'
-import { TREE_WORLD, WORLD_SIZE, stageRank } from './worldLayout'
+import { VILLAGE_ROAD_NETWORK } from './campusRoads'
+import { TREE_WORLD, WORLD_BUILDINGS, WORLD_SIZE, stageRank } from './worldLayout'
 
 const TILE = 16
 
@@ -53,53 +53,8 @@ function minDistToPolyline(px: number, py: number, points: [number, number][]): 
   return min
 }
 
-/** 마을 전체 도로망 — 항상 표시 */
-export const VILLAGE_ROAD_NETWORK: [number, number][][] = [
-  [
-    [512, 520],
-    [508, 440],
-    [495, 340],
-    [485, 240],
-    [478, 155],
-  ],
-  [
-    [512, 520],
-    [580, 505],
-    [660, 475],
-    [745, 445],
-    [835, 415],
-  ],
-  [
-    [512, 520],
-    [445, 515],
-    [360, 495],
-    [270, 478],
-    [175, 462],
-  ],
-  [
-    [512, 520],
-    [555, 565],
-    [630, 615],
-    [710, 655],
-    [795, 688],
-  ],
-  [
-    [512, 520],
-    [465, 575],
-    [385, 635],
-    [305, 685],
-    [235, 712],
-  ],
-  [
-    [200, 530],
-    [320, 525],
-    [420, 522],
-    [512, 520],
-    [600, 518],
-    [700, 515],
-    [820, 510],
-  ],
-]
+/** @deprecated import from campusRoads */
+export { VILLAGE_ROAD_NETWORK } from './campusRoads'
 
 export type WorldTerrainLayers = {
   grass: PixelRect[]
@@ -120,19 +75,25 @@ function grassColor(elev: number, variant: number): string {
 }
 
 function inForestZone(x: number, y: number): boolean {
-  if (x < 140 && y < 200) return true
-  if (x > 880 && y < 180) return true
-  if (x < 120 && y > 780) return true
-  if (x > 860 && y > 760) return true
-  if (y < 95 && x > 200 && x < 820) return true
-  if (x < 80 || x > 940 || y < 60 || y > 960) return true
+  const dist = Math.hypot(x - TREE_WORLD.cx, y - TREE_WORLD.cy)
+  if (dist > 400) return true
+  if (x < 50 || x > 974 || y < 40 || y > 984) return true
   return false
 }
 
 function inCentralPlaza(x: number, y: number): boolean {
-  const dx = (x - TREE_WORLD.cx) / 118
-  const dy = (y - (TREE_WORLD.cy + 15)) / 95
+  const dx = (x - TREE_WORLD.cx) / 138
+  const dy = (y - (TREE_WORLD.cy + 6)) / 112
   return dx * dx + dy * dy <= 1
+}
+
+function inBuildingPlot(cx: number, cy: number): boolean {
+  for (const b of WORLD_BUILDINGS) {
+    const dx = (cx - b.cx) / b.plotRx
+    const dy = (cy - (b.cy + 14)) / b.plotRy
+    if (dx * dx + dy * dy <= 1.05) return true
+  }
+  return false
 }
 
 export function buildCompleteWorldTerrain(treeStageKey: string): WorldTerrainLayers {
@@ -202,11 +163,13 @@ export function buildCompleteWorldTerrain(treeStageKey: string): WorldTerrainLay
         })
       }
 
+      let isRoadTile = false
       for (const polyline of VILLAGE_ROAD_NETWORK) {
         const d = minDistToPolyline(cx, cy, polyline)
-        const w = paved ? 34 : 28
+        const w = paved ? 38 : 30
         if (d <= w) {
-          const edge = d > 22
+          isRoadTile = true
+          const edge = d > 24
           paths.push({
             x,
             y,
@@ -226,9 +189,9 @@ export function buildCompleteWorldTerrain(treeStageKey: string): WorldTerrainLay
 
       if (inCentralPlaza(cx, cy)) {
         const ring =
-          ((cx - TREE_WORLD.cx) / 118) ** 2 + ((cy - TREE_WORLD.cy - 15) / 95) ** 2
-        const isEdge = ring > 0.55 && ring <= 1
-        const isInner = ring <= 0.55
+          ((cx - TREE_WORLD.cx) / 138) ** 2 + ((cy - TREE_WORLD.cy - 6) / 112) ** 2
+        const isEdge = ring > 0.5 && ring <= 1
+        const isInner = ring <= 0.5
         plaza.push({
           x,
           y,
@@ -243,18 +206,23 @@ export function buildCompleteWorldTerrain(treeStageKey: string): WorldTerrainLay
               : '#d4c4a8',
         })
       }
+
+      if (inBuildingPlot(cx, cy) && !inCentralPlaza(cx, cy) && !isRoadTile) {
+        plaza.push({
+          x,
+          y,
+          width: TILE,
+          height: TILE,
+          fill: hash2(tx + 5, ty) % 3 === 0 ? '#72b85e' : '#7ec46e',
+        })
+      }
     }
   }
 
   const rockSpots: [number, number, number][] = [
-    [155, 320, 28],
-    [870, 290, 32],
-    [120, 620, 24],
-    [900, 580, 30],
-    [640, 780, 22],
-    [380, 820, 26],
-    [720, 180, 20],
-    [280, 200, 18],
+    [90, 120, 22],
+    [920, 140, 24],
+    [85, 880, 20],
   ]
   for (const [rx, ry, r] of rockSpots) {
     for (let py = -r; py < r; py += 6) {
@@ -281,25 +249,11 @@ export function buildCompleteWorldTerrain(treeStageKey: string): WorldTerrainLay
   }
 
   const treeSpots: [number, number][] = [
-    [95, 140],
-    [180, 95],
-    [340, 75],
-    [680, 85],
-    [850, 120],
-    [940, 200],
-    [70, 380],
-    [60, 720],
-    [130, 880],
-    [940, 850],
-    [880, 920],
-    [350, 900],
-    [750, 860],
-    [250, 250],
-    [780, 260],
-    [160, 540],
-    [860, 520],
-    [420, 780],
-    [620, 760],
+    [70, 90],
+    [940, 100],
+    [55, 900],
+    [930, 880],
+    [512, 55],
   ]
   for (const [tx, ty] of treeSpots) {
     if (inCentralPlaza(tx, ty)) continue

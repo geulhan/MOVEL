@@ -99,7 +99,7 @@ export function WorldMapViewport({
       </div>
 
       <p className="pointer-events-none absolute bottom-2 left-0 right-0 text-center text-[10px] text-white/50">
-        드래그·핀치로 이동 · 두 번 탭으로 마을 중심
+        드래그·핀치로 이동 · 두 번 탭으로 왕국 중심
       </p>
     </div>
   )

@@ -12,12 +12,13 @@ import {
   resolveTreeAsset,
   VILLAGE_BUILDING_EXTERIOR,
 } from './data/villageAssets'
-import { TREE_WORLD } from './data/worldLayout'
+import { TREE_WORLD, WORLD_BUILDINGS } from './data/worldLayout'
 import type { WorldBuildingState } from './hooks/useVillageWorldState'
 import type { WorldBuildingKey } from './data/worldLayout'
 import { VillageEnvironmentLayer } from './VillageEnvironmentLayer'
 import { VillageNpcLayer } from './VillageNpcLayer'
 import { VillageFloatingRewards } from './VillageFloatingRewards'
+import { BuildingPlotGraphic } from './WorldBuildingPlotLayer'
 
 type Props = {
   treeStageKey: string
@@ -27,7 +28,8 @@ type Props = {
   exerciseEventsSinceCollect?: number
 }
 
-const BUILDING_SCALE = 1.725
+/** 통일 스케일 — 이전 대비 1.5배 추가 확대 */
+const BUILDING_SCALE = 2.59
 
 type BuildingLayer = {
   key: string
@@ -79,7 +81,7 @@ export function WorldMapCanvas({
           key: `${b.key}-site`,
           pixelRects: buildConstructionSite(b.cx, b.cy),
           imageUrl: VILLAGE_BUILDING_EXTERIOR[b.key],
-          imageOpacity: 0.45,
+          imageOpacity: 0.5,
           cx: b.cx,
           cy: b.cy,
           size,
@@ -112,7 +114,7 @@ export function WorldMapCanvas({
       height={ARTBOARD_SIZE}
       viewBox={`0 0 ${ARTBOARD_SIZE} ${ARTBOARD_SIZE}`}
       className="block touch-none"
-      aria-label="운동 마을 월드맵"
+      aria-label="운동 왕국 월드맵"
     >
       <defs>
         <linearGradient id="wm-sky" x1="0" y1="0" x2="0" y2="1">
@@ -120,16 +122,20 @@ export function WorldMapCanvas({
           <stop offset="45%" stopColor="#b8dff0" />
           <stop offset="100%" stopColor="#8ecf7a" />
         </linearGradient>
+        <radialGradient id="kingdom-glow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#fff9e6" stopOpacity={0.35} />
+          <stop offset="100%" stopColor="#8ecf7a" stopOpacity={0} />
+        </radialGradient>
       </defs>
 
       <rect width={ARTBOARD_SIZE} height={320} fill="url(#wm-sky)" />
-      <ellipse cx="220" cy="110" rx="100" ry="38" fill="#ffffff" opacity={0.5} />
-      <ellipse cx="780" cy="90" rx="90" ry="34" fill="#ffffff" opacity={0.45} />
+      <ellipse cx="220" cy="110" rx="100" ry="38" fill="#ffffff" opacity={0.45} />
+      <ellipse cx="780" cy="90" rx="90" ry="34" fill="#ffffff" opacity={0.4} />
 
       <g id="terrain-grass" style={{ imageRendering: 'pixelated' }}>
         <PixelRects rects={terrain.grass} />
       </g>
-      <g id="terrain-elevation" opacity={0.9} style={{ imageRendering: 'pixelated' }}>
+      <g id="terrain-elevation" opacity={0.85} style={{ imageRendering: 'pixelated' }}>
         <PixelRects rects={terrain.elevation} />
       </g>
       <g id="terrain-forest" style={{ imageRendering: 'pixelated' }}>
@@ -141,58 +147,51 @@ export function WorldMapCanvas({
       <g id="terrain-plaza" style={{ imageRendering: 'pixelated' }}>
         <PixelRects rects={terrain.plaza} />
       </g>
-      <g id="terrain-shadows">
-        {terrain.groundShadows.map((r, i) => (
-          <ellipse
-            key={`sh-${i}`}
-            cx={r.x + r.width / 2}
-            cy={r.y + r.height / 2}
-            rx={r.width / 2}
-            ry={r.height / 2}
-            fill={r.fill}
-          />
-        ))}
-      </g>
+
+      <ellipse
+        cx={TREE_WORLD.cx}
+        cy={TREE_WORLD.cy}
+        rx={155}
+        ry={125}
+        fill="url(#kingdom-glow)"
+      />
 
       <VillageEnvironmentLayer props={envProps} />
 
-      <g id="terrain-rocks" style={{ imageRendering: 'pixelated' }} opacity={0.7}>
+      <g id="terrain-rocks" style={{ imageRendering: 'pixelated' }} opacity={0.5}>
         <PixelRects rects={terrain.rocks} />
       </g>
-      <g id="terrain-trees" style={{ imageRendering: 'pixelated' }} opacity={0.65}>
+      <g id="terrain-trees" style={{ imageRendering: 'pixelated' }} opacity={0.45}>
         <PixelRects rects={terrain.smallTrees} />
+      </g>
+
+      <g id="building-plots">
+        {WORLD_BUILDINGS.map((def) => {
+          const state = buildings.find((b) => b.key === def.key)
+          return (
+            <BuildingPlotGraphic
+              key={`plot-${def.key}`}
+              building={def}
+              isBuilt={state?.isBuilt ?? false}
+              isUnlocked={state?.isUnlocked ?? false}
+            />
+          )
+        })}
       </g>
 
       <g id="buildings">
         {buildingLayers.map((layer) => {
           const b = buildings.find((x) => x.key === layer.buildingKey)
-          const imgW = layer.size * 1.35
-          const imgH = layer.size * 1.35
+          const def = WORLD_BUILDINGS.find((d) => d.key === layer.buildingKey)
+          const plotRy = def?.plotRy ?? 78
+          const imgW = layer.size * 1.22
+          const imgH = layer.size * 1.22
           const imgX = layer.cx - imgW / 2
-          const imgY = layer.cy - imgH * 0.82
+          const groundY = layer.cy + 14
+          const imgY = groundY - imgH + plotRy * 0.35
 
           return (
             <g key={layer.key}>
-              {(b?.isBuilt || b?.isUnlocked) && (
-                <ellipse
-                  cx={layer.cx}
-                  cy={layer.cy + layer.size * 0.28}
-                  rx={layer.size * 0.42}
-                  ry={layer.size * 0.12}
-                  fill="#8d6e4a"
-                  opacity={0.35}
-                />
-              )}
-              {layer.built && (
-                <ellipse
-                  cx={layer.cx}
-                  cy={layer.cy + layer.size * 0.22}
-                  rx={layer.size * 0.32}
-                  ry={layer.size * 0.09}
-                  fill="#2d4a28"
-                  opacity={0.3}
-                />
-              )}
               {layer.imageUrl && (
                 <image
                   href={layer.imageUrl}
@@ -210,10 +209,10 @@ export function WorldMapCanvas({
                 </g>
               )}
               {b?.isOperating && (
-                <circle cx={layer.cx} cy={layer.cy - layer.size * 0.38} r={5} fill="#5a9e6f" opacity={0.7}>
+                <circle cx={layer.cx} cy={imgY + 8} r={5} fill="#5a9e6f" opacity={0.65}>
                   <animate
                     attributeName="opacity"
-                    values="0.7;0.3;0.7"
+                    values="0.65;0.25;0.65"
                     dur="1.5s"
                     repeatCount="indefinite"
                   />
@@ -222,20 +221,20 @@ export function WorldMapCanvas({
               {b?.isBuilt && (
                 <g>
                   <rect
-                    x={layer.cx - 28}
-                    y={layer.cy - layer.size * 0.55}
-                    width={56}
-                    height={18}
+                    x={layer.cx - 30}
+                    y={imgY - 22}
+                    width={60}
+                    height={20}
                     rx={6}
                     fill="#2d3436"
-                    opacity={0.88}
+                    opacity={0.9}
                   />
                   <text
                     x={layer.cx}
-                    y={layer.cy - layer.size * 0.55 + 13}
+                    y={imgY - 8}
                     textAnchor="middle"
                     fill="#ffeaa7"
-                    fontSize={11}
+                    fontSize={12}
                     fontWeight="bold"
                     fontFamily="system-ui,sans-serif"
                   >
@@ -244,14 +243,15 @@ export function WorldMapCanvas({
                 </g>
               )}
               {selectedBuildingKey === layer.buildingKey && (
-                <circle
+                <ellipse
                   cx={layer.cx}
-                  cy={layer.cy}
-                  r={layer.size * 0.45}
+                  cy={groundY}
+                  rx={(def?.plotRx ?? 100) + 8}
+                  ry={(def?.plotRy ?? 75) + 6}
                   fill="none"
                   stroke="#ffca28"
                   strokeWidth={4}
-                  opacity={0.9}
+                  opacity={0.95}
                 />
               )}
             </g>
@@ -259,7 +259,7 @@ export function WorldMapCanvas({
         })}
       </g>
 
-      {drawTreeShadow(TREE_WORLD.cx, TREE_WORLD.cy + 10, treeSize * 0.48)}
+      {drawTreeShadow(TREE_WORLD.cx, TREE_WORLD.cy + 10, treeSize * 0.5)}
       <g id="hero-tree">
         <image
           href={treeAsset}
@@ -277,9 +277,27 @@ export function WorldMapCanvas({
 
       {isWorldActive && (
         <g id="village-active-glow" pointerEvents="none">
-          <circle cx={TREE_WORLD.cx} cy={TREE_WORLD.cy} r={treeSize * 0.55} fill="none" stroke="#5a9e6f" strokeWidth={2} opacity={0.25}>
-            <animate attributeName="r" values={`${treeSize * 0.5};${treeSize * 0.62};${treeSize * 0.5}`} dur="3s" repeatCount="indefinite" />
-            <animate attributeName="opacity" values="0.15;0.35;0.15" dur="3s" repeatCount="indefinite" />
+          <circle
+            cx={TREE_WORLD.cx}
+            cy={TREE_WORLD.cy}
+            r={treeSize * 0.55}
+            fill="none"
+            stroke="#5a9e6f"
+            strokeWidth={2}
+            opacity={0.25}
+          >
+            <animate
+              attributeName="r"
+              values={`${treeSize * 0.5};${treeSize * 0.65};${treeSize * 0.5}`}
+              dur="3s"
+              repeatCount="indefinite"
+            />
+            <animate
+              attributeName="opacity"
+              values="0.15;0.35;0.15"
+              dur="3s"
+              repeatCount="indefinite"
+            />
           </circle>
         </g>
       )}
