@@ -56,8 +56,8 @@ export function MotionHubLogo({
         : 'h-9 w-9 sm:h-10 sm:w-10'
       : variant === 'vertical'
         ? isHero
-          ? 'h-auto w-auto max-h-40 max-w-[min(100%,16rem)] sm:max-h-48'
-          : 'h-auto w-auto max-h-24 max-w-[10rem]'
+          ? 'h-auto w-auto max-h-40 max-w-[min(100%,14rem)] sm:max-h-48'
+          : 'h-auto w-auto max-h-28 max-w-[9.5rem] sm:max-h-32'
         : isHero
           ? 'h-auto w-auto max-h-16 max-w-[min(100%,20rem)] sm:max-h-[4.5rem]'
           : 'h-9 w-auto max-w-[11rem] sm:h-10 sm:max-w-[12rem]'
@@ -74,7 +74,7 @@ export function MotionHubLogo({
       <img
         src={src}
         alt="모션허브 MotionHub"
-        className={`object-contain object-left ${sizeClass}`}
+        className={`object-contain ${variant === 'vertical' ? 'object-center' : 'object-left'} ${sizeClass}`}
         decoding="async"
       />
       {showTagline && !imageHasTagline && (

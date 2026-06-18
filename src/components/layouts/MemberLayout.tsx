@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { MOTIONHUB_BRAND_ASSETS } from '../../constants/motionhubBrand'
+import { MotionHubLogo } from '../brand/MotionHubLogo'
 import { useApplyMemberTheme, useMemberThemeVars } from '../../hooks/useMemberTheme'
 import { isPlatformLandingHost } from '../../pages/RootPage'
 import { DEFAULT_CENTER_THEME, type CenterTheme } from '../../types/centerBranding'
@@ -10,19 +10,6 @@ type Props = {
   memberTheme?: CenterTheme
   onLogout?: () => void
   onDashboard?: () => void
-}
-
-function MemberHeaderLogo() {
-  return (
-    <div className="rounded-xl bg-white px-4 py-3 shadow-sm">
-      <img
-        src={MOTIONHUB_BRAND_ASSETS.logoMemberHeader}
-        alt="모션허브"
-        className="mx-auto h-auto w-full max-w-[17.5rem] object-contain"
-        decoding="async"
-      />
-    </div>
-  )
 }
 
 export function MemberLayout({
@@ -38,7 +25,9 @@ export function MemberLayout({
   const themed = Boolean(memberTheme)
   useApplyMemberTheme(activeTheme, { enabled: themed, memberName })
 
-  const logo = <MemberHeaderLogo />
+  const logo = (
+    <MotionHubLogo tone="light" variant="vertical" className="mx-auto items-center" />
+  )
 
   const logoWrapper = onDashboard ? (
     <button

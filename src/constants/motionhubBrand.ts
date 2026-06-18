@@ -13,8 +13,6 @@ export const MOTIONHUB_BRAND = {
 
 /** public/brand/motionhub — 사용자가 보낸 파일만 사용 */
 export const MOTIONHUB_BRAND_ASSETS = {
-  /** 회원 페이지 헤더 (한글 가로) */
-  logoMemberHeader: '/brand/motionhub/logo-member-header.png',
   /** 밝은 배경 · 한글 가로 조합 */
   logoKoLight: '/brand/motionhub/logo-ko-light.png',
   /** 밝은 배경 · 영문 가로 조합 */
