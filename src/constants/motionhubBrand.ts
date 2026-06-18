@@ -5,7 +5,7 @@ export const MOTIONHUB_BRAND = {
   primaryLight: '#E8FBF7',
   deep: '#0B0E11',
   /** logo-dark.png 배경과 동일 — 헤더에 로고 박스가 보이지 않게 */
-  logoHeaderBg: '#0A0C0E',
+  logoHeaderBg: '#000000',
   charcoal: '#1C1C1C',
   surface: '#FFFFFF',
   textOnDark: '#FFFFFF',
