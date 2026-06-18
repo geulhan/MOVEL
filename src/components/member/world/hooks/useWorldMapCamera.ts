@@ -34,7 +34,7 @@ export function useWorldMapCamera() {
     if (!el) return
     const w = el.clientWidth
     const h = el.clientHeight
-    const scale = clamp(Math.min(w, h) / 560, MIN_SCALE, MAX_SCALE)
+    const scale = clamp(Math.min(w, h) / 500, MIN_SCALE, MAX_SCALE)
     const x = w / 2 - TREE_WORLD.cx * scale
     const y = h / 2 - TREE_WORLD.cy * scale
     setCamera({ scale, x, y })
