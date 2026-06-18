@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { MotionHubLogo } from '../brand/MotionHubLogo'
+import { MOTIONHUB_BRAND } from '../../constants/motionhubBrand'
 import { useApplyMemberTheme, useMemberThemeVars } from '../../hooks/useMemberTheme'
 import { isPlatformLandingHost } from '../../pages/RootPage'
 import { DEFAULT_CENTER_THEME, type CenterTheme } from '../../types/centerBranding'
@@ -27,7 +28,12 @@ export function MemberLayout({
   const isLoggedIn = Boolean(memberName)
 
   const logo = (
-    <MotionHubLogo tone="light" variant="vertical" className="mx-auto items-center" />
+    <MotionHubLogo
+      tone="light"
+      variant="vertical"
+      size={isLoggedIn ? 'nav' : 'header'}
+      className="items-center"
+    />
   )
 
   const logoWrapper = onDashboard ? (
@@ -47,7 +53,7 @@ export function MemberLayout({
 
   return (
     <div
-      className="min-h-screen bg-surface"
+      className={`min-h-screen ${isLoggedIn ? 'bg-surface' : 'bg-[#f3f5f7]'}`}
       style={
         themed
           ? {
@@ -58,14 +64,16 @@ export function MemberLayout({
           : undefined
       }
     >
-      <header className="relative overflow-hidden border-b border-white/10 bg-motionhub-deep">
-        <div className="motionhub-glow pointer-events-none absolute inset-0 opacity-40" aria-hidden />
+      <header
+        className="relative"
+        style={{ backgroundColor: MOTIONHUB_BRAND.logoHeaderBg }}
+      >
         <div
           className={`relative mx-auto max-w-lg px-4 ${
-            isLoggedIn ? 'pt-4 pb-4' : 'pt-5 pb-6'
+            isLoggedIn ? 'py-4' : 'pb-10 pt-5 sm:pb-12 sm:pt-6'
           }`}
         >
-          <div className="absolute top-4 right-4">
+          <div className="absolute top-4 right-4 z-10 sm:top-5 sm:right-5">
             {onLogout ? (
               <button
                 type="button"
@@ -77,7 +85,7 @@ export function MemberLayout({
             ) : (
               <Link
                 to="/login"
-                className="text-xs font-medium text-motionhub transition hover:underline"
+                className="text-xs font-semibold text-motionhub transition hover:text-motionhub-dark"
               >
                 관리자 →
               </Link>
@@ -94,8 +102,8 @@ export function MemberLayout({
       </header>
 
       <main
-        className={`mx-auto max-w-lg space-y-4 px-4 ${
-          isLoggedIn ? 'py-6' : '-mt-3 pb-8 pt-0'
+        className={`mx-auto max-w-lg ${
+          isLoggedIn ? 'space-y-4 px-4 py-6' : 'relative z-10 -mt-5 px-4 pb-8 sm:-mt-6'
         }`}
       >
         {children}

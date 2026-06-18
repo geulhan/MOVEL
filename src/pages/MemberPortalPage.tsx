@@ -322,7 +322,7 @@ export default function MemberPortalPage() {
   if (!member) {
     return (
       <MemberLayout>
-        <section className={`${cardClass} relative z-10 p-6 shadow-lg shadow-charcoal/8`}>
+        <section className="overflow-hidden rounded-t-3xl bg-white px-6 pb-6 pt-6 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] ring-1 ring-charcoal/5">
           <div className="flex rounded-xl border border-charcoal/8 bg-motionhub-light/40 p-1">
             <button
               type="button"
@@ -531,7 +531,7 @@ export default function MemberPortalPage() {
 
         <p className="text-center text-xs text-muted">
           센터 관리자이신가요?{' '}
-          <Link to="/login" className="font-semibold text-teal-700 hover:underline">
+          <Link to="/login" className="font-semibold text-motionhub hover:underline">
             관리자 로그인
           </Link>
         </p>
