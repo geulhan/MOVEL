@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom'
 import { getMotionHubDemoUrl } from '../../constants/motionhub'
-import { MOTIONHUB_BRAND } from '../../constants/motionhubBrand'
 import { MOTIONHUB_SUB_MESSAGE_LINES } from '../../constants/motionhubSeo'
 import { isPlatformLandingHost } from '../../pages/RootPage'
 import { MotionHubLogo } from '../brand/MotionHubLogo'
@@ -21,7 +20,7 @@ export function MotionHubAuthShell({ children, title, subtitle }: Props) {
       <header className="border-b border-white/10 bg-motionhub-deep">
         <div className="mx-auto flex max-w-md items-center justify-between gap-3 px-4 py-4">
           <Link to={homeTo} className="transition hover:opacity-90">
-            <MotionHubLogo tone="light" showEnglish={false} />
+            <MotionHubLogo tone="light" variant="symbol" />
           </Link>
           <div className="flex gap-2 text-xs font-semibold">
             <Link
@@ -43,11 +42,8 @@ export function MotionHubAuthShell({ children, title, subtitle }: Props) {
       <section className="relative overflow-hidden bg-motionhub-deep px-4 py-8 sm:py-10">
         <div className="motionhub-glow pointer-events-none absolute inset-0 opacity-50" aria-hidden />
         <div className="relative mx-auto max-w-md">
-          <MotionHubLogo tone="light" size="hero" showEnglish={false} showTagline />
-          <p className="mt-5 text-lg font-semibold leading-snug text-white sm:text-xl">
-            {MOTIONHUB_BRAND.tagline}
-          </p>
-          <p className="mt-3 text-sm leading-relaxed text-white/65 sm:text-base">
+          <MotionHubLogo tone="light" variant="vertical" size="hero" />
+          <p className="mt-5 text-sm leading-relaxed text-white/65 sm:text-base">
             {MOTIONHUB_SUB_MESSAGE_LINES.join(' · ')}
             <br />
             하나로 연결하세요.

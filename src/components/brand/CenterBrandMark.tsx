@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
+import { MOTIONHUB_BRAND_ASSETS } from '../../constants/motionhubBrand'
 import type { CenterBranding } from '../../types/centerBranding'
-import { MotionHubLogo } from './MotionHubLogo'
 
 type Props = {
   branding: CenterBranding
@@ -37,8 +37,14 @@ export function CenterBrandMark({
       >
         {branding.centerName}
       </p>
-      <div className="mt-2 flex items-center gap-1.5 opacity-70">
-        <MotionHubLogo tone="light" variant="symbol" className="!h-4 !w-4" />
+      <div className="mt-2 flex items-center gap-1.5 opacity-80">
+        <img
+          src={MOTIONHUB_BRAND_ASSETS.iconDark}
+          alt=""
+          aria-hidden
+          className="h-4 w-4 rounded object-cover"
+          decoding="async"
+        />
         <span
           className="text-[10px] font-medium"
           style={{ color: 'var(--center-sidebar-muted)' }}

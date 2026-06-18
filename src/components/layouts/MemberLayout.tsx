@@ -26,7 +26,7 @@ export function MemberLayout({
   useApplyMemberTheme(activeTheme, { enabled: themed, memberName })
 
   const brand = (
-    <MotionHubLogo tone="dark" showEnglish={false} className="items-center" />
+    <MotionHubLogo tone="dark" locale="ko" className="items-center" />
   )
 
   const brandWrapper = onDashboard ? (

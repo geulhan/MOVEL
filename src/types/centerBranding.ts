@@ -19,15 +19,15 @@ export type CenterBranding = {
 }
 
 export const DEFAULT_CENTER_THEME: CenterTheme = {
-  sidebarBg: '#0f1419',
-  sidebarText: '#f8fafc',
-  sidebarMuted: 'rgba(248,250,252,0.62)',
-  accent: '#2ee8d6',
-  accentDark: '#1fc4b5',
-  mainBg: '#f8fafc',
+  sidebarBg: '#0b0e11',
+  sidebarText: '#ffffff',
+  sidebarMuted: 'rgba(255,255,255,0.62)',
+  accent: '#26e6c8',
+  accentDark: '#1ecfb4',
+  mainBg: '#ffffff',
   mainText: '#1c1c1c',
-  tabActiveBg: 'rgba(46,232,214,0.14)',
-  tabActiveText: '#2ee8d6',
+  tabActiveBg: 'rgba(38,230,200,0.14)',
+  tabActiveText: '#26e6c8',
 }
 
 export type ThemePreset = {

@@ -1,18 +1,41 @@
-import {
-  MOTIONHUB_BRAND,
-  MOTIONHUB_BRAND_ASSETS,
-} from '../../constants/motionhubBrand'
+import { MOTIONHUB_BRAND, MOTIONHUB_BRAND_ASSETS } from '../../constants/motionhubBrand'
 
 type Props = {
   className?: string
+  /** light = 어두운 배경 위, dark = 밝은 배경 위 */
   tone?: 'light' | 'dark'
   showTagline?: boolean
-  /** nav: 헤더·푸터, hero: 메인 타이틀 */
   size?: 'nav' | 'hero'
-  /** false면 영문 (MotionHub) 병기 숨김 — 이미지 로고 사용 시 무시 */
-  showEnglish?: boolean
-  /** symbol만 표시 */
-  variant?: 'combination' | 'symbol'
+  /** combination: 가로, vertical: 세로, symbol: 아이콘만 */
+  variant?: 'combination' | 'vertical' | 'symbol'
+  /** 한글 로고 우선 (밝은 배경) */
+  locale?: 'ko' | 'en'
+}
+
+function resolveSrc(
+  tone: 'light' | 'dark',
+  variant: 'combination' | 'vertical' | 'symbol',
+  locale: 'ko' | 'en',
+): string {
+  if (variant === 'symbol') {
+    return tone === 'light'
+      ? MOTIONHUB_BRAND_ASSETS.iconDark
+      : MOTIONHUB_BRAND_ASSETS.iconCyan
+  }
+
+  if (variant === 'vertical') {
+    return tone === 'light'
+      ? MOTIONHUB_BRAND_ASSETS.logoVerticalLight
+      : MOTIONHUB_BRAND_ASSETS.logoDark
+  }
+
+  if (tone === 'light') {
+    return MOTIONHUB_BRAND_ASSETS.logoDark
+  }
+
+  return locale === 'ko'
+    ? MOTIONHUB_BRAND_ASSETS.logoKoLight
+    : MOTIONHUB_BRAND_ASSETS.logoEnLight
 }
 
 export function MotionHubLogo({
@@ -21,44 +44,43 @@ export function MotionHubLogo({
   showTagline = false,
   size = 'nav',
   variant = 'combination',
+  locale = 'ko',
 }: Props) {
   const isHero = size === 'hero'
-  const onDark = tone === 'light'
+  const src = resolveSrc(tone, variant, locale)
 
-  if (variant === 'symbol') {
-    const src = onDark
-      ? MOTIONHUB_BRAND_ASSETS.symbolDark
-      : MOTIONHUB_BRAND_ASSETS.symbolLight
-    return (
-      <img
-        src={src}
-        alt="모션허브"
-        className={`object-contain ${isHero ? 'h-16 w-16 sm:h-20 sm:w-20' : 'h-8 w-8'} ${className}`}
-        decoding="async"
-      />
-    )
-  }
+  const sizeClass =
+    variant === 'symbol'
+      ? isHero
+        ? 'h-16 w-16 sm:h-20 sm:w-20'
+        : 'h-9 w-9 sm:h-10 sm:w-10'
+      : variant === 'vertical'
+        ? isHero
+          ? 'h-auto w-auto max-h-40 max-w-[min(100%,16rem)] sm:max-h-48'
+          : 'h-auto w-auto max-h-24 max-w-[10rem]'
+        : isHero
+          ? 'h-auto w-auto max-h-16 max-w-[min(100%,20rem)] sm:max-h-[4.5rem]'
+          : 'h-9 w-auto max-w-[11rem] sm:h-10 sm:max-w-[12rem]'
 
-  const src = onDark
-    ? MOTIONHUB_BRAND_ASSETS.combinationKoDark
-    : MOTIONHUB_BRAND_ASSETS.combinationKoLight
+  const imageHasTagline =
+    variant !== 'symbol' &&
+    (src === MOTIONHUB_BRAND_ASSETS.logoDark ||
+      src === MOTIONHUB_BRAND_ASSETS.logoKoLight ||
+      src === MOTIONHUB_BRAND_ASSETS.logoEnLight ||
+      src === MOTIONHUB_BRAND_ASSETS.logoVerticalLight)
 
   return (
     <div className={`inline-flex flex-col items-start ${className}`}>
       <img
         src={src}
         alt="모션허브 MotionHub"
-        className={`object-contain object-left ${
-          isHero
-            ? 'h-14 w-auto max-w-[min(100%,22rem)] sm:h-16'
-            : 'h-9 w-auto max-w-[11rem] sm:h-10 sm:max-w-[12rem]'
-        }`}
+        className={`object-contain object-left ${sizeClass}`}
         decoding="async"
       />
-      {showTagline && (
+      {showTagline && !imageHasTagline && (
         <p
           className={`mt-1 text-[11px] font-medium leading-snug ${
-            onDark ? 'text-cream/55' : 'text-charcoal/45'
+            tone === 'light' ? 'text-white/55' : 'text-charcoal/45'
           }`}
         >
           {MOTIONHUB_BRAND.tagline}

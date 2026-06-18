@@ -1,22 +1,28 @@
-/** MotionHub 공식 브랜드 컬러 · 에셋 경로 */
+/** 사용자 제공 모션허브 브랜드 에셋 (KakaoTalk 원본 이미지) */
 export const MOTIONHUB_BRAND = {
-  primary: '#2EE8D6',
-  primaryDark: '#1FC4B5',
-  primaryLight: '#E6FAF7',
-  deep: '#0F1419',
+  primary: '#26E6C8',
+  primaryDark: '#1ECFB4',
+  primaryLight: '#E8FBF7',
+  deep: '#0B0E11',
   charcoal: '#1C1C1C',
-  surface: '#F8FAFC',
-  textOnDark: '#F8FAFC',
-  muted: '#94A3B8',
+  surface: '#FFFFFF',
+  textOnDark: '#FFFFFF',
+  muted: '#757575',
   tagline: '회원이 운동을 지속하게 만드는 플랫폼',
 } as const
 
+/** public/brand/motionhub — 사용자가 보낸 파일만 사용 */
 export const MOTIONHUB_BRAND_ASSETS = {
-  symbolDark: '/brand/motionhub/symbol-dark.svg',
-  symbolLight: '/brand/motionhub/symbol-light.svg',
-  combinationKoDark: '/brand/motionhub/combination-ko-dark.svg',
-  combinationKoLight: '/brand/motionhub/combination-ko-light.png',
-  combinationDark: '/brand/motionhub/combination-dark.svg',
-  combinationLight: '/brand/motionhub/combination-light.svg',
-  appIcon: '/brand/motionhub/app-icon.svg',
+  /** 밝은 배경 · 한글 가로 조합 */
+  logoKoLight: '/brand/motionhub/logo-ko-light.png',
+  /** 밝은 배경 · 영문 가로 조합 */
+  logoEnLight: '/brand/motionhub/logo-en-light.png',
+  /** 밝은 배경 · 영문 세로 조합 */
+  logoVerticalLight: '/brand/motionhub/logo-vertical-light.png',
+  /** 어두운 배경 · 영문 세로 조합 */
+  logoDark: '/brand/motionhub/logo-dark.png',
+  /** 시안 배경 앱 아이콘 */
+  iconCyan: '/brand/motionhub/icon-cyan.png',
+  /** 다크 배경 앱 아이콘 */
+  iconDark: '/brand/motionhub/icon-dark.png',
 } as const

@@ -72,7 +72,7 @@ function LandingNav() {
     <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-motionhub-deep/90 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>
-          <MotionHubLogo tone="light" />
+          <MotionHubLogo tone="light" variant="symbol" />
         </a>
         <nav className="hidden items-center gap-6 text-sm font-medium text-cream/70 md:flex">
           <button type="button" onClick={() => scrollToId('problems')} className="transition hover:text-cream">
@@ -123,14 +123,9 @@ function HeroSection() {
       <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
         <div className="max-w-3xl">
           <h1 className="mt-0">
-            <MotionHubLogo tone="light" size="hero" />
+            <MotionHubLogo tone="light" variant="vertical" size="hero" />
           </h1>
-          <p className="mt-6 text-xl font-semibold leading-snug text-cream sm:text-2xl">
-            회원이 운동을 지속하게 만드는
-            <br />
-            운동센터 운영 플랫폼
-          </p>
-          <p className="mt-4 max-w-xl text-base leading-relaxed text-cream/65 sm:text-lg">
+          <p className="mt-6 max-w-xl text-base leading-relaxed text-white/65 sm:text-lg">
             {MOTIONHUB_SUB_MESSAGE_LINES.join(' · ')}
             <br />
             하나로 연결하세요.
@@ -575,7 +570,7 @@ function LandingFooter() {
   return (
     <footer className="border-t border-charcoal/10 bg-motionhub-deep py-12">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <MotionHubLogo tone="light" showTagline />
+        <MotionHubLogo tone="light" variant="vertical" showTagline />
         <p className="mt-4 text-sm text-cream/55">운동센터 운영 플랫폼</p>
         <p className="mt-2 text-xs font-medium tracking-wide text-cream/40">
           Powered by 모션허브

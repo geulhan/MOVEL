@@ -13,11 +13,11 @@ export default function HomePage() {
   const adminUrl = getAdminLoginUrl()
 
   return (
-    <div className="min-h-screen bg-cream">
-      <header className="border-b border-charcoal/10 bg-charcoal px-4 py-5">
+    <div className="min-h-screen bg-surface">
+      <header className="border-b border-white/10 bg-motionhub-deep px-4 py-5">
         <div className="mx-auto flex max-w-md flex-col items-center gap-3">
-          <MotionHubLogo tone="light" />
-          <p className="text-center text-xs text-cream/60">
+          <MotionHubLogo tone="light" variant="vertical" />
+          <p className="text-center text-xs text-white/60">
             MotionHub · 운동센터 운영 플랫폼
           </p>
         </div>
