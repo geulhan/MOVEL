@@ -19,6 +19,7 @@ import { VillageEnvironmentLayer } from './VillageEnvironmentLayer'
 import { VillageNpcLayer } from './VillageNpcLayer'
 import { VillageFloatingRewards } from './VillageFloatingRewards'
 import { BuildingPlotGraphic } from './WorldBuildingPlotLayer'
+import { WorldBuildingExteriorGraphic } from './WorldBuildingExteriorGraphic'
 
 type Props = {
   treeStageKey: string
@@ -126,6 +127,17 @@ export function WorldMapCanvas({
           <stop offset="0%" stopColor="#fff9e6" stopOpacity={0.35} />
           <stop offset="100%" stopColor="#8ecf7a" stopOpacity={0} />
         </radialGradient>
+        <filter
+          id="wm-building-shadow"
+          x="-35%"
+          y="-25%"
+          width="170%"
+          height="160%"
+          colorInterpolationFilters="sRGB"
+        >
+          <feDropShadow dx="0" dy="8" stdDeviation="6" floodColor="#0f2010" floodOpacity="0.5" />
+          <feDropShadow dx="0" dy="3" stdDeviation="2.5" floodColor="#000000" floodOpacity="0.28" />
+        </filter>
       </defs>
 
       <rect width={ARTBOARD_SIZE} height={320} fill="url(#wm-sky)" />
@@ -193,14 +205,17 @@ export function WorldMapCanvas({
           return (
             <g key={layer.key}>
               {layer.imageUrl && (
-                <image
-                  href={layer.imageUrl}
-                  x={imgX}
-                  y={imgY}
-                  width={imgW}
-                  height={imgH}
+                <WorldBuildingExteriorGraphic
+                  imageUrl={layer.imageUrl}
+                  cx={layer.cx}
+                  groundY={groundY}
+                  imgX={imgX}
+                  imgY={imgY}
+                  imgW={imgW}
+                  imgH={imgH}
+                  plotRx={def?.plotRx ?? 100}
+                  plotRy={def?.plotRy ?? 75}
                   opacity={layer.imageOpacity ?? 1}
-                  preserveAspectRatio="xMidYMax meet"
                 />
               )}
               {layer.pixelRects && (

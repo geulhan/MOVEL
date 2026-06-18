@@ -7,7 +7,7 @@ type Props = {
   isUnlocked: boolean
 }
 
-/** 시설 전용 부지 — 건물 아래 레이어, 장소감 연출 */
+/** 시설 전용 부지 — 잔디 위에 건물이 놓인 장소감 */
 export function BuildingPlotGraphic({ building, isBuilt, isUnlocked }: Props) {
   const { cx, cy, plotRx, plotRy, key } = building
   const hubX = TREE_WORLD.cx
@@ -20,40 +20,64 @@ export function BuildingPlotGraphic({ building, isBuilt, isUnlocked }: Props) {
   const entranceX = cx - Math.cos(angle) * (plotRx - 18)
   const entranceY = groundY - Math.sin(angle) * (plotRy - 14)
 
+  const grassOuter = isPlaza ? '#8d7a5c' : '#4a7a42'
+  const grassMid = isPlaza ? '#c9b896' : '#5f9e52'
+  const grassInner = isPlaza ? '#ddd0b8' : '#72c060'
+  const grassHighlight = isPlaza ? '#e8dcc8' : '#8ed67a'
+
   return (
     <g opacity={dim}>
       <ellipse
         cx={cx}
-        cy={groundY + 8}
-        rx={plotRx + 14}
-        ry={plotRy + 10}
-        fill="rgba(30,50,25,0.12)"
+        cy={groundY + 10}
+        rx={plotRx + 18}
+        ry={plotRy + 12}
+        fill="rgba(15,32,12,0.18)"
+      />
+
+      <ellipse
+        cx={cx}
+        cy={groundY + 4}
+        rx={plotRx + 10}
+        ry={plotRy + 6}
+        fill="#3d6638"
+        opacity={0.4}
       />
 
       <ellipse
         cx={cx}
         cy={groundY}
-        rx={plotRx + 6}
-        ry={plotRy + 4}
-        fill="#4a7a42"
+        rx={plotRx + 4}
+        ry={plotRy + 2}
+        fill={grassMid}
+        stroke={grassOuter}
+        strokeWidth={3}
+      />
+
+      <ellipse
+        cx={cx}
+        cy={groundY - 5}
+        rx={plotRx - 12}
+        ry={plotRy - 10}
+        fill={grassInner}
+        opacity={0.88}
+      />
+
+      <ellipse
+        cx={cx - plotRx * 0.22}
+        cy={groundY - 8}
+        rx={plotRx * 0.35}
+        ry={plotRy * 0.28}
+        fill={grassHighlight}
         opacity={0.35}
       />
       <ellipse
-        cx={cx}
-        cy={groundY}
-        rx={plotRx}
-        ry={plotRy}
-        fill={isPlaza ? '#c9b896' : '#6aab58'}
-        stroke="#4a7a42"
-        strokeWidth={3}
-      />
-      <ellipse
-        cx={cx}
-        cy={groundY - 4}
-        rx={plotRx - 18}
-        ry={plotRy - 14}
-        fill={isPlaza ? '#ddd0b8' : '#7ec46e'}
-        opacity={0.75}
+        cx={cx + plotRx * 0.18}
+        cy={groundY - 3}
+        rx={plotRx * 0.28}
+        ry={plotRy * 0.22}
+        fill={grassHighlight}
+        opacity={0.22}
       />
 
       <line
@@ -90,11 +114,20 @@ export function BuildingPlotGraphic({ building, isBuilt, isUnlocked }: Props) {
 
       <ellipse
         cx={cx}
-        cy={groundY + plotRy - 6}
-        rx={plotRx * 0.55}
-        ry={8}
-        fill="#8d6e4a"
-        opacity={0.25}
+        cy={groundY + plotRy - 4}
+        rx={plotRx * 0.62}
+        ry={9}
+        fill="#3a5c32"
+        opacity={0.45}
+      />
+
+      <ellipse
+        cx={cx}
+        cy={groundY + plotRy * 0.35}
+        rx={plotRx * 0.48}
+        ry={6}
+        fill="#2d4a28"
+        opacity={0.3}
       />
     </g>
   )
