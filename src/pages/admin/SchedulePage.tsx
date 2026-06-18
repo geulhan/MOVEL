@@ -32,22 +32,22 @@ export default function SchedulePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="PT 스케줄"
-        description="개별·고정 PT 예약을 등록합니다. 출석(완료) 처리는 관리자만 할 수 있습니다."
+        title="센터 일정"
+        description="PT·그룹수업 일정을 한곳에서 확인합니다. PT 출석(완료) 처리는 관리자만 할 수 있습니다."
       />
 
       {isAdmin && (
         <div className="flex flex-wrap items-end gap-3">
           <label className="block min-w-[12rem] text-sm">
             <span className="mb-1 block font-medium text-charcoal/70">
-              트레이너 보기
+              강사 보기
             </span>
             <select
               value={filterTrainerId}
               onChange={(e) => setFilterTrainerId(e.target.value)}
               className={inputClass}
             >
-              <option value="">전체 트레이너</option>
+              <option value="">전체 강사</option>
               {trainers.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
@@ -56,8 +56,7 @@ export default function SchedulePage() {
             </select>
           </label>
           <p className="pb-2 text-xs text-muted">
-            트레이너를 선택하면 해당 트레이너 일정만 표시됩니다. 취소·삭제는
-            트레이너도 가능하며, 완료(출석) 처리는 관리자만 할 수 있습니다.
+            강사를 선택하면 해당 강사의 PT·그룹수업 일정만 표시됩니다.
           </p>
         </div>
       )}
@@ -73,6 +72,7 @@ export default function SchedulePage() {
         lockedTrainerId={lockedTrainerId}
         filterTrainerId={filterTrainerId || undefined}
         isAdmin={isAdmin}
+        showClassSchedules
       />
     </div>
   )

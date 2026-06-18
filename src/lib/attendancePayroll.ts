@@ -1,6 +1,9 @@
-import type { Member, Trainer } from '../types/database'
+import type { Member, Trainer, TrainerSettlementMode } from '../types/database'
 import type { PtSchedule } from '../api/schedule'
+import type { ClassTrainerSessionPayroll } from '../api/classFixedSchedule'
 import {
+  calculateTrainerPay,
+  formatSettlementLabel,
   resolveTrainerIdByName,
   resolveTrainerSettlementRate,
 } from './trainerSettlement'
@@ -25,7 +28,10 @@ export function memberSessionUnitPrice(member: Member): number {
 export type TrainerPayrollSummaryRow = {
   trainerId: string | null
   trainerName: string
-  settlementRate: number
+  settlementMode: TrainerSettlementMode
+  settlementRate: number | null
+  settlementFixedAmount: number | null
+  settlementLabel: string
   sessionCount: number
   grossAmount: number
   trainerPay: number
@@ -160,23 +166,42 @@ function trainerBucketKey(trainerId: string | null, trainerName: string): string
   return trainerId ?? `name:${trainerName}`
 }
 
+type TrainerBucket = {
+  trainerId: string | null
+  trainerName: string
+  count: number
+  gross: number
+}
+
+function addToBucket(
+  byTrainer: Map<string, TrainerBucket>,
+  trainerId: string | null,
+  trainerName: string,
+  grossDelta: number,
+  countDelta: number,
+) {
+  const bucketKey = trainerBucketKey(trainerId, trainerName)
+  const bucket = byTrainer.get(bucketKey) ?? {
+    trainerId,
+    trainerName,
+    count: 0,
+    gross: 0,
+  }
+  bucket.count += countDelta
+  bucket.gross += grossDelta
+  byTrainer.set(bucketKey, bucket)
+}
+
 export function buildAttendancePayrollSummary(
   logs: AttendancePayrollLog[],
   members: Member[],
   schedules: PtSchedule[],
   trainers: Trainer[],
   defaultSettlementRate: number,
+  classSessions: ClassTrainerSessionPayroll[] = [],
 ): AttendancePayrollSummary {
   const memberById = new Map(members.map((member) => [member.id, member]))
-  const byTrainer = new Map<
-    string,
-    {
-      trainerId: string | null
-      trainerName: string
-      count: number
-      gross: number
-    }
-  >()
+  const byTrainer = new Map<string, TrainerBucket>()
 
   for (const log of logs) {
     const member = memberById.get(log.member_id)
@@ -186,35 +211,45 @@ export function buildAttendancePayrollSummary(
       schedules,
       trainers,
     )
-    const bucketKey = trainerBucketKey(trainerId, trainerName)
     const unitPrice = member ? memberSessionUnitPrice(member) : 0
-    const bucket = byTrainer.get(bucketKey) ?? {
-      trainerId,
-      trainerName,
-      count: 0,
-      gross: 0,
-    }
-    bucket.count += 1
-    bucket.gross += unitPrice
-    byTrainer.set(bucketKey, bucket)
+    addToBucket(byTrainer, trainerId, trainerName, unitPrice, 1)
+  }
+
+  for (const session of classSessions) {
+    addToBucket(
+      byTrainer,
+      session.trainerId,
+      session.trainerName,
+      session.grossAmount,
+      1,
+    )
   }
 
   const byTrainerRows = [...byTrainer.values()]
     .map((stats) => {
-      const settlementRate = resolveTrainerSettlementRate(
-        stats.trainerId,
+      const pay = calculateTrainerPay({
+        gross: stats.gross,
+        sessionCount: stats.count,
+        trainerId: stats.trainerId,
         trainers,
-        defaultSettlementRate,
-      )
-      const trainerPay = Math.round(stats.gross * (settlementRate / 100))
+        defaultRate: defaultSettlementRate,
+      })
       return {
         trainerId: stats.trainerId,
         trainerName: stats.trainerName,
-        settlementRate,
+        settlementMode: pay.settlementMode,
+        settlementRate: pay.settlementRate,
+        settlementFixedAmount: pay.settlementFixedAmount,
+        settlementLabel: formatSettlementLabel({
+          settlementMode: pay.settlementMode,
+          settlementRate: pay.settlementRate,
+          settlementFixedAmount: pay.settlementFixedAmount,
+          defaultRate: defaultSettlementRate,
+        }),
         sessionCount: stats.count,
         grossAmount: stats.gross,
-        trainerPay,
-        centerShare: stats.gross - trainerPay,
+        trainerPay: pay.trainerPay,
+        centerShare: pay.centerShare,
       }
     })
     .sort((a, b) => {
@@ -226,13 +261,25 @@ export function buildAttendancePayrollSummary(
 
   const totalGross = byTrainerRows.reduce((sum, row) => sum + row.grossAmount, 0)
   const totalTrainerPay = byTrainerRows.reduce((sum, row) => sum + row.trainerPay, 0)
+  const totalSessions = byTrainerRows.reduce((sum, row) => sum + row.sessionCount, 0)
 
   return {
     defaultSettlementRate,
-    totalSessions: logs.length,
+    totalSessions,
     totalGross,
     totalTrainerPay,
     totalCenterShare: totalGross - totalTrainerPay,
     byTrainer: byTrainerRows,
   }
 }
+
+/** @deprecated settlementLabel 사용 권장 */
+export function legacySettlementRateForRow(
+  row: TrainerPayrollSummaryRow,
+  defaultSettlementRate: number,
+): number {
+  if (row.settlementMode === 'fixed') return 0
+  return row.settlementRate ?? defaultSettlementRate
+}
+
+export { resolveTrainerSettlementRate }

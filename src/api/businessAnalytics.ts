@@ -106,7 +106,7 @@ async function loadRecognitionInputs(centerId: string) {
         .eq('center_id', centerId),
       supabase
         .from('trainers')
-        .select('id, name, settlement_rate, is_active')
+        .select('id, name, settlement_rate, settlement_mode, settlement_fixed_amount, is_active')
         .eq('center_id', centerId),
     ])
 
@@ -210,8 +210,13 @@ async function loadRecognitionInputs(centerId: string) {
     id: row.id,
     name: row.name,
     is_active: row.is_active,
+    settlement_mode: row.settlement_mode === 'fixed' ? 'fixed' : 'percent',
     settlement_rate:
       row.settlement_rate == null ? null : Number(row.settlement_rate),
+    settlement_fixed_amount:
+      row.settlement_fixed_amount == null
+        ? null
+        : Number(row.settlement_fixed_amount),
     created_at: '',
   }))
 

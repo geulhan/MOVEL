@@ -27,6 +27,7 @@ import {
   type ScheduleStatus,
 } from '../../api/schedule'
 import { completeScheduleAttendance } from '../../api/attendance'
+import { fetchClassSchedulesInRange, type ClassSchedule } from '../../api/classes'
 import { formatSupabaseError } from '../../lib/errors'
 import { useCenterFeatures } from '../../hooks/useCenterFeatures'
 import type { Member, Trainer } from '../../types/database'
@@ -81,6 +82,7 @@ type Props = {
   lockedTrainerId?: string
   filterTrainerId?: string
   isAdmin?: boolean
+  showClassSchedules?: boolean
 }
 
 export function PtScheduleCalendar({
@@ -88,12 +90,14 @@ export function PtScheduleCalendar({
   lockedTrainerId,
   filterTrainerId,
   isAdmin = false,
+  showClassSchedules = false,
 }: Props) {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
   const [selectedDate, setSelectedDate] = useState<string | null>(dateKey(now))
   const [schedules, setSchedules] = useState<PtSchedule[]>([])
+  const [classSchedules, setClassSchedules] = useState<ClassSchedule[]>([])
   const [journalKeys, setJournalKeys] = useState<Set<string>>(new Set())
   const [members, setMembers] = useState<Member[]>([])
   const [trainers, setTrainers] = useState<Trainer[]>([])
@@ -139,7 +143,7 @@ export function PtScheduleCalendar({
     setLoading(true)
     setError(null)
     try {
-      const [scheduleData, memberData, trainerData, fixedData, journalKeySet] =
+      const [scheduleData, memberData, trainerData, fixedData, journalKeySet, classData] =
         await Promise.all([
         fetchSchedulesInRange(range.startIso, range.endIso, {
           trainerId: effectiveTrainerId || undefined,
@@ -153,6 +157,9 @@ export function PtScheduleCalendar({
         journalFeatureEnabled
           ? fetchExerciseJournalKeysInRange(range.startDate, range.endDate)
           : Promise.resolve(new Set<string>()),
+        showClassSchedules
+          ? fetchClassSchedulesInRange(range.startIso, range.endIso)
+          : Promise.resolve([] as ClassSchedule[]),
       ])
       const memberMap = new Map(memberData.map((m) => [m.id, m.name]))
       const trainerMap = new Map(trainerData.map((t) => [t.id, t.name]))
@@ -162,6 +169,10 @@ export function PtScheduleCalendar({
         trainer_name: s.trainer_id ? trainerMap.get(s.trainer_id) : undefined,
       }))
       setSchedules(enriched)
+      const filteredClassSchedules = effectiveTrainerId
+        ? classData.filter((item) => item.trainer_id === effectiveTrainerId)
+        : classData
+      setClassSchedules(filteredClassSchedules)
       setJournalKeys(journalKeySet)
       const activeMembers = memberData.filter((m) => m.status !== 'terminated')
       setMembers(
@@ -176,7 +187,7 @@ export function PtScheduleCalendar({
     } finally {
       setLoading(false)
     }
-  }, [range.startIso, range.endIso, range.startDate, range.endDate, effectiveTrainerId, lockedTrainerId, journalFeatureEnabled])
+  }, [range.startIso, range.endIso, range.startDate, range.endDate, effectiveTrainerId, lockedTrainerId, journalFeatureEnabled, showClassSchedules])
 
   useEffect(() => {
     void load()
@@ -242,7 +253,27 @@ export function PtScheduleCalendar({
     return map
   }, [schedules])
 
+  const classByDate = useMemo(() => {
+    const map = new Map<string, ClassSchedule[]>()
+    for (const schedule of classSchedules) {
+      const key = dateKey(new Date(schedule.starts_at))
+      const list = map.get(key) ?? []
+      list.push(schedule)
+      map.set(key, list)
+    }
+    for (const [, list] of map) {
+      list.sort(
+        (a, b) =>
+          new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime(),
+      )
+    }
+    return map
+  }, [classSchedules])
+
   const selectedSchedules = selectedDate ? (byDate.get(selectedDate) ?? []) : []
+  const selectedClassSchedules = selectedDate
+    ? (classByDate.get(selectedDate) ?? [])
+    : []
   const matrix = getMonthMatrix(year, month)
   const today = dateKey(now)
 
@@ -463,6 +494,8 @@ export function PtScheduleCalendar({
                 }
                 const key = dateKey(date)
                 const daySchedules = byDate.get(key) ?? []
+                const dayClassSchedules = classByDate.get(key) ?? []
+                const totalCount = daySchedules.length + dayClassSchedules.length
                 const isSelected = selectedDate === key
                 const isToday = key === today
                 const dow = date.getDay()
@@ -490,20 +523,28 @@ export function PtScheduleCalendar({
                       >
                         {date.getDate()}
                       </span>
-                      {daySchedules.length > 0 && (
+                      {totalCount > 0 && (
                         <span className="shrink-0 rounded bg-charcoal/8 px-1 text-[10px] font-semibold text-charcoal/60 tabular-nums">
-                          {daySchedules.length}
+                          {totalCount}
                         </span>
                       )}
                     </div>
                     <div className="mt-auto flex flex-wrap gap-0.5 pt-1">
-                      {daySchedules.slice(0, 6).map((s) => (
+                      {daySchedules.slice(0, 4).map((s) => (
                         <span
                           key={s.id}
-                          title={`${formatTime(s.scheduled_at)} ${s.member_name ?? ''}`}
+                          title={`PT ${formatTime(s.scheduled_at)} ${s.member_name ?? ''}`}
                           className={`h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_COLORS[s.status]} ${
                             s.fixed_schedule_id ? 'ring-1 ring-charcoal/30' : ''
                           }`}
+                        />
+                      ))}
+                      {dayClassSchedules.slice(0, 4).map((s) => (
+                        <span
+                          key={s.id}
+                          title={`그룹 ${formatTime(s.starts_at)} ${s.class_name ?? ''}`}
+                          className="h-1.5 w-1.5 shrink-0 rounded-full ring-1 ring-charcoal/20"
+                          style={{ backgroundColor: s.class_color ?? '#2dd4bf' }}
                         />
                       ))}
                     </div>
@@ -512,7 +553,7 @@ export function PtScheduleCalendar({
               })}
             </div>
             <p className="mt-3 text-xs text-charcoal/45">
-              날짜를 선택하면 해당 일 일정을 확인할 수 있습니다. PT 차감은 출석
+              날짜를 선택하면 PT·그룹수업 일정을 확인할 수 있습니다. PT 차감은 출석
               처리 시에만 됩니다.
             </p>
           </>
@@ -527,7 +568,8 @@ export function PtScheduleCalendar({
               : '일정 목록'}
             {selectedDate && (
               <span className="ml-2 text-sm font-normal text-charcoal/50">
-                {selectedSchedules.length}건
+                PT {selectedSchedules.length}건
+                {showClassSchedules ? ` · 그룹 ${selectedClassSchedules.length}건` : ''}
               </span>
             )}
           </h3>
@@ -535,7 +577,7 @@ export function PtScheduleCalendar({
             <p className="mt-4 text-sm text-charcoal/50">
               캘린더에서 날짜를 선택해 주세요.
             </p>
-          ) : selectedSchedules.length === 0 ? (
+          ) : selectedSchedules.length === 0 && selectedClassSchedules.length === 0 ? (
             <p className="mt-4 text-sm text-charcoal/50">예약이 없습니다.</p>
           ) : (
             <ul className="mt-4 space-y-2.5">
@@ -620,6 +662,45 @@ export function PtScheduleCalendar({
                   )}
                 </li>
               ))}
+              {showClassSchedules &&
+                selectedClassSchedules.map((schedule) => (
+                  <li
+                    key={`class-${schedule.id}`}
+                    className="rounded-xl border border-teal-200/60 bg-teal-50/40 p-3.5"
+                  >
+                    <div className="flex min-w-0 items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-semibold text-charcoal">
+                          <span className="rounded bg-teal-100 px-1.5 py-0.5 text-[10px] font-bold text-teal-800">
+                            그룹
+                          </span>
+                          <span className="ml-1.5 tabular-nums">
+                            {formatTime(schedule.starts_at)}
+                          </span>
+                          <span className="mx-1.5 text-charcoal/30">·</span>
+                          <span>{schedule.class_name}</span>
+                        </p>
+                        <p className="mt-0.5 truncate text-xs text-charcoal/55">
+                          {schedule.trainer_name ?? '강사 미지정'} · 예약{' '}
+                          {schedule.reserved_count ?? 0}/{schedule.capacity ?? '-'}
+                        </p>
+                        {schedule.fixed_schedule_id && (
+                          <span className="mt-1 inline-block rounded bg-gold/20 px-1.5 py-0.5 text-[10px] font-semibold text-charcoal/70">
+                            {schedule.is_detached ? '고정·개별' : '고정'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-2">
+                      <Link
+                        to="/admin/classes"
+                        className="inline-flex rounded-lg border border-teal-600/30 bg-white px-2.5 py-1 text-xs font-semibold text-teal-900 transition hover:bg-teal-50"
+                      >
+                        클래스 관리에서 보기
+                      </Link>
+                    </div>
+                  </li>
+                ))}
             </ul>
           )}
 

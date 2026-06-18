@@ -56,6 +56,8 @@ export type ClassSchedule = {
   capacity: number | null
   status: ScheduleStatus
   note: string | null
+  fixed_schedule_id?: string | null
+  is_detached?: boolean
   created_at: string
   updated_at: string
   class_name?: string
@@ -63,6 +65,7 @@ export type ClassSchedule = {
   class_color?: string
   pass_type?: PassType
   deduct_sessions?: boolean
+  trainer_id?: string | null
   trainer_name?: string
   reserved_count?: number
   waitlist_count?: number
@@ -253,7 +256,7 @@ export async function fetchClassSchedulesInRange(
   const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('class_schedules')
-    .select('*, classes(name, class_type, color, capacity, pass_type, deduct_sessions, trainers(name))')
+    .select('*, classes(name, class_type, color, capacity, pass_type, deduct_sessions, trainer_id, trainers(name))')
     .eq('center_id', centerId)
     .gte('starts_at', startIso)
     .lte('starts_at', endIso)
@@ -270,6 +273,7 @@ export async function fetchClassSchedulesInRange(
       capacity?: number
       pass_type?: PassType
       deduct_sessions?: boolean
+      trainer_id?: string | null
       trainers?: { name?: string } | null
     } | null
     const { classes: _c, ...rest } = row
@@ -282,6 +286,7 @@ export async function fetchClassSchedulesInRange(
       class_color: cls?.color,
       pass_type: cls?.pass_type,
       deduct_sessions: cls?.deduct_sessions,
+      trainer_id: cls?.trainer_id ?? undefined,
       trainer_name: cls?.trainers?.name ?? undefined,
     }
   })

@@ -28,8 +28,8 @@ export default function TrainersPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="트레이너"
-        description="트레이너 등록, 수업료 비율, 로그인 계정 관리"
+        title="강사 관리"
+        description="강사 등록, 수업료 설정(비율·고정금액), 로그인 계정 관리"
       />
 
       {error && (

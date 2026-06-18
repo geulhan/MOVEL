@@ -14,11 +14,15 @@ export const MEMBER_STATUS_LABELS: Record<MemberStatus, string> = {
   terminated: '종료',
 }
 
+export type TrainerSettlementMode = 'percent' | 'fixed'
+
 export type Trainer = {
   id: string
   name: string
   is_active: boolean
+  settlement_mode: TrainerSettlementMode
   settlement_rate: number | null
+  settlement_fixed_amount: number | null
   center_id?: string
   created_at: string
 }

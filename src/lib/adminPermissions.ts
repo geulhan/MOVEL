@@ -38,7 +38,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   {
     to: '/admin/schedule',
     end: false,
-    label: 'PT 스케줄',
+    label: '센터 일정',
     icon: '▦',
     roles: ['admin', 'trainer'],
     featureKeys: ['pt'],
@@ -62,7 +62,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   {
     to: '/admin/trainers',
     end: false,
-    label: '트레이너',
+    label: '강사 관리',
     icon: '★',
     roles: ['admin'],
     featureKeys: ['pt', 'class'],

@@ -18,7 +18,7 @@ export function TrainerManage({ trainers, onUpdated }: Props) {
   async function handleDelete(trainer: Trainer) {
     if (
       !window.confirm(
-        `${trainer.name} 트레이너를 삭제할까요?\n로그인 계정이 있으면 함께 삭제되며, 기존 회원 담당 정보는 유지됩니다.`,
+        `${trainer.name} 강사를 삭제할까요?\n로그인 계정이 있으면 함께 삭제되며, 기존 회원 담당 정보는 유지됩니다.`,
       )
     ) {
       return
@@ -29,11 +29,11 @@ export function TrainerManage({ trainers, onUpdated }: Props) {
     setMessage(null)
     try {
       await deleteTrainer(trainer.id)
-      setMessage(`${trainer.name} 트레이너가 삭제되었습니다.`)
+      setMessage(`${trainer.name} 강사가 삭제되었습니다.`)
       onUpdated()
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : '트레이너 삭제에 실패했습니다.',
+        err instanceof Error ? err.message : '강사 삭제에 실패했습니다.',
       )
     } finally {
       setDeletingId(null)
@@ -48,11 +48,11 @@ export function TrainerManage({ trainers, onUpdated }: Props) {
     try {
       await createTrainer(name)
       setName('')
-      setMessage('트레이너가 등록되었습니다.')
+      setMessage('강사가 등록되었습니다.')
       onUpdated()
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : '트레이너 등록에 실패했습니다.',
+        err instanceof Error ? err.message : '강사 등록에 실패했습니다.',
       )
     } finally {
       setLoading(false)
@@ -61,9 +61,9 @@ export function TrainerManage({ trainers, onUpdated }: Props) {
 
   return (
     <section className={`${cardClass} p-6`}>
-      <h2 className="text-lg font-semibold text-charcoal">트레이너 관리</h2>
+      <h2 className="text-lg font-semibold text-charcoal">강사 등록</h2>
       <p className="mt-1 text-sm text-muted">
-        등록된 트레이너를 회원 등록 시 선택할 수 있습니다.
+        등록된 강사를 회원·클래스 담당으로 지정할 수 있습니다.
       </p>
 
       {trainers.length > 0 && (
@@ -93,19 +93,19 @@ export function TrainerManage({ trainers, onUpdated }: Props) {
       >
         <label className="flex-1">
           <span className="mb-1.5 block text-sm font-medium text-charcoal">
-            새 트레이너
+            새 강사
           </span>
           <input
             type="text"
             lang="ko"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="트레이너 이름"
+            placeholder="강사 이름"
             className={inputClass}
           />
         </label>
         <button type="submit" disabled={loading} className={btnGold}>
-          {loading ? '등록 중…' : '트레이너 등록'}
+          {loading ? '등록 중…' : '강사 등록'}
         </button>
       </form>
 

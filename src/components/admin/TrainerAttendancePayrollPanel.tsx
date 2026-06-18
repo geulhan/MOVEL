@@ -22,7 +22,9 @@ export function TrainerAttendancePayrollPanel({
   const monthLabel = formatMonthLabel(monthRef)
   const title = trainerView
     ? `${trainerName ?? '내'} 수업·수업료`
-    : '트레이너별 수업·수업료'
+    : '강사별 수업·수업료'
+
+  const primaryRow = summary?.byTrainer[0]
 
   return (
     <section className={`${cardClass} overflow-hidden`}>
@@ -31,8 +33,8 @@ export function TrainerAttendancePayrollPanel({
           <h3 className="text-base font-semibold text-charcoal">{title}</h3>
           <p className="mt-1 text-xs text-muted">
             {trainerView
-              ? `${monthLabel} 담당 출석 기준 · 회원 단가 × 출석 횟수 × 적용 비율`
-              : `${monthLabel} 출석 기준 · 회원 단가 × 출석 횟수로 소진 매출을 계산하고, 트레이너별 수업료 비율을 적용합니다.`}
+              ? `${monthLabel} 담당 PT 출석·그룹수업 진행 기준 · 비율 또는 고정금액 적용`
+              : `${monthLabel} PT 출석·그룹수업 진행 기준 · 강사별 비율(%) 또는 고정금액(원/회)을 적용합니다.`}
             {!trainerView && summary
               ? ` (기본 ${summary.defaultSettlementRate}%, 개별 설정 우선)`
               : ''}
@@ -40,7 +42,7 @@ export function TrainerAttendancePayrollPanel({
         </div>
         {!trainerView && (
           <Link to="/admin/trainers" className={`${btnOutline} text-xs`}>
-            트레이너별 비율 설정
+            강사 수업료 설정
           </Link>
         )}
       </div>
@@ -49,7 +51,7 @@ export function TrainerAttendancePayrollPanel({
         <p className="px-5 py-6 text-sm text-muted">집계 중…</p>
       ) : !summary || summary.byTrainer.length === 0 ? (
         <p className="px-5 py-6 text-sm text-muted">
-          {monthLabel} {trainerView ? '담당 ' : ''}출석 기록이 없습니다.
+          {monthLabel} {trainerView ? '담당 ' : ''}출석·수업 기록이 없습니다.
         </p>
       ) : (
         <>
@@ -61,7 +63,7 @@ export function TrainerAttendancePayrollPanel({
             }`}
           >
             <div>
-              <p className="text-xs text-muted">총 출석</p>
+              <p className="text-xs text-muted">총 수업</p>
               <p className="mt-1 text-xl font-bold tabular-nums text-charcoal">
                 {summary.totalSessions}회
               </p>
@@ -76,9 +78,9 @@ export function TrainerAttendancePayrollPanel({
             )}
             <div>
               <p className="text-xs text-muted">
-                {trainerView ? '예상 수업료' : '트레이너 수업료 합계'}
-                {trainerView && summary.byTrainer[0]
-                  ? ` (${summary.byTrainer[0].settlementRate}%)`
+                {trainerView ? '예상 수업료' : '강사 수업료 합계'}
+                {trainerView && primaryRow
+                  ? ` (${primaryRow.settlementLabel})`
                   : ''}
               </p>
               <p className="mt-1 text-xl font-bold tabular-nums text-emerald-700">
@@ -100,11 +102,11 @@ export function TrainerAttendancePayrollPanel({
               <table className="w-full min-w-[720px] text-left text-sm">
                 <thead className="table-head">
                   <tr>
-                    <th className="px-4 py-2.5">트레이너</th>
-                    <th className="px-4 py-2.5">비율</th>
+                    <th className="px-4 py-2.5">강사</th>
+                    <th className="px-4 py-2.5">수업료</th>
                     <th className="px-4 py-2.5">수업 횟수</th>
                     <th className="px-4 py-2.5">소진 매출</th>
-                    <th className="px-4 py-2.5">트레이너 수업료</th>
+                    <th className="px-4 py-2.5">강사 수업료</th>
                     <th className="px-4 py-2.5">센터 몫</th>
                   </tr>
                 </thead>
@@ -118,7 +120,7 @@ export function TrainerAttendancePayrollPanel({
                         {row.trainerName}
                       </td>
                       <td className="px-4 py-3 tabular-nums text-charcoal/70">
-                        {row.settlementRate}%
+                        {row.settlementLabel}
                       </td>
                       <td className="px-4 py-3 tabular-nums">{row.sessionCount}회</td>
                       <td className="px-4 py-3 tabular-nums">

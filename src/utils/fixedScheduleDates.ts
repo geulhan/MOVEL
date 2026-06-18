@@ -59,3 +59,34 @@ export function scheduleTimeHHMM(iso: string): string {
   const d = new Date(iso)
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
+
+/** 그룹수업 고정 일정: weeksAhead 주 동안 선택 요일의 미래 일정 생성 */
+export function buildClassFixedScheduleDates(
+  daysOfWeek: number[],
+  timeHHMM: string,
+  weeksAhead: number,
+): Date[] {
+  if (weeksAhead <= 0 || daysOfWeek.length === 0) return []
+
+  const daySet = new Set(daysOfWeek)
+  const [hours, minutes] = timeHHMM.split(':').map((v) => parseInt(v, 10))
+  const dates: Date[] = []
+  const cursor = new Date()
+  cursor.setHours(0, 0, 0, 0)
+
+  const endDate = new Date(cursor)
+  endDate.setDate(endDate.getDate() + weeksAhead * 7)
+
+  while (cursor.getTime() <= endDate.getTime()) {
+    if (daySet.has(cursor.getDay())) {
+      const slot = new Date(cursor)
+      slot.setHours(hours, minutes, 0, 0)
+      if (slot.getTime() > Date.now()) {
+        dates.push(slot)
+      }
+    }
+    cursor.setDate(cursor.getDate() + 1)
+  }
+
+  return dates
+}

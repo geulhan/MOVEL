@@ -5,6 +5,23 @@ import type { Trainer } from '../types/database'
 
 type RpcResult = { ok: boolean; error?: string }
 
+function normalizeTrainerRow(row: Record<string, unknown>): Trainer {
+  return {
+    id: String(row.id),
+    name: String(row.name),
+    is_active: Boolean(row.is_active ?? true),
+    settlement_mode: row.settlement_mode === 'fixed' ? 'fixed' : 'percent',
+    settlement_rate:
+      row.settlement_rate == null ? null : Number(row.settlement_rate),
+    settlement_fixed_amount:
+      row.settlement_fixed_amount == null
+        ? null
+        : Number(row.settlement_fixed_amount),
+    center_id: row.center_id != null ? String(row.center_id) : undefined,
+    created_at: String(row.created_at ?? ''),
+  }
+}
+
 function parseRpcResult(data: unknown): RpcResult {
   if (!data || typeof data !== 'object' || Array.isArray(data)) {
     return { ok: false, error: '처리에 실패했습니다.' }
@@ -37,38 +54,59 @@ export async function fetchTrainers(options?: {
   const { data, error } = await query
 
   if (error) throw new Error(formatSupabaseError(error))
-  return (data ?? []).map((row) => ({
-    ...row,
-    settlement_rate:
-      row.settlement_rate == null ? null : Number(row.settlement_rate),
-  }))
+  return (data ?? []).map((row) => normalizeTrainerRow(row as Record<string, unknown>))
 }
 
-export async function updateTrainerSettlementRate(
+export type TrainerSettlementInput = {
+  mode: 'percent' | 'fixed'
+  settlementRate: number | null
+  settlementFixedAmount: number | null
+}
+
+export async function updateTrainerSettlement(
   trainerId: string,
-  settlementRate: number | null,
+  input: TrainerSettlementInput,
 ): Promise<Trainer> {
-  const value =
-    settlementRate == null ? null : Math.min(100, Math.max(0, Math.round(settlementRate)))
+  const mode = input.mode === 'fixed' ? 'fixed' : 'percent'
+  const settlementRate =
+    mode === 'percent' && input.settlementRate != null
+      ? Math.min(100, Math.max(0, Math.round(input.settlementRate)))
+      : null
+  const settlementFixedAmount =
+    mode === 'fixed' && input.settlementFixedAmount != null
+      ? Math.max(0, Math.round(input.settlementFixedAmount))
+      : null
 
   const { data, error } = await supabase
     .from('trainers')
-    .update({ settlement_rate: value })
+    .update({
+      settlement_mode: mode,
+      settlement_rate: settlementRate,
+      settlement_fixed_amount: settlementFixedAmount,
+    })
     .eq('id', trainerId)
     .select('*')
     .single()
 
   if (error) throw new Error(formatSupabaseError(error))
-  return {
-    ...data,
-    settlement_rate:
-      data.settlement_rate == null ? null : Number(data.settlement_rate),
-  }
+  return normalizeTrainerRow(data as Record<string, unknown>)
+}
+
+/** @deprecated updateTrainerSettlement 사용 */
+export async function updateTrainerSettlementRate(
+  trainerId: string,
+  settlementRate: number | null,
+): Promise<Trainer> {
+  return updateTrainerSettlement(trainerId, {
+    mode: 'percent',
+    settlementRate,
+    settlementFixedAmount: null,
+  })
 }
 
 export async function createTrainer(name: string): Promise<Trainer> {
   const trimmed = name.trim()
-  if (!trimmed) throw new Error('트레이너 이름을 입력해 주세요.')
+  if (!trimmed) throw new Error('강사 이름을 입력해 주세요.')
 
   const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
@@ -83,7 +121,7 @@ export async function createTrainer(name: string): Promise<Trainer> {
     }
     throw new Error(formatSupabaseError(error))
   }
-  return data
+  return normalizeTrainerRow(data as Record<string, unknown>)
 }
 
 export async function deleteTrainer(trainerId: string): Promise<void> {

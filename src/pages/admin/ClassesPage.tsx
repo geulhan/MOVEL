@@ -24,6 +24,7 @@ import {
   classRequiresSessionPass,
   fetchEligibleMemberIdsForClassPass,
 } from '../../api/memberSessionPasses'
+import { createClassFixedSchedule } from '../../api/classFixedSchedule'
 import { fetchTrainers } from '../../api/trainers'
 import { getAdminSession } from '../../lib/adminSession'
 import { getErrorMessage } from '../../lib/errors'
@@ -35,6 +36,8 @@ import {
   startOfWeekMonday,
   weekDaysFrom,
 } from '../../utils/weekRange'
+import { buildClassFixedScheduleDates } from '../../utils/fixedScheduleDates'
+import { WEEKDAYS } from '../../utils/calendar'
 import { PageHeader } from '../../components/admin/PageHeader'
 import { AdminToast, useAdminToast } from '../../components/admin/AdminToast'
 import { MemberSearchCombobox } from '../../components/admin/MemberSearchCombobox'
@@ -67,6 +70,9 @@ export default function ClassesPage() {
   const [newScheduleDate, setNewScheduleDate] = useState(todayDateString())
   const [newScheduleTime, setNewScheduleTime] = useState('10:00')
   const [newScheduleCapacity, setNewScheduleCapacity] = useState(8)
+  const [newScheduleMode, setNewScheduleMode] = useState<'single' | 'fixed'>('single')
+  const [newScheduleDays, setNewScheduleDays] = useState<number[]>([1])
+  const [newScheduleWeeksAhead, setNewScheduleWeeksAhead] = useState(8)
   const [reserveQuery, setReserveQuery] = useState('')
   const [reserveMember, setReserveMember] = useState<Member | null>(null)
   const [eligibleMemberIds, setEligibleMemberIds] = useState<Set<string> | null>(null)
@@ -244,8 +250,30 @@ export default function ClassesPage() {
     setNewScheduleDate(todayDateString())
     setNewScheduleTime('10:00')
     setNewScheduleCapacity(firstClass?.capacity ?? 8)
+    setNewScheduleMode('single')
+    setNewScheduleDays([1])
+    setNewScheduleWeeksAhead(8)
     setModal('schedule')
   }
+
+  function toggleScheduleDay(day: number) {
+    setNewScheduleDays((prev) => {
+      if (prev.includes(day)) {
+        const next = prev.filter((item) => item !== day)
+        return next.length > 0 ? next : prev
+      }
+      return [...prev, day].sort((a, b) => a - b)
+    })
+  }
+
+  const fixedSchedulePreviewCount = useMemo(() => {
+    if (newScheduleMode !== 'fixed' || newScheduleDays.length === 0) return 0
+    return buildClassFixedScheduleDates(
+      newScheduleDays,
+      newScheduleTime,
+      newScheduleWeeksAhead,
+    ).length
+  }, [newScheduleMode, newScheduleDays, newScheduleTime, newScheduleWeeksAhead])
 
   function handleScheduleClassChange(classId: string) {
     setNewScheduleClassId(classId)
@@ -330,6 +358,30 @@ export default function ClassesPage() {
     }
     const cls = classes.find((c) => c.id === newScheduleClassId)
     const duration = cls?.duration_minutes ?? 60
+
+    if (newScheduleMode === 'fixed') {
+      if (newScheduleDays.length === 0) {
+        setError('최소 1개 요일을 선택해 주세요.')
+        return
+      }
+      await runAction(async () => {
+        const result = await createClassFixedSchedule({
+          class_id: newScheduleClassId,
+          days_of_week: newScheduleDays,
+          time_of_day: newScheduleTime,
+          capacity: newScheduleCapacity,
+          weeks_ahead: newScheduleWeeksAhead,
+          duration_minutes: duration,
+        })
+        setModal(null)
+        await load()
+        setToast(
+          `고정 일정 등록 · ${result.createdCount}건 생성 (${newScheduleWeeksAhead}주)`,
+        )
+      }, '고정 일정이 추가되었습니다.')
+      return
+    }
+
     const starts = new Date(`${newScheduleDate}T${newScheduleTime}:00`)
     const ends = new Date(starts.getTime() + duration * 60 * 1000)
     await runAction(async () => {
@@ -882,18 +934,83 @@ export default function ClassesPage() {
                     onChange={(e) => setNewScheduleCapacity(Number(e.target.value) || 1)}
                   />
                 </label>
-                <input
-                  type="date"
-                  className={inputClass}
-                  value={newScheduleDate}
-                  onChange={(e) => setNewScheduleDate(e.target.value)}
-                />
+                <label className="block text-sm">
+                  <span className="mb-1 block font-medium text-charcoal/70">등록 방식</span>
+                  <div className="flex flex-wrap gap-3 text-sm">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        checked={newScheduleMode === 'single'}
+                        onChange={() => setNewScheduleMode('single')}
+                      />
+                      날짜 지정
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        checked={newScheduleMode === 'fixed'}
+                        onChange={() => setNewScheduleMode('fixed')}
+                      />
+                      고정 요일·시간
+                    </label>
+                  </div>
+                </label>
                 <input
                   type="time"
                   className={inputClass}
                   value={newScheduleTime}
                   onChange={(e) => setNewScheduleTime(e.target.value)}
                 />
+                {newScheduleMode === 'single' ? (
+                  <input
+                    type="date"
+                    className={inputClass}
+                    value={newScheduleDate}
+                    onChange={(e) => setNewScheduleDate(e.target.value)}
+                  />
+                ) : (
+                  <>
+                    <div>
+                      <p className="mb-2 text-sm font-medium text-charcoal/70">반복 요일</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {WEEKDAYS.map((label, day) => (
+                          <button
+                            key={label}
+                            type="button"
+                            onClick={() => toggleScheduleDay(day)}
+                            className={`rounded-lg border px-2.5 py-1 text-xs font-semibold ${
+                              newScheduleDays.includes(day)
+                                ? 'border-gold bg-gold/20 text-charcoal'
+                                : 'border-gold/25 bg-white text-charcoal/60'
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <label className="block text-sm">
+                      <span className="mb-1 block font-medium text-charcoal/70">
+                        생성 기간 (주)
+                      </span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={52}
+                        className={inputClass}
+                        value={newScheduleWeeksAhead}
+                        onChange={(e) =>
+                          setNewScheduleWeeksAhead(
+                            Math.min(52, Math.max(1, Number(e.target.value) || 8)),
+                          )
+                        }
+                      />
+                    </label>
+                    <p className="text-xs text-muted">
+                      약 {fixedSchedulePreviewCount}건의 일정이 생성됩니다.
+                    </p>
+                  </>
+                )}
                 <div className="flex gap-2">
                   <button
                     type="button"

@@ -20,6 +20,7 @@ import {
   type PtSchedule,
 } from '../../api/schedule'
 import { fetchTrainers } from '../../api/trainers'
+import { fetchMonthClassTrainerSessions } from '../../api/classFixedSchedule'
 import { getAdminSession } from '../../lib/adminSession'
 import { isTrainerStaff } from '../../lib/adminPermissions'
 import { isSameLocalDay } from '../../utils/date'
@@ -152,13 +153,14 @@ export function CenterAttendanceBoard() {
     setError(null)
     try {
       const { startIso, endIso } = monthRangeIso(monthRef)
-      const [board, memberList, trainers, monthLogs, monthSchedules] =
+      const [board, memberList, trainers, monthLogs, monthSchedules, classSessions] =
         await Promise.all([
           fetchCenterAttendanceBoard(monthRef),
           fetchMembers(),
           fetchTrainers({ activeOnly: false }),
           fetchMonthAttendanceLogs(monthRef),
           fetchSchedulesInRange(startIso, endIso),
+          fetchMonthClassTrainerSessions(startIso, endIso),
         ])
 
       let defaultSettlementRate =
@@ -186,6 +188,7 @@ export function CenterAttendanceBoard() {
         monthSchedules as PtSchedule[],
         trainers,
         defaultSettlementRate,
+        classSessions,
       )
       setPayrollSummary(
         isTrainer
