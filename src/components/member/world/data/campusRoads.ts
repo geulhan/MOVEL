@@ -1,69 +1,58 @@
 import { PLAZA_HUB, TREE_WORLD, WORLD_BUILDINGS } from './worldLayout'
 
-function organicMidpoint(
-  from: [number, number],
-  to: [number, number],
-  bend: number,
-): [number, number] {
-  const mx = (from[0] + to[0]) / 2
-  const my = (from[1] + to[1]) / 2
-  const dx = to[0] - from[0]
-  const dy = to[1] - from[1]
+function pathToFacility(buildingKey: string): [number, number][] {
+  const b = WORLD_BUILDINGS.find((x) => x.key === buildingKey)
+  if (!b || b.terrainOnly) return []
+
+  const center: [number, number] = [PLAZA_HUB.cx, PLAZA_HUB.cy]
+  const treeBase: [number, number] = [TREE_WORLD.cx, TREE_WORLD.cy + 58]
+  const target: [number, number] = [b.cx, b.cy + 14]
+
+  const dx = target[0] - center[0]
+  const dy = target[1] - center[1]
   const len = Math.hypot(dx, dy) || 1
-  return [
-    Math.round(mx + (-dy / len) * bend),
-    Math.round(my + (dx / len) * bend),
+  const edge: [number, number] = [
+    Math.round(center[0] + (dx / len) * (PLAZA_HUB.rx * 0.52)),
+    Math.round(center[1] + (dy / len) * (PLAZA_HUB.ry * 0.52)),
   ]
+  const mid: [number, number] = [
+    Math.round((edge[0] + target[0]) / 2),
+    Math.round((edge[1] + target[1]) / 2),
+  ]
+
+  return [target, mid, edge, treeBase]
 }
 
-/** 타운스퀘어 → 각 시설 흙길 + 광장 내부 순환로 */
+/** 시설 → 광장 → 운동나무 직결 흙길 */
 export function buildCampusRoadNetwork(): [number, number][][] {
-  const hub: [number, number] = [PLAZA_HUB.cx, PLAZA_HUB.cy]
-
-  const spokes: [number, number][][] = WORLD_BUILDINGS.filter(
-    (b) => b.key !== 'plaza',
-  ).map((b, i) => {
-    const target: [number, number] = [b.cx, b.cy + 16]
-    const bend = (i % 2 === 0 ? 1 : -1) * (24 + (i % 4) * 14)
-    const mid = organicMidpoint(hub, target, bend)
-    const near: [number, number] = [
-      Math.round(hub[0] + (target[0] - hub[0]) * 0.68),
-      Math.round(hub[1] + (target[1] - hub[1]) * 0.68),
-    ]
-    return [hub, mid, near, target]
-  })
+  const spokes = ['track', 'gym', 'recovery', 'nutrition', 'hall']
+    .map((key) => pathToFacility(key))
+    .filter((p) => p.length > 0)
 
   const ring: [number, number][] = []
-  const ringRx = PLAZA_HUB.rx * 0.7
-  const ringRy = PLAZA_HUB.ry * 0.58
-  for (let i = 0; i <= 9; i += 1) {
-    const angle = ((-100 + i * 40) * Math.PI) / 180
+  for (let i = 0; i <= 16; i += 1) {
+    const angle = ((i / 16) * Math.PI * 2) - Math.PI / 2
     ring.push([
-      Math.round(PLAZA_HUB.cx + ringRx * Math.cos(angle)),
-      Math.round(PLAZA_HUB.cy + ringRy * Math.sin(angle)),
+      Math.round(PLAZA_HUB.cx + PLAZA_HUB.rx * 0.62 * Math.cos(angle)),
+      Math.round(PLAZA_HUB.cy + PLAZA_HUB.ry * 0.52 * Math.sin(angle)),
     ])
   }
 
-  const treeToPlaza: [number, number][] = [
-    [TREE_WORLD.cx, TREE_WORLD.cy + 48],
-    [PLAZA_HUB.cx - 8, PLAZA_HUB.cy - 28],
-    [PLAZA_HUB.cx, PLAZA_HUB.cy - 8],
-  ]
-
-  return [treeToPlaza, ...spokes, ring]
+  return [...spokes, ring]
 }
 
 export const VILLAGE_ROAD_NETWORK = buildCampusRoadNetwork()
 
+export function getPlazaRingPath(): [number, number][] {
+  const ring = VILLAGE_ROAD_NETWORK[VILLAGE_ROAD_NETWORK.length - 1]
+  return [...ring, ring[0]]
+}
+
+export function getFacilityPath(key: string): [number, number][] {
+  const path = pathToFacility(key)
+  return path.length > 0 ? [...path, ...[...path].reverse().slice(1)] : []
+}
+
 export function getTrackGymWalkPath(): [number, number][] {
-  const track = WORLD_BUILDINGS.find((b) => b.key === 'track')!
-  const gym = WORLD_BUILDINGS.find((b) => b.key === 'gym')!
-  const hub: [number, number] = [PLAZA_HUB.cx, PLAZA_HUB.cy]
-  return [
-    [track.cx, track.cy + 12],
-    organicMidpoint([track.cx, track.cy], hub, -32),
-    hub,
-    organicMidpoint(hub, [gym.cx, gym.cy], 28),
-    [gym.cx, gym.cy + 12],
-  ]
+  return getFacilityPath('track')
 }

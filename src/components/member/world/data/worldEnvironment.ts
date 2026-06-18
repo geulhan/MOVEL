@@ -77,6 +77,7 @@ function inExclusionZone(x: number, y: number): boolean {
   const pdy = (y - PLAZA_HUB.cy) / (PLAZA_HUB.ry + 20)
   if (pdx * pdx + pdy * pdy <= 1.1) return true
   for (const b of WORLD_BUILDINGS) {
+    if (b.terrainOnly || b.plotRx <= 0) continue
     const dx = (x - b.cx) / (b.plotRx + 20)
     const dy = (y - (b.cy + 14)) / (b.plotRy + 16)
     if (dx * dx + dy * dy <= 1.2) return true
@@ -85,10 +86,11 @@ function inExclusionZone(x: number, y: number): boolean {
 }
 
 const PROP_TYPES: EnvPropType[] = [
+  'dumbbell_rack',
   'bench',
   'street_lamp',
-  'fence',
-  'grass_patch',
+  'exercise_sign',
+  'small_tree',
 ]
 
 let cachedProps: EnvProp[] | null = null
@@ -114,14 +116,17 @@ export function generateWorldEnvironment(): EnvProp[] {
       idx += 1
 
       if (inExclusionZone(px, py)) continue
-      if (Math.hypot(px - TREE_WORLD.cx, py - TREE_WORLD.cy) < 420) continue
+      if (Math.hypot(px - TREE_WORLD.cx, py - TREE_WORLD.cy) < 360) continue
 
       const roll = hash(idx * 97) % 100
-      if (roll > 14) continue
+      if (roll > 22) continue
 
       let type = PROP_TYPES[hash(idx * 53) % PROP_TYPES.length]
-      if ((type === 'bench' || type === 'street_lamp') && !nearRoad(px, py, 48)) {
-        type = 'grass_patch'
+      if (
+        (type === 'bench' || type === 'street_lamp' || type === 'dumbbell_rack') &&
+        !nearRoad(px, py, 52)
+      ) {
+        type = 'small_tree'
       }
 
       props.push({
@@ -135,6 +140,14 @@ export function generateWorldEnvironment(): EnvProp[] {
     }
   }
 
+  const fixed: EnvProp[] = [
+    { id: 'fix-bench-n', type: 'bench', x: 512, y: 330, rot: 0, scale: 1 },
+    { id: 'fix-lamp-e', type: 'street_lamp', x: 640, y: 512, rot: 0, scale: 1 },
+    { id: 'fix-db-w', type: 'dumbbell_rack', x: 384, y: 512, rot: 0, scale: 0.95 },
+    { id: 'fix-sign-s', type: 'exercise_sign', x: 512, y: 648, rot: 0, scale: 1 },
+  ]
+  props.push(...fixed)
+
   cachedProps = props
   return props
 }
@@ -144,8 +157,8 @@ export const TRACK_GYM_WALK_PATH = getTrackGymWalkPath()
 export function getVillageBounds() {
   return {
     cx: TREE_WORLD.cx,
-    cy: TREE_WORLD.cy + 18,
-    width: 560,
-    height: 560,
+    cy: TREE_WORLD.cy,
+    width: 470,
+    height: 470,
   }
 }

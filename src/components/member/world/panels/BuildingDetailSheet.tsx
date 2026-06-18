@@ -70,7 +70,8 @@ export function BuildingDetailSheet({
           </div>
 
           <div className="mt-3 rounded-xl border border-gold/20 bg-white p-3">
-            <div className="flex items-center justify-between text-xs text-muted">
+            <p className="text-xs font-semibold text-muted">운동 생산량</p>
+            <div className="mt-1 flex items-center justify-between text-sm text-charcoal">
               <span>{ops.activityTitle}</span>
               {building.isBuilt && (
                 <span className="font-bold text-amber-700">
@@ -109,7 +110,7 @@ export function BuildingDetailSheet({
             className="mt-4 w-full rounded-xl border border-charcoal/15 bg-white py-2.5 text-sm font-semibold text-charcoal hover:bg-charcoal/5"
             onClick={onClose}
           >
-            마을로 돌아가기
+            닫기
           </button>
         </div>
       </div>

@@ -28,7 +28,7 @@ export function MemberGrowthHubShell({ memberId, refreshToken = 0 }: Props) {
               : 'text-charcoal hover:bg-cream/80'
           }`}
         >
-          내 왕국
+          내 운동 세계
         </button>
         <button
           type="button"

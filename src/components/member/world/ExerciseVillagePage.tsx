@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { btnOutline } from '../../../styles/theme'
 import { VillageHudBar } from './hud/VillageHudBar'
-import { FacilityOperationStrip } from './hud/FacilityOperationStrip'
 import { CollectFloatingButton } from './hud/CollectFloatingButton'
 import { BuildingDetailSheet } from './panels/BuildingDetailSheet'
 import { TreeDetailSheet } from './panels/TreeDetailSheet'
@@ -10,7 +9,6 @@ import {
   useVillageWorldState,
   type SelectedWorldTarget,
 } from './hooks/useVillageWorldState'
-import type { WorldBuildingKey } from './data/worldLayout'
 
 type Props = {
   memberId: string
@@ -23,8 +21,8 @@ export function ExerciseVillagePage({ memberId, refreshToken = 0 }: Props) {
 
   if (world.loading) {
     return (
-      <div className="flex h-[min(85dvh,720px)] items-center justify-center rounded-2xl bg-[#1a2f1a]/80 text-sm text-cream/70">
-        운동 마을을 불러오는 중…
+      <div className="flex h-[min(88dvh,720px)] items-center justify-center rounded-2xl bg-[#1a2f1a]/80 text-sm text-cream/70">
+        운동 세계를 불러오는 중…
       </div>
     )
   }
@@ -50,7 +48,7 @@ export function ExerciseVillagePage({ memberId, refreshToken = 0 }: Props) {
       : null
 
   return (
-    <div className="relative flex h-[min(86dvh,900px)] min-h-[460px] flex-col">
+    <div className="relative flex h-[min(88dvh,920px)] min-h-[480px] flex-col">
       <WorldMapViewport
         className="h-full min-h-0 flex-1"
         treeStageKey={world.treeStageKey}
@@ -72,19 +70,6 @@ export function ExerciseVillagePage({ memberId, refreshToken = 0 }: Props) {
             growthUntilNext={world.growthUntilNext}
             builtFacilityCount={world.builtFacilityCount}
             exerciseEventsSinceCollect={world.exerciseEventsSinceCollect}
-          />
-        </div>
-      </div>
-
-      <div className="pointer-events-none absolute inset-x-0 bottom-6 z-10 px-1.5">
-        <div className="pointer-events-auto">
-          <FacilityOperationStrip
-            buildings={world.buildings}
-            exerciseEventsSinceCollect={world.exerciseEventsSinceCollect}
-            selectedBuildingKey={selectedBuilding?.key ?? null}
-            onSelectBuilding={(key) =>
-              setSelected({ type: 'building', key: key as WorldBuildingKey })
-            }
           />
         </div>
       </div>

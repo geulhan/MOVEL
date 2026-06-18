@@ -85,8 +85,8 @@ function grassColor(elev: number, variant: number, cx: number, cy: number): stri
 
 function inForestZone(x: number, y: number): boolean {
   const dist = Math.hypot(x - TREE_WORLD.cx, y - TREE_WORLD.cy)
-  if (dist > 318) return true
-  if (x < 32 || x > 992 || y < 32 || y > 992) return true
+  if (dist > 300) return true
+  if (x < 28 || x > 996 || y < 28 || y > 996) return true
   return false
 }
 
@@ -98,6 +98,7 @@ function inCentralPlaza(x: number, y: number): boolean {
 
 function inBuildingPlot(cx: number, cy: number): boolean {
   for (const b of WORLD_BUILDINGS) {
+    if (b.terrainOnly) continue
     const dx = (cx - b.cx) / b.plotRx
     const dy = (cy - (b.cy + 14)) / b.plotRy
     if (dx * dx + dy * dy <= 1.05) return true

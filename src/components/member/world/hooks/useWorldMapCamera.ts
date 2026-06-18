@@ -10,7 +10,7 @@ type Camera = {
 
 const MIN_SCALE = 0.5
 const MAX_SCALE = 2.6
-const INITIAL_FOCUS_BIAS_Y = 18
+const INITIAL_FOCUS_BIAS_Y = 0
 
 function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n))
@@ -37,7 +37,7 @@ export function useWorldMapCamera() {
     const w = el.clientWidth
     const h = el.clientHeight
     const bounds = getVillageBounds()
-    const scale = clamp(Math.min(w, h) / bounds.width, 0.95, MAX_SCALE)
+    const scale = clamp(Math.min(w, h) / bounds.width, 1.02, MAX_SCALE)
     const focusY = TREE_WORLD.cy + INITIAL_FOCUS_BIAS_Y
     const x = w / 2 - TREE_WORLD.cx * scale
     const y = h / 2 - focusY * scale

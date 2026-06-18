@@ -1,23 +1,26 @@
-/** 1024×1024 운동 왕국 — 운동나무 중심, 타운스퀘어 허브 */
+/** 1024×1024 — 운동나무 중심 · 내 운동 세계 v2 */
 
 export const WORLD_SIZE = 1024
 
+/** 운동나무 = 절대 주인공 (화면 비중 60%) */
 export const TREE_WORLD = {
   cx: 512,
   cy: 512,
-  drawSize: 389,
-  hitRadius: 108,
+  drawSize: 584,
+  hitRadius: 118,
 } as const
 
-/** 중앙 운동광장(타운스퀘어) — 흙길 허브 */
+/** 중앙 운동광장(타운스퀘어) — 시설 에셋이 아닌 지형 허브 */
 export const PLAZA_HUB = {
   cx: 512,
-  cy: 558,
-  rx: 152,
-  ry: 120,
+  cy: 512,
+  rx: 172,
+  ry: 142,
 } as const
 
-export const CAMPUS_RADIUS = 295
+export const FACILITY_ORBIT = 248
+
+export const CAMPUS_RADIUS = FACILITY_ORBIT + 80
 
 export type WorldBuildingKey =
   | 'plaza'
@@ -41,6 +44,8 @@ export type WorldBuildingDef = {
   plotRx: number
   plotRy: number
   legacyDbSlotKey?: string
+  /** true면 PNG 건물 대신 광장 지형만 사용 */
+  terrainOnly?: boolean
 }
 
 export const STAGE_RANK: Record<string, number> = {
@@ -59,22 +64,22 @@ export const UNLOCK_STAGE_LABEL: Record<string, string> = {
   sakura: '벚꽃나무',
 }
 
-const UNIFIED_DRAW = 135
-const UNIFIED_HIT = 62
-const UNIFIED_PLOT_RX = 88
-const UNIFIED_PLOT_RY = 64
+const UNIFIED_DRAW = 84
+const UNIFIED_HIT = 52
+const UNIFIED_PLOT_RX = 68
+const UNIFIED_PLOT_RY = 50
 
-/** 비대칭·유기적 배치 — 게임 마을 느낌 */
-const ORGANIC_LAYOUT: Record<
+/** 북 트랙 · 동 체육관 · 서 회복 · 남 영양 · 광장=지형 */
+const LAYOUT: Record<
   WorldBuildingKey,
-  { cx: number; cy: number; plotRx?: number; plotRy?: number }
+  { cx: number; cy: number; plotRx?: number; plotRy?: number; drawSize?: number }
 > = {
-  plaza: { cx: 512, cy: 602, plotRx: 102, plotRy: 74 },
-  gym: { cx: 678, cy: 438, plotRx: 90, plotRy: 64 },
-  track: { cx: 362, cy: 388, plotRx: 88, plotRy: 62 },
-  recovery: { cx: 318, cy: 542, plotRx: 86, plotRy: 60 },
-  nutrition: { cx: 448, cy: 718, plotRx: 88, plotRy: 62 },
-  hall: { cx: 738, cy: 578, plotRx: 92, plotRy: 66 },
+  plaza: { cx: 512, cy: 512, plotRx: 0, plotRy: 0 },
+  track: { cx: 512, cy: 264 },
+  gym: { cx: 760, cy: 512 },
+  recovery: { cx: 264, cy: 512 },
+  nutrition: { cx: 512, cy: 760 },
+  hall: { cx: 688, cy: 648, plotRx: 58, plotRy: 42, drawSize: 72 },
 }
 
 function def(
@@ -85,8 +90,9 @@ function def(
   spriteKey: string,
   unlockStageKey: string,
   legacyDbSlotKey?: string,
+  terrainOnly = false,
 ): WorldBuildingDef {
-  const pos = ORGANIC_LAYOUT[key]
+  const pos = LAYOUT[key]
   return {
     key,
     title,
@@ -96,11 +102,12 @@ function def(
     unlockStageKey,
     cx: pos.cx,
     cy: pos.cy,
-    drawSize: UNIFIED_DRAW,
+    drawSize: pos.drawSize ?? UNIFIED_DRAW,
     hitRadius: UNIFIED_HIT,
     plotRx: pos.plotRx ?? UNIFIED_PLOT_RX,
     plotRy: pos.plotRy ?? UNIFIED_PLOT_RY,
     legacyDbSlotKey,
+    terrainOnly,
   }
 }
 
@@ -109,34 +116,35 @@ export const WORLD_BUILDINGS: WorldBuildingDef[] = [
     'plaza',
     '운동광장',
     '광장',
-    '왕국 중심 광장에서 모임과 워밍업을 합니다.',
+    '운동나무 아래 중심 광장입니다.',
     'slg_exercise_plaza',
     'sprout',
     'north',
-  ),
-  def(
-    'gym',
-    '체육관',
-    '체육관',
-    'PT와 수업이 이루어지는 동쪽 핵심 시설입니다.',
-    'slg_gym',
-    'large',
-    'east',
+    true,
   ),
   def(
     'track',
     '러닝트랙',
     '트랙',
-    '걸음과 러닝이 쌓이는 북서쪽 시설입니다.',
+    '운동나무 성장의 결과로 열린 북쪽 시설입니다.',
     'slg_running_track',
     'small',
     'west',
   ),
   def(
+    'gym',
+    '체육관',
+    '체육관',
+    '운동나무 성장의 결과로 열린 동쪽 시설입니다.',
+    'slg_gym',
+    'large',
+    'east',
+  ),
+  def(
     'recovery',
     '회복센터',
     '회복',
-    '휴식과 회복의 서쪽 시설입니다.',
+    '운동나무 성장의 결과로 열린 서쪽 시설입니다.',
     'slg_recovery_center',
     'small',
   ),
@@ -144,7 +152,7 @@ export const WORLD_BUILDINGS: WorldBuildingDef[] = [
     'nutrition',
     '영양센터',
     '영양',
-    '일지와 체성분을 돕는 남쪽 시설입니다.',
+    '운동나무 성장의 결과로 열린 남쪽 시설입니다.',
     'slg_nutrition_center',
     'large',
   ),
@@ -152,7 +160,7 @@ export const WORLD_BUILDINGS: WorldBuildingDef[] = [
     'hall',
     '명예의 전당',
     '전당',
-    '운동 업적을 기념하는 동남쪽 랜드마크입니다.',
+    '운동 업적을 기념하는 작은 랜드마크입니다.',
     'slg_hall_of_fame',
     'sakura',
     'south',
