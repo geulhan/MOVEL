@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { MotionHubLogo } from '../brand/MotionHubLogo'
+import { MOTIONHUB_BRAND_ASSETS } from '../../constants/motionhubBrand'
 import { useApplyMemberTheme, useMemberThemeVars } from '../../hooks/useMemberTheme'
 import { isPlatformLandingHost } from '../../pages/RootPage'
 import { DEFAULT_CENTER_THEME, type CenterTheme } from '../../types/centerBranding'
@@ -10,6 +10,19 @@ type Props = {
   memberTheme?: CenterTheme
   onLogout?: () => void
   onDashboard?: () => void
+}
+
+function MemberHeaderLogo() {
+  return (
+    <div className="rounded-xl bg-white px-4 py-3 shadow-sm">
+      <img
+        src={MOTIONHUB_BRAND_ASSETS.logoMemberHeader}
+        alt="모션허브"
+        className="mx-auto h-auto w-full max-w-[17.5rem] object-contain"
+        decoding="async"
+      />
+    </div>
+  )
 }
 
 export function MemberLayout({
@@ -25,28 +38,26 @@ export function MemberLayout({
   const themed = Boolean(memberTheme)
   useApplyMemberTheme(activeTheme, { enabled: themed, memberName })
 
-  const brand = (
-    <MotionHubLogo tone="dark" locale="ko" className="items-center" />
-  )
+  const logo = <MemberHeaderLogo />
 
-  const brandWrapper = onDashboard ? (
+  const logoWrapper = onDashboard ? (
     <button
       type="button"
       onClick={onDashboard}
       className="transition hover:opacity-90"
       aria-label="대시보드 (내 정보)"
     >
-      {brand}
+      {logo}
     </button>
   ) : (
     <Link to="/member" className="transition hover:opacity-90" aria-label="회원 홈">
-      {brand}
+      {logo}
     </Link>
   )
 
   return (
     <div
-      className={themed ? 'min-h-screen' : 'min-h-screen bg-surface'}
+      className="min-h-screen bg-surface"
       style={
         themed
           ? {
@@ -57,56 +68,33 @@ export function MemberLayout({
           : undefined
       }
     >
-      <header
-        className={themed ? 'border-b' : 'border-b border-charcoal/10 bg-white'}
-        style={
-          themed
-            ? {
-                background: 'var(--center-sidebar-bg)',
-                color: 'var(--center-sidebar-text)',
-                borderColor: 'color-mix(in srgb, var(--center-accent) 20%, transparent)',
-              }
-            : undefined
-        }
-      >
+      <header className="border-b border-white/10 bg-motionhub-deep">
         <div className="relative mx-auto max-w-lg px-4 pt-4 pb-5">
           <div className="absolute top-4 right-4 flex flex-col items-end gap-1">
             {onLogout && (
               <button
                 type="button"
                 onClick={onLogout}
-                className={`text-xs hover:opacity-100 ${themed ? 'opacity-70' : 'text-charcoal/50 hover:text-charcoal'}`}
-                style={themed ? { color: 'var(--center-sidebar-text)' } : undefined}
+                className="text-xs text-white/70 transition hover:text-white"
               >
                 로그아웃
               </button>
             )}
             <Link
               to="/login"
-              className={`text-xs hover:underline ${themed ? '' : 'text-motionhub-dark'}`}
-              style={themed ? { color: 'var(--center-accent)' } : undefined}
+              className="text-xs font-medium text-motionhub transition hover:underline"
             >
               관리자 →
             </Link>
           </div>
 
           <div className="flex flex-col items-center text-center">
-            {brandWrapper}
+            {logoWrapper}
             {memberName && (
-              <p
-                className={`mt-2 text-base font-bold ${themed ? '' : 'text-charcoal'}`}
-                style={themed ? { color: 'var(--center-sidebar-text)' } : undefined}
-              >
-                {memberName} 님
-              </p>
+              <p className="mt-3 text-base font-bold text-white">{memberName} 님</p>
             )}
             {!memberName && (
-              <p
-                className={`mt-2 text-xs ${themed ? '' : 'text-muted'}`}
-                style={themed ? { color: 'var(--center-sidebar-muted)' } : undefined}
-              >
-                모션허브 회원 페이지
-              </p>
+              <p className="mt-3 text-xs text-white/60">모션허브 회원 페이지</p>
             )}
           </div>
         </div>
