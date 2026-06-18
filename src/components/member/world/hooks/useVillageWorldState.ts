@@ -13,6 +13,8 @@ export type WorldBuildingState = WorldBuildingDef & {
   isUnlocked: boolean
   isBuilt: boolean
   level: number
+  productionRatePerHour: number
+  isOperating: boolean
 }
 
 export type VillageWorldState = {
@@ -26,6 +28,8 @@ export type VillageWorldState = {
   progressPercent: number
   currentAcorns: number
   pendingAcorns: number
+  exerciseEventsSinceCollect: number
+  builtFacilityCount: number
   buildings: WorldBuildingState[]
   reload: () => void
 }
@@ -59,21 +63,33 @@ export function useVillageWorldState(
   const buildings = useMemo((): WorldBuildingState[] => {
     const stageKey = growth.profile?.current_stage_key ?? 'seed'
     const slots = village.state?.slots ?? []
+    const exerciseEvents =
+      village.state?.production?.exercise_events_since_collect ?? 0
+    const globalActive = exerciseEvents > 0
 
     return WORLD_BUILDINGS.map((def) => {
       const legacy = slotByLegacyKey(slots, def.legacyDbSlotKey)
       const unlocked = isStageUnlocked(stageKey, def.unlockStageKey)
       const built = legacy?.is_built ?? false
       const level = legacy?.is_built ? legacy.level : 0
+      const productionRatePerHour =
+        legacy?.production_rate_per_hour ??
+        (built ? def.drawSize > 115 ? 3 : 2 : 0)
 
       return {
         ...def,
         isUnlocked: unlocked,
         isBuilt: built,
         level,
+        productionRatePerHour,
+        isOperating: built && globalActive,
       }
     })
-  }, [growth.profile?.current_stage_key, village.state?.slots])
+  }, [
+    growth.profile?.current_stage_key,
+    village.state?.slots,
+    village.state?.production?.exercise_events_since_collect,
+  ])
 
   const profile = growth.profile
   const tree = profile?.tree
@@ -100,6 +116,9 @@ export function useVillageWorldState(
     progressPercent,
     currentAcorns: village.state?.current_acorns ?? 0,
     pendingAcorns: village.state?.production?.pending_acorns ?? 0,
+    exerciseEventsSinceCollect:
+      village.state?.production?.exercise_events_since_collect ?? 0,
+    builtFacilityCount: buildings.filter((b) => b.isBuilt).length,
     buildings,
     reload: () => {
       void growth.reload()

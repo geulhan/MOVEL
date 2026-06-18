@@ -19,7 +19,7 @@ type Props = {
   selectedBuildingKey: string | null
 }
 
-const BUILDING_SCALE = 0.72
+const BUILDING_SCALE = 1.1
 
 export function WorldMapCanvas({ treeStageKey, buildings, selectedBuildingKey }: Props) {
   const terrain = useMemo(
@@ -148,39 +148,115 @@ export function WorldMapCanvas({ treeStageKey, buildings, selectedBuildingKey }:
         <PixelRects rects={terrain.smallTrees} />
       </g>
 
-      <g id="buildings" opacity={0.92}>
-        {buildingLayers.map((layer) => (
-          <g key={layer.key}>
-            {layer.built && (
-              <ellipse
-                cx={layer.cx}
-                cy={layer.cy + layer.size * 0.22}
-                rx={layer.size * 0.28}
-                ry={layer.size * 0.08}
-                fill="#2d4a28"
-                opacity={0.28}
-              />
-            )}
-            <PixelRects rects={layer.rects} />
-            {selectedBuildingKey === layer.buildingKey && (
-              <circle
-                cx={layer.cx}
-                cy={layer.cy}
-                r={layer.size * 0.38}
-                fill="none"
-                stroke="#ffca28"
-                strokeWidth={3}
-                opacity={0.85}
-              />
-            )}
-          </g>
-        ))}
+      <g id="buildings">
+        {buildingLayers.map((layer) => {
+          const b = buildings.find((x) => x.key === layer.buildingKey)
+          return (
+            <g key={layer.key}>
+              {/* 건물 받침대 */}
+              {(b?.isBuilt || b?.isUnlocked) && (
+                <ellipse
+                  cx={layer.cx}
+                  cy={layer.cy + layer.size * 0.28}
+                  rx={layer.size * 0.42}
+                  ry={layer.size * 0.12}
+                  fill="#8d6e4a"
+                  opacity={0.35}
+                />
+              )}
+              {layer.built && (
+                <ellipse
+                  cx={layer.cx}
+                  cy={layer.cy + layer.size * 0.22}
+                  rx={layer.size * 0.32}
+                  ry={layer.size * 0.09}
+                  fill="#2d4a28"
+                  opacity={0.3}
+                />
+              )}
+              <PixelRects rects={layer.rects} />
+              {/* 운영 중 표시 */}
+              {b?.isOperating && (
+                <>
+                  <circle cx={layer.cx} cy={layer.cy - layer.size * 0.38} r={6} fill="#5a9e6f">
+                    <animate
+                      attributeName="opacity"
+                      values="1;0.4;1"
+                      dur="1.5s"
+                      repeatCount="indefinite"
+                    />
+                  </circle>
+                </>
+              )}
+              {b?.isBuilt && (
+                <g>
+                  <rect
+                    x={layer.cx - 28}
+                    y={layer.cy - layer.size * 0.55}
+                    width={56}
+                    height={18}
+                    rx={6}
+                    fill="#2d3436"
+                    opacity={0.88}
+                  />
+                  <text
+                    x={layer.cx}
+                    y={layer.cy - layer.size * 0.55 + 13}
+                    textAnchor="middle"
+                    fill="#ffeaa7"
+                    fontSize={11}
+                    fontWeight="bold"
+                    fontFamily="system-ui,sans-serif"
+                  >
+                    {b.shortLabel} Lv.{b.level}
+                  </text>
+                </g>
+              )}
+              {selectedBuildingKey === layer.buildingKey && (
+                <circle
+                  cx={layer.cx}
+                  cy={layer.cy}
+                  r={layer.size * 0.45}
+                  fill="none"
+                  stroke="#ffca28"
+                  strokeWidth={4}
+                  opacity={0.9}
+                />
+              )}
+            </g>
+          )
+        })}
       </g>
 
       {drawTreeShadow(TREE_WORLD.cx, TREE_WORLD.cy + 10, TREE_WORLD.drawSize * 0.48)}
       <g id="hero-tree">
         <PixelRects rects={treeSprite} />
       </g>
+
+      {buildings.some((b) => b.isOperating) && (
+        <g id="village-life" opacity={0.85}>
+          <VillageWalker cx={420} cy={540} delay={0} />
+          <VillageWalker cx={620} cy={520} delay={0.6} />
+          <VillageWalker cx={380} cy={680} delay={1.2} />
+        </g>
+      )}
     </svg>
+  )
+}
+
+function VillageWalker({ cx, cy, delay }: { cx: number; cy: number; delay: number }) {
+  return (
+    <g>
+      <animateTransform
+        attributeName="transform"
+        type="translate"
+        values={`0,0; 8,-3; 0,0; -8,-3; 0,0`}
+        dur="4s"
+        begin={`${delay}s`}
+        repeatCount="indefinite"
+      />
+      <circle cx={cx} cy={cy} r={5} fill="#ffcc80" stroke="#5d4037" strokeWidth={1.5} />
+      <rect x={cx - 4} y={cy + 4} width={8} height={10} rx={2} fill="#ef5350" />
+    </g>
   )
 }

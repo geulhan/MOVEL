@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { btnOutline } from '../../../styles/theme'
 import { VillageHudBar } from './hud/VillageHudBar'
+import { FacilityOperationStrip } from './hud/FacilityOperationStrip'
 import { CollectFloatingButton } from './hud/CollectFloatingButton'
 import { BuildingDetailSheet } from './panels/BuildingDetailSheet'
 import { TreeDetailSheet } from './panels/TreeDetailSheet'
@@ -9,6 +10,7 @@ import {
   useVillageWorldState,
   type SelectedWorldTarget,
 } from './hooks/useVillageWorldState'
+import type { WorldBuildingKey } from './data/worldLayout'
 
 type Props = {
   memberId: string
@@ -56,6 +58,8 @@ export function ExerciseVillagePage({ memberId, refreshToken = 0 }: Props) {
         progressPercent={world.progressPercent}
         nextStageName={world.nextStageName}
         growthUntilNext={world.growthUntilNext}
+        builtFacilityCount={world.builtFacilityCount}
+        exerciseEventsSinceCollect={world.exerciseEventsSinceCollect}
       />
 
       <div className="relative flex-1">
@@ -71,8 +75,18 @@ export function ExerciseVillagePage({ memberId, refreshToken = 0 }: Props) {
         />
       </div>
 
+      <FacilityOperationStrip
+        buildings={world.buildings}
+        exerciseEventsSinceCollect={world.exerciseEventsSinceCollect}
+        selectedBuildingKey={selectedBuilding?.key ?? null}
+        onSelectBuilding={(key) =>
+          setSelected({ type: 'building', key: key as WorldBuildingKey })
+        }
+      />
+
       <BuildingDetailSheet
         building={selectedBuilding}
+        exerciseEventsSinceCollect={world.exerciseEventsSinceCollect}
         onClose={() => setSelected(null)}
       />
 
@@ -84,6 +98,8 @@ export function ExerciseVillagePage({ memberId, refreshToken = 0 }: Props) {
         progressPercent={world.progressPercent}
         nextStageName={world.nextStageName}
         growthUntilNext={world.growthUntilNext}
+        buildings={world.buildings}
+        exerciseEventsSinceCollect={world.exerciseEventsSinceCollect}
         onClose={() => setSelected(null)}
       />
     </div>

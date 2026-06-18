@@ -51,6 +51,7 @@ import { MemberClassBookingSection } from '../components/member/MemberClassBooki
 import { MemberJournalPortalSection } from '../components/member/MemberJournalPortalSection'
 import { MemberInbodySection } from '../components/member/MemberInbodySection'
 import { MemberPortalNav } from '../components/member/MemberPortalNav'
+import { isVillageTestMember } from '../lib/villageTestAccess'
 import { SessionCount } from '../components/SessionCount'
 
 type Tab =
@@ -103,6 +104,14 @@ export default function MemberPortalPage() {
   const [checkInConfirmOpen, setCheckInConfirmOpen] = useState(false)
   const [portalError, setPortalError] = useState<string | null>(null)
   const [refreshToken, setRefreshToken] = useState(0)
+
+  const showGrowthHub = member != null && isVillageTestMember(member)
+
+  useEffect(() => {
+    if (!showGrowthHub && tab === 'growth') {
+      setTab('home')
+    }
+  }, [showGrowthHub, tab])
 
   const loadMemberData = useCallback(async (memberId: string) => {
     const m = await fetchMemberById(memberId)
@@ -545,6 +554,7 @@ export default function MemberPortalPage() {
       <MemberPortalNav
         activeTab={activeNavTab}
         onSelect={(id) => setTab(id)}
+        showGrowthHub={showGrowthHub}
       />
 
       <PullToRefresh onRefresh={handlePortalRefresh}>
@@ -640,7 +650,7 @@ export default function MemberPortalPage() {
           <MemberPaymentSection memberId={member.id} />
         )}
 
-        {tab === 'growth' && member && (
+        {tab === 'growth' && member && showGrowthHub && (
           <MemberGrowthHubShell
             memberId={member.id}
             refreshToken={refreshToken}

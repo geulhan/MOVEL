@@ -10,6 +10,7 @@ type TabId =
 type Props = {
   activeTab: TabId | null
   onSelect: (tab: TabId) => void
+  showGrowthHub?: boolean
 }
 
 const NAV_ITEMS: { id: TabId; lines: string[] }[] = [
@@ -22,13 +23,27 @@ const NAV_ITEMS: { id: TabId; lines: string[] }[] = [
   { id: 'mypage', lines: ['마이', '페이지'] },
 ]
 
-export function MemberPortalNav({ activeTab, onSelect }: Props) {
+export function MemberPortalNav({
+  activeTab,
+  onSelect,
+  showGrowthHub = false,
+}: Props) {
+  const items = NAV_ITEMS.filter(
+    (item) => item.id !== 'growth' || showGrowthHub,
+  )
+  const colClass =
+    items.length === 7
+      ? 'grid-cols-7'
+      : items.length === 6
+        ? 'grid-cols-6'
+        : 'grid-cols-5'
+
   return (
     <nav
       aria-label="회원 메뉴"
-      className="grid grid-cols-7 gap-1 rounded-2xl border border-gold/20 bg-white p-1.5 shadow-sm"
+      className={`grid ${colClass} gap-1 rounded-2xl border border-gold/20 bg-white p-1.5 shadow-sm`}
     >
-      {NAV_ITEMS.map((item) => {
+      {items.map((item) => {
         const isActive = activeTab === item.id
         const isGrowth = item.id === 'growth'
         const isRewards = item.id === 'rewards'

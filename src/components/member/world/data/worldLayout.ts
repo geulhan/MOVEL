@@ -58,8 +58,8 @@ export const WORLD_BUILDINGS: WorldBuildingDef[] = [
     unlockStageKey: 'sprout',
     cx: 598,
     cy: 498,
-    drawSize: 110,
-    hitRadius: 52,
+    drawSize: 155,
+    hitRadius: 58,
     legacyDbSlotKey: 'north',
   },
   {
@@ -71,8 +71,8 @@ export const WORLD_BUILDINGS: WorldBuildingDef[] = [
     unlockStageKey: 'sakura',
     cx: 478,
     cy: 148,
-    drawSize: 120,
-    hitRadius: 55,
+    drawSize: 165,
+    hitRadius: 62,
     legacyDbSlotKey: 'south',
   },
   {
@@ -84,8 +84,8 @@ export const WORLD_BUILDINGS: WorldBuildingDef[] = [
     unlockStageKey: 'small',
     cx: 848,
     cy: 408,
-    drawSize: 115,
-    hitRadius: 54,
+    drawSize: 160,
+    hitRadius: 60,
     legacyDbSlotKey: 'west',
   },
   {
@@ -97,8 +97,8 @@ export const WORLD_BUILDINGS: WorldBuildingDef[] = [
     unlockStageKey: 'small',
     cx: 168,
     cy: 455,
-    drawSize: 105,
-    hitRadius: 50,
+    drawSize: 150,
+    hitRadius: 56,
   },
   {
     key: 'gym',
@@ -109,8 +109,8 @@ export const WORLD_BUILDINGS: WorldBuildingDef[] = [
     unlockStageKey: 'large',
     cx: 808,
     cy: 698,
-    drawSize: 125,
-    hitRadius: 58,
+    drawSize: 170,
+    hitRadius: 64,
     legacyDbSlotKey: 'east',
   },
   {
@@ -122,8 +122,8 @@ export const WORLD_BUILDINGS: WorldBuildingDef[] = [
     unlockStageKey: 'large',
     cx: 228,
     cy: 718,
-    drawSize: 108,
-    hitRadius: 50,
+    drawSize: 152,
+    hitRadius: 56,
   },
 ]
 
