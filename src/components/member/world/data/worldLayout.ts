@@ -5,8 +5,8 @@ export const WORLD_SIZE = 1024
 export const TREE_WORLD = {
   cx: 512,
   cy: 500,
-  drawSize: 360,
-  hitRadius: 100,
+  drawSize: 216,
+  hitRadius: 60,
 } as const
 
 export type WorldBuildingKey =

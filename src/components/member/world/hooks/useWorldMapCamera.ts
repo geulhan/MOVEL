@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { TREE_WORLD, WORLD_SIZE } from '../data/worldLayout'
+import { getVillageBounds } from '../data/worldEnvironment'
+import { WORLD_SIZE } from '../data/worldLayout'
 
 type Camera = {
   scale: number
@@ -29,25 +30,27 @@ export function useWorldMapCamera() {
     scale: number
   } | null>(null)
 
-  const fitToTree = useCallback(() => {
+  const fitToVillage = useCallback(() => {
     const el = viewportRef.current
     if (!el) return
     const w = el.clientWidth
     const h = el.clientHeight
-    const scale = clamp(Math.min(w, h) / 500, MIN_SCALE, MAX_SCALE)
-    const x = w / 2 - TREE_WORLD.cx * scale
-    const y = h / 2 - TREE_WORLD.cy * scale
+    const bounds = getVillageBounds()
+    const span = Math.max(bounds.width, bounds.height) * 1.05
+    const scale = clamp(Math.min(w, h) / span, MIN_SCALE, MAX_SCALE)
+    const x = w / 2 - bounds.cx * scale
+    const y = h / 2 - bounds.cy * scale
     setCamera({ scale, x, y })
   }, [])
 
   useEffect(() => {
-    fitToTree()
+    fitToVillage()
     const el = viewportRef.current
     if (!el) return
-    const ro = new ResizeObserver(() => fitToTree())
+    const ro = new ResizeObserver(() => fitToVillage())
     ro.observe(el)
     return () => ro.disconnect()
-  }, [fitToTree])
+  }, [fitToVillage])
 
   const screenToWorld = useCallback(
     (clientX: number, clientY: number) => {
@@ -146,7 +149,7 @@ export function useWorldMapCamera() {
   return {
     viewportRef,
     camera,
-    fitToTree,
+    fitToVillage,
     screenToWorld,
     handlers: {
       onPointerDown,

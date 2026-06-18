@@ -10,6 +10,8 @@ type Props = {
   buildings: import('./hooks/useVillageWorldState').WorldBuildingState[]
   selected: SelectedWorldTarget | null
   onSelect: (target: SelectedWorldTarget | null) => void
+  isWorldActive?: boolean
+  exerciseEventsSinceCollect?: number
 }
 
 const TAP_MOVE_THRESHOLD = 12
@@ -23,8 +25,10 @@ export function WorldMapViewport({
   buildings,
   selected,
   onSelect,
+  isWorldActive = false,
+  exerciseEventsSinceCollect = 0,
 }: Props) {
-  const { viewportRef, camera, screenToWorld, fitToTree, handlers } =
+  const { viewportRef, camera, fitToVillage, screenToWorld, handlers } =
     useWorldMapCamera()
   const pointerStart = useRef<{ x: number; y: number } | null>(null)
 
@@ -77,7 +81,7 @@ export function WorldMapViewport({
         }
       }}
       onPointerCancel={handlers.onPointerCancel}
-      onDoubleClick={() => fitToTree()}
+      onDoubleClick={() => fitToVillage()}
     >
       <div
         className="absolute left-0 top-0 origin-top-left will-change-transform"
@@ -89,11 +93,13 @@ export function WorldMapViewport({
           treeStageKey={treeStageKey}
           buildings={buildings}
           selectedBuildingKey={selectedBuildingKey}
+          isWorldActive={isWorldActive}
+          exerciseEventsSinceCollect={exerciseEventsSinceCollect}
         />
       </div>
 
       <p className="pointer-events-none absolute bottom-2 left-0 right-0 text-center text-[10px] text-white/50">
-        드래그·핀치로 이동 · 두 번 탭으로 나무 중심
+        드래그·핀치로 이동 · 두 번 탭으로 마을 중심
       </p>
     </div>
   )

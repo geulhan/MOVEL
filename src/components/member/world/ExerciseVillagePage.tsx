@@ -68,6 +68,8 @@ export function ExerciseVillagePage({ memberId, refreshToken = 0 }: Props) {
           buildings={world.buildings}
           selected={selected}
           onSelect={setSelected}
+          isWorldActive={world.exerciseEventsSinceCollect > 0}
+          exerciseEventsSinceCollect={world.exerciseEventsSinceCollect}
         />
         <CollectFloatingButton
           pendingAcorns={world.pendingAcorns}

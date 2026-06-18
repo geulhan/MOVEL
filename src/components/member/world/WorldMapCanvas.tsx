@@ -7,6 +7,7 @@ import {
   buildConstructionSite,
   buildLockedMist,
 } from './data/worldMapGenerator'
+import { generateWorldEnvironment } from './data/worldEnvironment'
 import {
   resolveTreeAsset,
   VILLAGE_BUILDING_EXTERIOR,
@@ -14,14 +15,19 @@ import {
 import { TREE_WORLD } from './data/worldLayout'
 import type { WorldBuildingState } from './hooks/useVillageWorldState'
 import type { WorldBuildingKey } from './data/worldLayout'
+import { VillageEnvironmentLayer } from './VillageEnvironmentLayer'
+import { VillageNpcLayer } from './VillageNpcLayer'
+import { VillageFloatingRewards } from './VillageFloatingRewards'
 
 type Props = {
   treeStageKey: string
   buildings: WorldBuildingState[]
   selectedBuildingKey: string | null
+  isWorldActive?: boolean
+  exerciseEventsSinceCollect?: number
 }
 
-const BUILDING_SCALE = 1.15
+const BUILDING_SCALE = 1.725
 
 type BuildingLayer = {
   key: string
@@ -35,11 +41,19 @@ type BuildingLayer = {
   imageOpacity?: number
 }
 
-export function WorldMapCanvas({ treeStageKey, buildings, selectedBuildingKey }: Props) {
+export function WorldMapCanvas({
+  treeStageKey,
+  buildings,
+  selectedBuildingKey,
+  isWorldActive = false,
+  exerciseEventsSinceCollect = 0,
+}: Props) {
   const terrain = useMemo(
     () => buildCompleteWorldTerrain(treeStageKey),
     [treeStageKey],
   )
+
+  const envProps = useMemo(() => generateWorldEnvironment(), [])
 
   const buildingLayers = useMemo((): BuildingLayer[] => {
     const layers: BuildingLayer[] = []
@@ -90,6 +104,7 @@ export function WorldMapCanvas({ treeStageKey, buildings, selectedBuildingKey }:
 
   const treeAsset = resolveTreeAsset(treeStageKey)
   const treeSize = TREE_WORLD.drawSize
+  const showRewards = isWorldActive && exerciseEventsSinceCollect > 0
 
   return (
     <svg
@@ -111,19 +126,19 @@ export function WorldMapCanvas({ treeStageKey, buildings, selectedBuildingKey }:
       <ellipse cx="220" cy="110" rx="100" ry="38" fill="#ffffff" opacity={0.5} />
       <ellipse cx="780" cy="90" rx="90" ry="34" fill="#ffffff" opacity={0.45} />
 
-      <g id="terrain-grass">
+      <g id="terrain-grass" style={{ imageRendering: 'pixelated' }}>
         <PixelRects rects={terrain.grass} />
       </g>
-      <g id="terrain-elevation" opacity={0.9}>
+      <g id="terrain-elevation" opacity={0.9} style={{ imageRendering: 'pixelated' }}>
         <PixelRects rects={terrain.elevation} />
       </g>
-      <g id="terrain-forest">
+      <g id="terrain-forest" style={{ imageRendering: 'pixelated' }}>
         <PixelRects rects={terrain.forest} />
       </g>
-      <g id="terrain-paths">
+      <g id="terrain-paths" style={{ imageRendering: 'pixelated' }}>
         <PixelRects rects={terrain.paths} />
       </g>
-      <g id="terrain-plaza">
+      <g id="terrain-plaza" style={{ imageRendering: 'pixelated' }}>
         <PixelRects rects={terrain.plaza} />
       </g>
       <g id="terrain-shadows">
@@ -138,10 +153,13 @@ export function WorldMapCanvas({ treeStageKey, buildings, selectedBuildingKey }:
           />
         ))}
       </g>
-      <g id="terrain-rocks">
+
+      <VillageEnvironmentLayer props={envProps} />
+
+      <g id="terrain-rocks" style={{ imageRendering: 'pixelated' }} opacity={0.7}>
         <PixelRects rects={terrain.rocks} />
       </g>
-      <g id="terrain-trees">
+      <g id="terrain-trees" style={{ imageRendering: 'pixelated' }} opacity={0.65}>
         <PixelRects rects={terrain.smallTrees} />
       </g>
 
@@ -192,10 +210,10 @@ export function WorldMapCanvas({ treeStageKey, buildings, selectedBuildingKey }:
                 </g>
               )}
               {b?.isOperating && (
-                <circle cx={layer.cx} cy={layer.cy - layer.size * 0.38} r={6} fill="#5a9e6f">
+                <circle cx={layer.cx} cy={layer.cy - layer.size * 0.38} r={5} fill="#5a9e6f" opacity={0.7}>
                   <animate
                     attributeName="opacity"
-                    values="1;0.4;1"
+                    values="0.7;0.3;0.7"
                     dur="1.5s"
                     repeatCount="indefinite"
                   />
@@ -253,30 +271,18 @@ export function WorldMapCanvas({ treeStageKey, buildings, selectedBuildingKey }:
         />
       </g>
 
-      {buildings.some((b) => b.isOperating) && (
-        <g id="village-life" opacity={0.85}>
-          <VillageWalker cx={420} cy={540} delay={0} />
-          <VillageWalker cx={620} cy={520} delay={0.6} />
-          <VillageWalker cx={380} cy={680} delay={1.2} />
+      <VillageNpcLayer />
+
+      <VillageFloatingRewards active={showRewards} />
+
+      {isWorldActive && (
+        <g id="village-active-glow" pointerEvents="none">
+          <circle cx={TREE_WORLD.cx} cy={TREE_WORLD.cy} r={treeSize * 0.55} fill="none" stroke="#5a9e6f" strokeWidth={2} opacity={0.25}>
+            <animate attributeName="r" values={`${treeSize * 0.5};${treeSize * 0.62};${treeSize * 0.5}`} dur="3s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.15;0.35;0.15" dur="3s" repeatCount="indefinite" />
+          </circle>
         </g>
       )}
     </svg>
-  )
-}
-
-function VillageWalker({ cx, cy, delay }: { cx: number; cy: number; delay: number }) {
-  return (
-    <g>
-      <animateTransform
-        attributeName="transform"
-        type="translate"
-        values={`0,0; 8,-3; 0,0; -8,-3; 0,0`}
-        dur="4s"
-        begin={`${delay}s`}
-        repeatCount="indefinite"
-      />
-      <circle cx={cx} cy={cy} r={5} fill="#ffcc80" stroke="#5d4037" strokeWidth={1.5} />
-      <rect x={cx - 4} y={cy + 4} width={8} height={10} rx={2} fill="#ef5350" />
-    </g>
   )
 }
