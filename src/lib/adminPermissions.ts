@@ -227,7 +227,7 @@ export function getMemberDetailTabs(
     ] as Array<{ to: string; end: boolean; label: string }>
 
     if (!features || features.pt) {
-      adminTabs.push({ to: 'pt', end: false, label: 'PT·결제' })
+      adminTabs.push({ to: 'pt', end: false, label: '결제정보' })
     }
     if (!features || features.attendance) {
       adminTabs.push({ to: 'attendance', end: false, label: '출석' })

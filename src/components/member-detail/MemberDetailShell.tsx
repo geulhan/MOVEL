@@ -102,14 +102,6 @@ function MemberDetailShellInner() {
           >
             인바디
           </NavLink>
-          <NavLink
-            to={`${basePath}/journal`}
-            className={({ isActive }) =>
-              `chip whitespace-nowrap ${isActive ? 'chip-active' : 'chip-inactive'}`
-            }
-          >
-            운동일지
-          </NavLink>
         </nav>
       )}
 
