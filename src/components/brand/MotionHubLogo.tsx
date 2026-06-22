@@ -57,7 +57,7 @@ export function MotionHubLogo({
         : 'h-9 w-9 sm:h-10 sm:w-10'
       : variant === 'vertical'
         ? isHero
-          ? 'h-auto w-auto max-h-40 max-w-[min(100%,14rem)] sm:max-h-48'
+          ? 'h-auto w-auto max-h-52 max-w-[min(100%,16rem)] sm:max-h-60 sm:max-w-[18rem]'
           : isHeader
             ? 'h-auto w-auto max-h-[7.5rem] max-w-[10.5rem] sm:max-h-36 sm:max-w-[11.5rem]'
             : 'h-auto w-auto max-h-28 max-w-[9.5rem] sm:max-h-32'

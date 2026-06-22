@@ -1,26 +1,32 @@
 import { Link } from 'react-router-dom'
-import { MovelLogo } from '../components/brand/MovelLogo'
+import { MotionHubLogo } from '../components/brand/MotionHubLogo'
 import { SiteUrlCopy } from '../components/SiteUrlCopy'
 import { getMemberPortalUrl } from '../lib/siteUrl'
 
 export default function NotFoundPage() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-cream px-4 text-center">
-      <MovelLogo tone="charcoal" className="mb-6 h-16 w-auto" />
-      <p className="text-sm font-medium text-gold-dark">404</p>
-      <h1 className="mt-2 text-xl font-bold text-charcoal">페이지를 찾을 수 없습니다</h1>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-motionhub-deep px-4 text-center">
+      <MotionHubLogo tone="light" variant="vertical" size="header" className="mb-8" />
+      <p className="text-sm font-medium text-motionhub">404</p>
+      <h1 className="mt-2 text-xl font-bold text-cream">페이지를 찾을 수 없습니다</h1>
       <div className="mt-6 flex flex-col gap-2 sm:flex-row">
         <Link
-          to="/admin"
-          className="rounded-lg bg-charcoal px-5 py-2.5 text-sm font-semibold text-cream"
+          to="/"
+          className="rounded-lg bg-motionhub px-5 py-2.5 text-sm font-semibold text-charcoal"
         >
-          관리자 페이지
+          홈으로
         </Link>
         <Link
-          to="/member"
-          className="rounded-lg border border-gold/50 bg-white px-5 py-2.5 text-sm font-semibold text-charcoal"
+          to="/guide"
+          className="rounded-lg border border-cream/25 px-5 py-2.5 text-sm font-semibold text-cream"
         >
-          회원 페이지
+          시작 가이드
+        </Link>
+        <Link
+          to="/login"
+          className="rounded-lg border border-cream/25 px-5 py-2.5 text-sm font-semibold text-cream"
+        >
+          관리자 로그인
         </Link>
       </div>
       <div className="mt-6 w-full max-w-md">

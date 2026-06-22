@@ -28,7 +28,7 @@ export function LandingNav({ activePage = 'landing', onScrollTo }: LandingNavPro
     <header className="fixed inset-x-0 top-0 z-50 border-b border-white/[0.08] bg-motionhub-deep/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
         <Link to="/" className="shrink-0" onClick={() => setOpen(false)}>
-          <MotionHubLogo tone="light" variant="symbol" />
+          <MotionHubLogo tone="light" variant="vertical" />
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">
