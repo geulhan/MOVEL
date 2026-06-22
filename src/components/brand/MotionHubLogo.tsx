@@ -5,7 +5,7 @@ type Props = {
   /** light = 어두운 배경 위, dark = 밝은 배경 위 */
   tone?: 'light' | 'dark'
   showTagline?: boolean
-  size?: 'nav' | 'header' | 'hero'
+  size?: 'nav' | 'header' | 'hero' | 'footer'
   /** combination: 가로, vertical: 세로, symbol: 아이콘만 */
   variant?: 'combination' | 'vertical' | 'symbol'
   /** 한글 로고 우선 (밝은 배경) */
@@ -48,6 +48,7 @@ export function MotionHubLogo({
 }: Props) {
   const isHero = size === 'hero'
   const isHeader = size === 'header'
+  const isFooter = size === 'footer'
   const src = resolveSrc(tone, variant, locale)
 
   const sizeClass =
@@ -60,7 +61,9 @@ export function MotionHubLogo({
           ? 'h-auto w-auto max-h-52 max-w-[min(100%,16rem)] sm:max-h-60 sm:max-w-[18rem]'
           : isHeader
             ? 'h-auto w-auto max-h-[7.5rem] max-w-[10.5rem] sm:max-h-36 sm:max-w-[11.5rem]'
-            : 'h-auto w-auto max-h-10 max-w-[4.5rem] sm:max-h-11 sm:max-w-[5rem]'
+            : isFooter
+              ? 'h-auto w-auto max-h-[4.5rem] max-w-[7.5rem] sm:max-h-20 sm:max-w-[8.5rem]'
+              : 'h-auto w-auto max-h-10 max-w-[4.5rem] sm:max-h-11 sm:max-w-[5rem]'
         : isHero
           ? 'h-auto w-auto max-h-16 max-w-[min(100%,20rem)] sm:max-h-[4.5rem]'
           : 'h-9 w-auto max-w-[11rem] sm:h-10 sm:max-w-[12rem]'

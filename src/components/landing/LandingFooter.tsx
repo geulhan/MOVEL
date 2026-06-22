@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
-import { MOTIONHUB_BRAND_ASSETS } from '../../constants/motionhubBrand'
-import { MOTIONHUB_BRAND_KO, MOTIONHUB_MAIN_MESSAGE } from '../../constants/motionhubSeo'
+import { MotionHubLogo } from '../brand/MotionHubLogo'
+import { MOTIONHUB_MAIN_MESSAGE } from '../../constants/motionhubSeo'
 import { MOTIONHUB_CENTER_GUIDE_PATH } from '../../constants/motionhubGuide'
 
 export function LandingFooter() {
@@ -9,17 +9,8 @@ export function LandingFooter() {
       <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
-            <Link to="/" className="landing-footer-brand group inline-flex items-center gap-3">
-              <img
-                src={MOTIONHUB_BRAND_ASSETS.iconCyan}
-                alt=""
-                className="h-11 w-11 shrink-0 object-contain"
-                decoding="async"
-                aria-hidden
-              />
-              <span className="text-xl font-bold tracking-tight text-cream transition group-hover:text-motionhub">
-                {MOTIONHUB_BRAND_KO}
-              </span>
+            <Link to="/" className="landing-footer-logo inline-block transition hover:opacity-90">
+              <MotionHubLogo tone="light" variant="vertical" size="footer" />
             </Link>
             <p className="landing-footer-tagline mt-4 text-sm leading-relaxed text-cream/50">
               {MOTIONHUB_MAIN_MESSAGE}
