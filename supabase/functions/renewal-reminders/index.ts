@@ -1,24 +1,14 @@
 import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
+import { isNotificationAuthorized } from '../_shared/notificationAuth.ts'
 import {
   addDaysKst,
   daysBetweenKst,
+  membershipExpireTemplateKey,
   sendMemberNotification,
 } from '../_shared/notifications.ts'
 import { getSupabaseAdmin } from '../_shared/supabaseAdmin.ts'
 
-const REMINDER_DAYS = [7, 3, 1] as const
-
-function isAuthorized(req: Request): boolean {
-  const secret = Deno.env.get('NOTIFICATION_INTERNAL_SECRET')
-  const headerKey = req.headers.get('x-mobel-notification-key')
-  if (secret && headerKey === secret) return true
-
-  const auth = req.headers.get('authorization') ?? ''
-  const serviceRole = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-  if (serviceRole && auth === `Bearer ${serviceRole}`) return true
-
-  return false
-}
+const REMINDER_DAYS = [14, 7, 0] as const
 
 function todayKst(): string {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
@@ -33,7 +23,7 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'Method not allowed' }, 405)
   }
 
-  if (!isAuthorized(req)) {
+  if (!isNotificationAuthorized(req)) {
     return jsonResponse({ error: 'Unauthorized' }, 401)
   }
 
@@ -48,7 +38,7 @@ Deno.serve(async (req) => {
 
   const { data: members, error } = await supabase
     .from('members')
-    .select('id, name, expires_at, status')
+    .select('id, name, expires_at, remaining_sessions, status')
     .eq('status', 'active')
     .in('expires_at', expiresList)
 
@@ -59,26 +49,32 @@ Deno.serve(async (req) => {
   const results: Array<{
     memberId: string
     daysLeft: number
+    templateKey: string
     status: string
     error?: string
   }> = []
 
   for (const member of members ?? []) {
     if (!member.expires_at) continue
-    const daysLeft = daysBetweenKst(today, member.expires_at.split('T')[0])
-    if (!REMINDER_DAYS.includes(daysLeft as (typeof REMINDER_DAYS)[number])) {
-      continue
-    }
+    const expireDate = member.expires_at.split('T')[0]
+    const daysLeft = daysBetweenKst(today, expireDate)
+    const templateKey = membershipExpireTemplateKey(daysLeft)
+    if (!templateKey) continue
 
     const result = await sendMemberNotification({
-      templateKey: 'renewal',
+      templateKey,
       memberId: member.id,
-      metadata: { days_left: daysLeft },
+      metadata: {
+        days_left: daysLeft,
+        expire_date: expireDate,
+        remaining_count: member.remaining_sessions,
+      },
     })
 
     results.push({
       memberId: member.id,
       daysLeft,
+      templateKey,
       status: result.status,
       error: result.error ?? result.skippedReason,
     })

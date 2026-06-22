@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { submitBetaApplication, type CenterType } from '../api/betaApplication'
 import { MotionHubLogo } from '../components/brand/MotionHubLogo'
+import { LandingFooter } from '../components/landing/LandingFooter'
+import { LandingNav } from '../components/landing/LandingNav'
+import { MOTIONHUB_CENTER_GUIDE_PATH } from '../constants/motionhubGuide'
 import {
   getMotionHubDemoUrl,
   getMotionHubKakaoUrl,
@@ -67,53 +70,6 @@ function scrollToId(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
 }
 
-function LandingNav() {
-  return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-motionhub-deep/90 backdrop-blur-md">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-        <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>
-          <MotionHubLogo tone="light" variant="symbol" />
-        </a>
-        <nav className="hidden items-center gap-6 text-sm font-medium text-cream/70 md:flex">
-          <button type="button" onClick={() => scrollToId('problems')} className="transition hover:text-cream">
-            문제
-          </button>
-          <button type="button" onClick={() => scrollToId('features')} className="transition hover:text-cream">
-            기능
-          </button>
-          <button type="button" onClick={() => scrollToId('case-study')} className="transition hover:text-cream">
-            사례
-          </button>
-          <button type="button" onClick={() => scrollToId('contact')} className="transition hover:text-cream">
-            도입 문의
-          </button>
-        </nav>
-        <div className="flex shrink-0 items-center gap-2">
-          <a
-            href="/signup"
-            className="hidden rounded-lg border border-cream/20 px-3 py-2 text-xs font-semibold text-cream/85 hover:bg-white/5 sm:inline-block"
-          >
-            센터 등록
-          </a>
-          <a
-            href="/login"
-            className="rounded-lg border border-cream/20 px-3 py-2 text-xs font-semibold text-cream/85 hover:bg-white/5"
-          >
-            로그인
-          </a>
-          <button
-            type="button"
-            onClick={() => scrollToId('beta')}
-            className="rounded-lg bg-motionhub px-4 py-2 text-sm font-bold text-charcoal transition hover:bg-motionhub-dark"
-          >
-            베타 신청
-          </button>
-        </div>
-      </div>
-    </header>
-  )
-}
-
 function HeroSection() {
   const demoUrl = getMotionHubDemoUrl()
 
@@ -145,6 +101,12 @@ function HeroSection() {
               className="rounded-xl border border-cream/25 bg-cream/5 px-6 py-3.5 text-center text-sm font-bold text-cream transition hover:border-cream/40 hover:bg-cream/10"
             >
               데모 보기
+            </a>
+            <a
+              href={MOTIONHUB_CENTER_GUIDE_PATH}
+              className="rounded-xl border border-gold/30 bg-gold/10 px-6 py-3.5 text-center text-sm font-bold text-cream transition hover:border-gold/50 hover:bg-gold/15"
+            >
+              시작 가이드
             </a>
           </div>
         </div>
@@ -560,26 +522,15 @@ function BottomCtaSection() {
           >
             센터 등록
           </a>
+          <a
+            href={MOTIONHUB_CENTER_GUIDE_PATH}
+            className="rounded-xl border border-gold/30 bg-gold/10 px-6 py-3.5 text-sm font-bold text-cream transition hover:border-gold/50"
+          >
+            이용가이드
+          </a>
         </div>
       </div>
     </section>
-  )
-}
-
-function LandingFooter() {
-  return (
-    <footer className="border-t border-charcoal/10 bg-motionhub-deep py-12">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <MotionHubLogo tone="light" variant="vertical" showTagline />
-        <p className="mt-4 text-sm text-cream/55">운동센터 운영 플랫폼</p>
-        <p className="mt-2 text-xs font-medium tracking-wide text-cream/40">
-          Powered by 모션허브
-        </p>
-        <p className="mt-8 text-xs text-cream/35">
-          © {new Date().getFullYear()} 모션허브. All rights reserved.
-        </p>
-      </div>
-    </footer>
   )
 }
 
@@ -588,7 +539,7 @@ export default function MotionHubLandingPage() {
 
   return (
     <div className="min-h-screen bg-surface">
-      <LandingNav />
+      <LandingNav onScrollTo={scrollToId} />
       <main>
         <HeroSection />
         <TrustSection />

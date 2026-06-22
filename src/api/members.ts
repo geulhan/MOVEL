@@ -2,7 +2,7 @@ import { supabase } from '../lib/supabase'
 import { getCurrentCenterId, resolveCenterIdForMember } from '../lib/center'
 import { normalizeMember } from '../lib/memberNormalize'
 import type { Member, MemberInsert, MemberStatus } from '../types/database'
-import { notifyMemberWelcome, notifyPaymentDone } from './notifications'
+import { notifyMemberSignupGuide, notifyPaymentDone } from './notifications'
 import { logPlatformActivity } from './platformActivity'
 import { awardCustomRulesOnMemberRegistered, awardReferralOnPayment } from './rewards'
 import { calcSessionExpiry } from '../utils/period'
@@ -146,7 +146,7 @@ export async function createMember(input: {
     notifyPaymentDone(data.id, paymentId)
   }
 
-  notifyMemberWelcome(data.id)
+  notifyMemberSignupGuide(data.id)
 
   try {
     await awardCustomRulesOnMemberRegistered(data.id)

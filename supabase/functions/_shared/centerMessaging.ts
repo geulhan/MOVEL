@@ -1,4 +1,5 @@
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1'
+import { loadPlatformTemplateIds } from './alimtalkTemplateRegistry.ts'
 import type { SolapiConfig } from './solapi.ts'
 
 export type CenterMessagingContext = {
@@ -15,11 +16,6 @@ type CenterMessagingRow = {
   pf_id: string | null
   from_number: string | null
   sender_name: string | null
-  template_welcome: string | null
-  template_payment_done: string | null
-  template_renewal: string | null
-  template_step_verification_result: string | null
-  template_pt_reminder: string | null
 }
 
 function platformSolapiConfig(): SolapiConfig {
@@ -28,14 +24,7 @@ function platformSolapiConfig(): SolapiConfig {
     apiSecret: Deno.env.get('SOLAPI_API_SECRET') ?? '',
     pfId: Deno.env.get('SOLAPI_PF_ID') ?? '',
     fromNumber: Deno.env.get('SOLAPI_FROM_NUMBER') ?? '',
-    templateIds: {
-      welcome: Deno.env.get('SOLAPI_TEMPLATE_WELCOME') ?? '',
-      payment_done: Deno.env.get('SOLAPI_TEMPLATE_PAYMENT') ?? '',
-      renewal: Deno.env.get('SOLAPI_TEMPLATE_RENEWAL') ?? '',
-      step_verification_result:
-        Deno.env.get('SOLAPI_TEMPLATE_STEP_RESULT') ?? '',
-      pt_reminder: Deno.env.get('SOLAPI_TEMPLATE_PT_REMINDER') ?? '',
-    },
+    templateIds: loadPlatformTemplateIds(),
     enabled:
       (Deno.env.get('MESSAGING_ENABLED') ?? 'false').toLowerCase() === 'true',
     siteUrl: (Deno.env.get('SITE_URL') ?? 'https://motionhub.kr').replace(
@@ -56,17 +45,8 @@ function buildConfigFromRow(
     apiSecret,
     pfId: row.pf_id?.trim() || platform.pfId,
     fromNumber: row.from_number?.trim() || platform.fromNumber,
-    templateIds: {
-      welcome: row.template_welcome?.trim() || platform.templateIds.welcome,
-      payment_done:
-        row.template_payment_done?.trim() || platform.templateIds.payment_done,
-      renewal: row.template_renewal?.trim() || platform.templateIds.renewal,
-      step_verification_result:
-        row.template_step_verification_result?.trim() ||
-        platform.templateIds.step_verification_result,
-      pt_reminder:
-        row.template_pt_reminder?.trim() || platform.templateIds.pt_reminder,
-    },
+    // MotionHub 공용 채널: 템플릿 ID는 플랫폼 Secrets만 사용 (센터별 커스텀 채널 제외)
+    templateIds: platform.templateIds,
     enabled: row.enabled && platform.enabled,
     siteUrl: platform.siteUrl,
   }
@@ -88,7 +68,9 @@ export async function loadCenterMessagingContext(
 
   const { data: row } = await supabase
     .from('center_messaging_config')
-    .select('*')
+    .select(
+      'enabled, use_platform_api_keys, pf_id, from_number, sender_name',
+    )
     .eq('center_id', centerId)
     .maybeSingle()
 
@@ -117,8 +99,7 @@ export async function loadCenterMessagingContext(
     return {
       centerId,
       centerSlug: String(center.slug),
-      centerName:
-        messagingRow.sender_name?.trim() || String(center.name),
+      centerName: messagingRow.sender_name?.trim() || String(center.name),
       config: {
         ...platform,
         enabled: false,
@@ -149,5 +130,20 @@ export async function loadCenterMessagingContext(
     centerName: messagingRow.sender_name?.trim() || String(center.name),
     config: buildConfigFromRow(messagingRow, apiKey, apiSecret, platform),
     source: 'center',
+  }
+}
+
+export function getPlatformMessagingContext(
+  centerId: string,
+  centerSlug: string,
+  centerName: string,
+): CenterMessagingContext {
+  const platform = platformSolapiConfig()
+  return {
+    centerId,
+    centerSlug,
+    centerName,
+    config: platform,
+    source: 'platform_fallback',
   }
 }

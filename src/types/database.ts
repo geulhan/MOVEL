@@ -184,10 +184,28 @@ export type ContractInstanceRow = {
 }
 
 export type MessageTemplateKey =
-  | 'welcome'
-  | 'payment_done'
-  | 'renewal'
+  | 'member_signup_guide'
+  | 'payment_completed'
+  | 'schedule_reminder'
+  | 'pt_remaining_3'
+  | 'pt_remaining_1'
+  | 'membership_expire_14'
+  | 'membership_expire_7'
+  | 'membership_expire_today'
+  | 'schedule_changed'
+  | 'schedule_cancelled'
+  | 'center_welcome'
+  | 'weekly_report'
   | 'step_verification_result'
+  /** @deprecated 레거시 이력 호환 */
+  | 'member_welcome'
+  /** @deprecated 레거시 이력 호환 */
+  | 'welcome'
+  /** @deprecated 레거시 이력 호환 */
+  | 'payment_done'
+  /** @deprecated 레거시 이력 호환 */
+  | 'renewal'
+  /** @deprecated 레거시 이력 호환 */
   | 'pt_reminder'
 
 export type MessageLogStatus = 'pending' | 'sent' | 'failed' | 'skipped'
@@ -195,11 +213,24 @@ export type MessageLogStatus = 'pending' | 'sent' | 'failed' | 'skipped'
 export type MessageLogChannel = 'alimtalk' | 'sms' | 'skipped'
 
 export const MESSAGE_TEMPLATE_LABELS: Record<MessageTemplateKey, string> = {
-  welcome: '신규 가입 환영',
-  payment_done: '결제 완료',
-  renewal: '갱신 안내',
+  member_signup_guide: '회원가입 안내',
+  payment_completed: '결제 완료',
+  schedule_reminder: '수업 리마인더',
+  pt_remaining_3: 'PT 잔여 3회 알림',
+  pt_remaining_1: 'PT 잔여 1회 알림',
+  membership_expire_14: '회원권 만료 14일 전',
+  membership_expire_7: '회원권 만료 7일 전',
+  membership_expire_today: '회원권 만료 당일',
+  schedule_changed: '예약 변경',
+  schedule_cancelled: '예약 취소',
+  center_welcome: '센터 가입 축하',
+  weekly_report: '모션허브 주간 리포트',
   step_verification_result: '만보 인증 결과',
-  pt_reminder: 'PT 예약 리마인더',
+  member_welcome: '회원 등록 완료 (레거시)',
+  welcome: '신규 가입 환영 (레거시)',
+  payment_done: '결제 완료 (레거시)',
+  renewal: '갱신 안내 (레거시)',
+  pt_reminder: 'PT 예약 리마인더 (레거시)',
 }
 
 export const MESSAGE_STATUS_LABELS: Record<MessageLogStatus, string> = {

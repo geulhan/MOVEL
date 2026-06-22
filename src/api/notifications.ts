@@ -124,9 +124,14 @@ export async function sendNotification(
   return result
 }
 
-/** 회원 등록 후 환영 알림 (실패해도 회원 등록은 유지) */
+/** 회원 등록 완료 후 회원가입 안내 알림 */
+export function notifyMemberSignupGuide(memberId: string): void {
+  void invokeNotification('member_signup_guide', memberId)
+}
+
+/** @deprecated notifyMemberSignupGuide 사용 */
 export function notifyMemberWelcome(memberId: string): void {
-  void invokeNotification('welcome', memberId)
+  notifyMemberSignupGuide(memberId)
 }
 
 /** 결제 기록 생성 후 결제 완료 알림 */
@@ -134,7 +139,48 @@ export function notifyPaymentDone(
   memberId: string,
   paymentId: string,
 ): void {
-  void invokeNotification('payment_done', memberId, { paymentId })
+  void invokeNotification('payment_completed', memberId, { paymentId })
+}
+
+/** 예약 변경 알림 */
+export function notifyScheduleChanged(
+  memberId: string,
+  scheduleId: string,
+  metadata?: Record<string, string | number>,
+): void {
+  void invokeNotification('schedule_changed', memberId, {
+    metadata: { schedule_id: scheduleId, ...metadata },
+  })
+}
+
+/** 예약 취소 알림 */
+export function notifyScheduleCancelled(
+  memberId: string,
+  scheduleId: string,
+  metadata?: Record<string, string | number>,
+): void {
+  void invokeNotification('schedule_cancelled', memberId, {
+    metadata: { schedule_id: scheduleId, ...metadata },
+  })
+}
+
+/** 센터 가입 축하 알림 (센터 관리자 대상, 플랫폼 발송) */
+export async function notifyCenterWelcome(
+  centerId: string,
+): Promise<SendNotificationResult | null> {
+  const triggerKey = import.meta.env.VITE_NOTIFICATION_TRIGGER_KEY
+  if (!triggerKey) return null
+
+  const { data, error } = await supabase.functions.invoke('send-notification', {
+    body: { templateKey: 'center_welcome', centerId },
+    headers: { 'x-mobel-notification-key': triggerKey },
+  })
+
+  if (error) {
+    console.warn('[notifications] center_welcome 호출 실패:', error.message)
+    return { ok: false, status: 'failed', error: error.message }
+  }
+  return data as SendNotificationResult
 }
 
 /** 만보 인증 승인/반려 결과 알림 (템플릿 승인 후 발송) */
@@ -189,4 +235,12 @@ export async function triggerRenewalReminders(): Promise<unknown> {
 
 export async function triggerPtReminders(): Promise<unknown> {
   return invokeReminderFunction('pt-reminders')
+}
+
+export async function triggerScheduleReminders(): Promise<unknown> {
+  return invokeReminderFunction('schedule-reminders')
+}
+
+export async function triggerWeeklyCenterReport(): Promise<unknown> {
+  return invokeReminderFunction('weekly-center-report')
 }

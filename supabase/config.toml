@@ -9,3 +9,9 @@ verify_jwt = false
 
 [functions.pt-reminders]
 verify_jwt = false
+
+[functions.schedule-reminders]
+verify_jwt = false
+
+[functions.weekly-center-report]
+verify_jwt = false

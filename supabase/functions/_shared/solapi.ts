@@ -1,3 +1,8 @@
+import {
+  loadPlatformTemplateIds,
+  type AlimtalkTemplateKey,
+} from './alimtalkTemplateRegistry.ts'
+
 export type SolapiConfig = {
   apiKey: string
   apiSecret: string
@@ -14,15 +19,9 @@ export function getSolapiConfig(): SolapiConfig {
     apiSecret: Deno.env.get('SOLAPI_API_SECRET') ?? '',
     pfId: Deno.env.get('SOLAPI_PF_ID') ?? '',
     fromNumber: Deno.env.get('SOLAPI_FROM_NUMBER') ?? '',
-    templateIds: {
-      welcome: Deno.env.get('SOLAPI_TEMPLATE_WELCOME') ?? '',
-      payment_done: Deno.env.get('SOLAPI_TEMPLATE_PAYMENT') ?? '',
-      renewal: Deno.env.get('SOLAPI_TEMPLATE_RENEWAL') ?? '',
-      step_verification_result:
-        Deno.env.get('SOLAPI_TEMPLATE_STEP_RESULT') ?? '',
-      pt_reminder: Deno.env.get('SOLAPI_TEMPLATE_PT_REMINDER') ?? '',
-    },
-    enabled: (Deno.env.get('MESSAGING_ENABLED') ?? 'false').toLowerCase() === 'true',
+    templateIds: loadPlatformTemplateIds(),
+    enabled:
+      (Deno.env.get('MESSAGING_ENABLED') ?? 'false').toLowerCase() === 'true',
     siteUrl: (Deno.env.get('SITE_URL') ?? 'https://motionhub.kr').replace(
       /\/$/,
       '',
@@ -38,8 +37,9 @@ export function isSolapiReady(
   if (!config.apiKey || !config.apiSecret) return 'SOLAPI API keys missing'
   if (!config.pfId) return 'SOLAPI_PF_ID missing'
   if (!config.fromNumber) return 'SOLAPI_FROM_NUMBER missing'
-  if (!config.templateIds[templateKey]) {
-    return `Template ID missing for ${templateKey}`
+  const templateId = config.templateIds[templateKey]?.trim()
+  if (!templateId) {
+    return 'missing_template_id'
   }
   return null
 }
@@ -86,7 +86,7 @@ export type SolapiSendResult = {
 
 export async function sendAlimtalk(
   config: SolapiConfig,
-  templateKey: string,
+  templateKey: AlimtalkTemplateKey | string,
   to: string,
   variables: Record<string, string>,
 ): Promise<SolapiSendResult> {
@@ -139,8 +139,9 @@ export async function sendAlimtalk(
   }
 
   const groupInfo = (raw as { groupInfo?: { groupId?: string } }).groupInfo
-  const firstMessage = (raw as { messageList?: Array<{ messageId?: string; statusCode?: string }> })
-    .messageList?.[0]
+  const firstMessage = (
+    raw as { messageList?: Array<{ messageId?: string; statusCode?: string }> }
+  ).messageList?.[0]
 
   return {
     ok: true,

@@ -1,7 +1,7 @@
 import { detectDeviceType } from '../lib/deviceType'
 import { supabase } from '../lib/supabase'
 import { formatSupabaseError, getErrorMessage } from '../lib/errors'
-import { notifyMemberWelcome } from './notifications'
+import { notifyMemberSignupGuide } from './notifications'
 import { getMemberCenterSlug, saveMemberSession } from './memberPortal'
 import { logPlatformActivity } from './platformActivity'
 import type { Json } from '../types/database'
@@ -184,7 +184,7 @@ export async function registerMember(
     result.center_slug,
     result.center_id,
   )
-  notifyMemberWelcome(result.id)
+  notifyMemberSignupGuide(result.id)
 
   return {
     memberId: result.id,

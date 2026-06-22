@@ -1,11 +1,7 @@
 import { ALIMTALK_BRAND_HEADER } from './alimtalkBrand.ts'
+import type { AlimtalkTemplateKey } from './alimtalkTemplateRegistry.ts'
 
-export type TemplateKey =
-  | 'welcome'
-  | 'payment_done'
-  | 'renewal'
-  | 'step_verification_result'
-  | 'pt_reminder'
+export type TemplateKey = AlimtalkTemplateKey
 
 export type MemberRow = {
   id: string
@@ -13,6 +9,28 @@ export type MemberRow = {
   phone: string
   expires_at: string | null
   remaining_sessions: number
+}
+
+export type TemplateVariableContext = {
+  siteUrl: string
+  centerSlug?: string
+  centerName?: string
+  memberName?: string
+  trainerName?: string
+  scheduleDate?: string
+  className?: string
+  productName?: string
+  amount?: number
+  sessions?: number
+  remainingCount?: number
+  expireDate?: string
+  scheduledAt?: string
+  daysLeft?: number
+  reportWeek?: string
+  activeMembers?: number
+  newMembers?: number
+  approved?: boolean
+  reason?: string
 }
 
 export function formatKoreanDate(dateStr: string | null): string {
@@ -38,72 +56,137 @@ export function formatScheduledAtKst(iso: string): string {
   })
 }
 
-export function buildTemplateVariables(
-  templateKey: TemplateKey,
-  member: MemberRow,
-  config: { siteUrl: string; centerSlug?: string; centerName?: string },
-  extra: {
-    amount?: number
-    sessions?: number
-    daysLeft?: number
-    approved?: boolean
-    reason?: string
-    scheduledAt?: string
-    trainerName?: string
-  } = {},
-): Record<string, string> {
+function buildMemberPortalUrl(config: {
+  siteUrl: string
+  centerSlug?: string
+}): string {
   const slug = config.centerSlug?.trim().toLowerCase() ?? ''
-  const portalUrl = slug
+  return slug
     ? `${config.siteUrl}/member?center=${encodeURIComponent(slug)}`
     : `${config.siteUrl}/member`
+}
+
+function buildCenterStartGuideUrl(siteUrl: string): string {
+  return `${siteUrl.replace(/\/$/, '')}/guide`
+}
+
+function baseVariables(
+  config: { siteUrl: string; centerSlug?: string; centerName?: string },
+  memberName: string,
+): Record<string, string> {
   const centerName = config.centerName?.trim() || '센터'
-  const base = {
+  const memberPortalUrl = buildMemberPortalUrl(config)
+  return {
     '#{brandHeader}': ALIMTALK_BRAND_HEADER,
     '#{centerName}': centerName,
-    '#{name}': member.name,
-    '#{portalUrl}': portalUrl,
+    '#{memberName}': memberName,
+    '#{name}': memberName,
+    '#{portalUrl}': memberPortalUrl,
   }
+}
+
+/** 카카오/Solapi 템플릿 변수 매핑 (공통 + 템플릿별) */
+export function buildTemplateVariables(
+  templateKey: TemplateKey,
+  member: MemberRow | null,
+  config: { siteUrl: string; centerSlug?: string; centerName?: string },
+  extra: TemplateVariableContext = {},
+): Record<string, string> {
+  const memberName =
+    extra.memberName?.trim() || member?.name?.trim() || '회원'
+  const base = baseVariables(config, memberName)
+
+  const trainerName = extra.trainerName?.trim() || '담당 트레이너'
+  const scheduleDate =
+    extra.scheduleDate?.trim() ||
+    (extra.scheduledAt ? formatScheduledAtKst(extra.scheduledAt) : '-')
+  const className = extra.className?.trim() || '수업'
+  const productName = extra.productName?.trim() || '수강권'
+  const remainingCount = String(
+    extra.remainingCount ?? member?.remaining_sessions ?? 0,
+  )
+  const expireDate =
+    extra.expireDate?.trim() ||
+    formatKoreanDate(member?.expires_at ?? null)
 
   switch (templateKey) {
+    case 'member_signup_guide':
+    case 'member_welcome':
     case 'welcome':
       return {
-        ...base,
-        '#{phone}': member.phone,
+        '#{centerName}': config.centerName?.trim() || '센터',
       }
+    case 'payment_completed':
     case 'payment_done':
       return {
         ...base,
         '#{amount}': formatCurrency(extra.amount ?? 0),
+        '#{productName}': productName,
         '#{sessions}': String(extra.sessions ?? 0),
       }
+    case 'schedule_reminder':
+    case 'pt_reminder':
+      return {
+        ...base,
+        '#{scheduleDate}': scheduleDate,
+        '#{scheduledAt}': scheduleDate,
+        '#{trainerName}': trainerName,
+        '#{className}': className,
+      }
+    case 'schedule_changed':
+    case 'schedule_cancelled':
+      return {
+        ...base,
+        '#{scheduleDate}': scheduleDate,
+        '#{trainerName}': trainerName,
+        '#{className}': className,
+      }
+    case 'pt_remaining_3':
+    case 'pt_remaining_1':
+      return {
+        ...base,
+        '#{remainingCount}': remainingCount,
+        '#{remainingSessions}': remainingCount,
+      }
+    case 'membership_expire_14':
+    case 'membership_expire_7':
+    case 'membership_expire_today':
     case 'renewal':
       return {
         ...base,
-        '#{expiresAt}': formatKoreanDate(member.expires_at),
+        '#{expireDate}': expireDate,
+        '#{expiresAt}': expireDate,
+        '#{remainingCount}': remainingCount,
+        '#{remainingSessions}': remainingCount,
         '#{daysLeft}': String(extra.daysLeft ?? 0),
-        '#{remainingSessions}': String(member.remaining_sessions),
       }
     case 'step_verification_result':
       return {
         ...base,
         '#{result}': extra.approved ? '승인' : '반려',
-        '#{reason}': extra.reason?.trim() || (extra.approved ? '인증 완료' : '-'),
+        '#{reason}':
+          extra.reason?.trim() || (extra.approved ? '인증 완료' : '-'),
       }
-    case 'pt_reminder':
+    case 'center_welcome': {
+      const centerGuideUrl = buildCenterStartGuideUrl(config.siteUrl)
       return {
-        ...base,
-        '#{scheduledAt}': extra.scheduledAt ?? '-',
-        '#{trainerName}': extra.trainerName?.trim() || '담당 트레이너',
+        '#{brandHeader}': ALIMTALK_BRAND_HEADER,
+        '#{centerName}': config.centerName?.trim() || '센터',
+        '#{guideUrl}': centerGuideUrl,
+        '#{portalUrl}': centerGuideUrl,
+      }
+    }
+    case 'weekly_report':
+      return {
+        '#{brandHeader}': ALIMTALK_BRAND_HEADER,
+        '#{centerName}': config.centerName?.trim() || '센터',
+        '#{reportWeek}': extra.reportWeek?.trim() || '-',
+        '#{activeMembers}': String(extra.activeMembers ?? 0),
+        '#{newMembers}': String(extra.newMembers ?? 0),
       }
     default:
-      return {}
+      return base
   }
 }
 
-export const TEMPLATE_LABELS: Record<TemplateKey, string> = {
-  welcome: '신규 가입 환영',
-  payment_done: '결제 완료',
-  renewal: '갱신 안내',
-  step_verification_result: '만보 인증 결과',
-  pt_reminder: 'PT 예약 리마인더',
-}
+export { TEMPLATE_LABELS } from './alimtalkTemplateRegistry.ts'

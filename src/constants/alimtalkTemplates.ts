@@ -1,56 +1,139 @@
 /** MotionHub 알림톡 템플릿 가이드 (Solapi 심사용 — 본문은 Solapi 콘솔에 등록) */
 
+import { MOTIONHUB_MEMBER_SIGNUP_PORTAL_URL } from './motionhubGuide'
+
 export const ALIMTALK_BRAND_HEADER = '[모션허브]' as const
 
 export const ALIMTALK_GREETING_PATTERN = '#{centerName} 회원님' as const
 
+/** 신규 템플릿 키 상수 (12종) */
+export const ALIMTALK_TEMPLATE_KEYS = {
+  member_signup_guide: 'member_signup_guide',
+  payment_completed: 'payment_completed',
+  schedule_reminder: 'schedule_reminder',
+  pt_remaining_3: 'pt_remaining_3',
+  pt_remaining_1: 'pt_remaining_1',
+  membership_expire_14: 'membership_expire_14',
+  membership_expire_7: 'membership_expire_7',
+  membership_expire_today: 'membership_expire_today',
+  schedule_changed: 'schedule_changed',
+  schedule_cancelled: 'schedule_cancelled',
+  center_welcome: 'center_welcome',
+  weekly_report: 'weekly_report',
+} as const
+
+/** Supabase Secrets 환경변수 키명 */
+export const ALIMTALK_TEMPLATE_SECRET_KEYS = {
+  member_signup_guide: 'SOLAPI_TEMPLATE_MEMBER_SIGNUP_GUIDE',
+  payment_completed: 'SOLAPI_TEMPLATE_PAYMENT_COMPLETED',
+  schedule_reminder: 'SOLAPI_TEMPLATE_SCHEDULE_REMINDER',
+  pt_remaining_3: 'SOLAPI_TEMPLATE_PT_REMAINING_3',
+  pt_remaining_1: 'SOLAPI_TEMPLATE_PT_REMAINING_1',
+  membership_expire_14: 'SOLAPI_TEMPLATE_MEMBERSHIP_EXPIRE_14',
+  membership_expire_7: 'SOLAPI_TEMPLATE_MEMBERSHIP_EXPIRE_7',
+  membership_expire_today: 'SOLAPI_TEMPLATE_MEMBERSHIP_EXPIRE_TODAY',
+  schedule_changed: 'SOLAPI_TEMPLATE_SCHEDULE_CHANGED',
+  schedule_cancelled: 'SOLAPI_TEMPLATE_SCHEDULE_CANCELLED',
+  center_welcome: 'SOLAPI_TEMPLATE_CENTER_WELCOME',
+  weekly_report: 'SOLAPI_TEMPLATE_WEEKLY_REPORT',
+} as const
+
 /** Solapi 템플릿 등록 시 복사·참고용 예시 (변수명은 코드와 동일해야 함) */
 export const ALIMTALK_TEMPLATE_EXAMPLES = {
-  welcome: `[모션허브]
-#{centerName} 회원님, 가입을 환영합니다.
+  member_signup_guide: `안녕하세요.
 
-회원 포털: #{portalUrl}
-초기 비밀번호는 휴대폰 뒤 4자리입니다.`,
+#{centerName} 입니다.
 
-  payment_done: `[모션허브]
-#{centerName} 회원님, #{amount} 결제가 완료되었습니다. (PT #{sessions}회)
+회원 등록이 완료되었습니다.
+
+아래 링크에서 회원가입 후
+예약, 출석, 운동기록 등을 확인하실 수 있습니다.
+
+회원가입
+${MOTIONHUB_MEMBER_SIGNUP_PORTAL_URL}
+
+감사합니다.`,
+
+  payment_completed: `[모션허브]
+#{centerName} 회원님, #{amount} 결제가 완료되었습니다. (#{productName})
 
 회원 포털: #{portalUrl}`,
 
-  renewal: `[모션허브]
-#{centerName} 회원님, 회원권 만료가 #{daysLeft}일 남았습니다.
-만료일 #{expiresAt} · 잔여 PT #{remainingSessions}회
+  schedule_reminder: `[모션허브]
+#{centerName} 회원님, #{className} 수업이 예정되어 있습니다.
 
-#{portalUrl}`,
-
-  step_verification_result: `[모션허브]
-#{centerName} 회원님, 만보 인증 결과: #{result}
-사유: #{reason}
-
-#{portalUrl}`,
-
-  pt_reminder: `[모션허브]
-#{centerName} 회원님, PT 수업이 내일 예정되어 있습니다.
-
-일시: #{scheduledAt}
+일시: #{scheduleDate}
 담당: #{trainerName}
 
 #{portalUrl}`,
+
+  pt_remaining_3: `[모션허브]
+#{centerName} 회원님, PT 잔여 횟수가 #{remainingCount}회 남았습니다.
+
+#{portalUrl}`,
+
+  pt_remaining_1: `[모션허브]
+#{centerName} 회원님, PT 잔여 횟수가 #{remainingCount}회 남았습니다.
+
+#{portalUrl}`,
+
+  membership_expire_14: `[모션허브]
+#{centerName} 회원님, 회원권이 14일 후 만료됩니다.
+만료일: #{expireDate}
+
+#{portalUrl}`,
+
+  membership_expire_7: `[모션허브]
+#{centerName} 회원님, 회원권이 7일 후 만료됩니다.
+만료일: #{expireDate}
+
+#{portalUrl}`,
+
+  membership_expire_today: `[모션허브]
+#{centerName} 회원님, 회원권이 오늘 만료됩니다.
+만료일: #{expireDate}
+
+#{portalUrl}`,
+
+  schedule_changed: `[모션허브]
+#{centerName} 회원님, #{className} 예약이 변경되었습니다.
+
+일시: #{scheduleDate}
+담당: #{trainerName}`,
+
+  schedule_cancelled: `[모션허브]
+#{centerName} 회원님, #{className} 예약이 취소되었습니다.
+
+일시: #{scheduleDate}
+담당: #{trainerName}`,
+
+  center_welcome: `[모션허브]
+#{centerName} 센터 가입을 축하드립니다!
+
+시작 가이드: #{guideUrl}`,
+
+  weekly_report: `[모션허브]
+#{centerName} 주간 리포트 (#{reportWeek})
+
+활성 회원: #{activeMembers}명
+신규 가입: #{newMembers}명`,
 } as const
 
 export const ALIMTALK_TEMPLATE_VARIABLES = [
   '#{brandHeader}',
   '#{centerName}',
+  '#{memberName}',
   '#{name}',
-  '#{portalUrl}',
-  '#{amount}',
-  '#{sessions}',
-  '#{daysLeft}',
-  '#{expiresAt}',
-  '#{remainingSessions}',
-  '#{result}',
-  '#{reason}',
-  '#{scheduledAt}',
   '#{trainerName}',
-  '#{phone}',
+  '#{scheduleDate}',
+  '#{className}',
+  '#{productName}',
+  '#{amount}',
+  '#{remainingCount}',
+  '#{expireDate}',
+  '#{guideUrl}',
+  '#{portalUrl}',
+  '#{reportWeek}',
+  '#{activeMembers}',
+  '#{newMembers}',
 ] as const

@@ -19,6 +19,12 @@ const SITEMAP_XML = `<?xml version="1.0" encoding="UTF-8"?>
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://motionhub.kr/guide</loc>
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
     <loc>https://motionhub.kr/motionhub</loc>
     <lastmod>2026-06-16</lastmod>
     <changefreq>weekly</changefreq>

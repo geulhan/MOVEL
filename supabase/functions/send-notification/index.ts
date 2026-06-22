@@ -1,28 +1,21 @@
 import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
-import { sendMemberNotification } from '../_shared/notifications.ts'
-import type { TemplateKey } from '../_shared/templates.ts'
+import {
+  normalizeTemplateKey,
+  SEND_NOTIFICATION_CENTER_KEYS,
+  SEND_NOTIFICATION_EVENT_KEYS,
+  SEND_NOTIFICATION_MEMBER_KEYS,
+} from '../_shared/alimtalkTemplateRegistry.ts'
+import { isNotificationAuthorized } from '../_shared/notificationAuth.ts'
+import {
+  sendCenterNotification,
+  sendMemberNotification,
+} from '../_shared/notifications.ts'
 
-const TEMPLATE_KEYS = new Set<TemplateKey>([
-  'welcome',
-  'payment_done',
-  'renewal',
-  'step_verification_result',
-  'pt_reminder',
+const ALLOWED_KEYS = new Set([
+  ...SEND_NOTIFICATION_MEMBER_KEYS,
+  ...SEND_NOTIFICATION_CENTER_KEYS,
+  ...SEND_NOTIFICATION_EVENT_KEYS,
 ])
-
-function isAuthorized(req: Request): boolean {
-  const secret = Deno.env.get('NOTIFICATION_INTERNAL_SECRET')
-  if (!secret) return false
-
-  const headerKey = req.headers.get('x-mobel-notification-key')
-  if (headerKey && headerKey === secret) return true
-
-  const auth = req.headers.get('authorization') ?? ''
-  const serviceRole = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-  if (serviceRole && auth === `Bearer ${serviceRole}`) return true
-
-  return false
-}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -33,13 +26,14 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'Method not allowed' }, 405)
   }
 
-  if (!isAuthorized(req)) {
+  if (!isNotificationAuthorized(req)) {
     return jsonResponse({ error: 'Unauthorized' }, 401)
   }
 
   let body: {
     templateKey?: string
     memberId?: string
+    centerId?: string
     paymentId?: string
     metadata?: Record<string, string | number>
   }
@@ -50,23 +44,33 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'Invalid JSON body' }, 400)
   }
 
-  const templateKey = body.templateKey as TemplateKey | undefined
-  const memberId = body.memberId
-
-  if (!templateKey || !TEMPLATE_KEYS.has(templateKey)) {
+  const templateKey = normalizeTemplateKey(body.templateKey ?? '')
+  if (!templateKey || !ALLOWED_KEYS.has(templateKey)) {
     return jsonResponse({ error: 'Invalid templateKey' }, 400)
   }
-  if (!memberId) {
+
+  if (SEND_NOTIFICATION_CENTER_KEYS.has(templateKey)) {
+    if (!body.centerId) {
+      return jsonResponse({ error: 'centerId is required' }, 400)
+    }
+    const result = await sendCenterNotification({
+      templateKey,
+      centerId: body.centerId,
+      metadata: body.metadata,
+    })
+    return jsonResponse(result, 200)
+  }
+
+  if (!body.memberId) {
     return jsonResponse({ error: 'memberId is required' }, 400)
   }
 
   const result = await sendMemberNotification({
     templateKey,
-    memberId,
+    memberId: body.memberId,
     paymentId: body.paymentId,
     metadata: body.metadata,
   })
 
-  // Always 200 so the client receives result.error (Solapi, config, etc.)
   return jsonResponse(result, 200)
 })

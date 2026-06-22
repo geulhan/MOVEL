@@ -30,6 +30,7 @@ import { RootPage } from './pages/RootPage'
 import LoginPage from './pages/LoginPage'
 import CenterSignupPage from './pages/CenterSignupPage'
 import MotionHubLandingPage from './pages/MotionHubLandingPage'
+import GuidePage from './pages/GuidePage'
 import PlatformLoginPage from './pages/platform/PlatformLoginPage'
 import PlatformDashboardPage from './pages/platform/PlatformDashboardPage'
 import PlatformCentersPage from './pages/platform/PlatformCentersPage'
@@ -50,6 +51,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<RootPage />} />
         <Route path="/motionhub" element={<MotionHubLandingPage />} />
+        <Route path="/guide" element={<GuidePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<CenterSignupPage />} />
         <Route path="/platform/login" element={<PlatformLoginPage />} />

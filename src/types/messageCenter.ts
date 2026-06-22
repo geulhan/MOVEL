@@ -55,7 +55,7 @@ export const ANNOUNCEMENT_SEGMENTS = [
 export type AnnouncementSegment = (typeof ANNOUNCEMENT_SEGMENTS)[number]
 
 export const AUTOMATIC_TRIGGER_EVENTS = [
-  'member_welcome',
+  'member_signup_guide',
   'payment_completed',
   'membership_renewal',
   'pt_schedule_reminder',

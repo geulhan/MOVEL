@@ -44,3 +44,14 @@ export const MOTIONHUB_SEO = {
 export function getMotionHubOgImageUrl(): string {
   return `${MOTIONHUB_SITE_URL}${MOTIONHUB_SEO.ogImagePath}`
 }
+
+/** 센터 시작 가이드 (/guide) SEO */
+export const MOTIONHUB_GUIDE_SEO = {
+  title: '모션허브 시작 가이드',
+  description:
+    '운동센터 운영을 위한 모션허브 초기 설정 및 이용 방법 안내',
+  ogTitle: '모션허브 시작 가이드',
+  ogDescription:
+    '운동센터 운영을 위한 모션허브 초기 설정 및 이용 방법 안내',
+  canonicalPath: '/guide',
+} as const
