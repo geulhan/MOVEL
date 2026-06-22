@@ -138,6 +138,58 @@ body {
       radial-gradient(ellipse 80% 60% at 50% -10%, rgba(38, 230, 200, 0.28), transparent),
       radial-gradient(ellipse 50% 40% at 100% 50%, rgba(38, 230, 200, 0.08), transparent);
   }
+
+  .landing-eyebrow {
+    @apply text-[11px] font-bold tracking-[0.22em] uppercase sm:text-xs;
+  }
+
+  .landing-hero-mesh {
+    background:
+      radial-gradient(ellipse 90% 70% at 10% -10%, rgba(38, 230, 200, 0.2), transparent 55%),
+      radial-gradient(ellipse 70% 50% at 95% 10%, rgba(200, 184, 130, 0.12), transparent 50%),
+      radial-gradient(ellipse 50% 40% at 50% 100%, rgba(38, 230, 200, 0.06), transparent),
+      #0b0e11;
+  }
+
+  .landing-card {
+    @apply rounded-2xl border border-charcoal/8 bg-white shadow-sm shadow-charcoal/[0.04] transition duration-300;
+  }
+
+  .landing-card-hover {
+    @apply hover:-translate-y-0.5 hover:border-motionhub/25 hover:shadow-md hover:shadow-motionhub/10;
+  }
+
+  .landing-btn-primary {
+    @apply inline-flex items-center justify-center rounded-xl bg-motionhub px-6 py-3.5 text-center text-sm font-bold text-charcoal transition hover:bg-motionhub-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-motionhub disabled:opacity-50;
+  }
+
+  .landing-btn-secondary {
+    @apply inline-flex items-center justify-center rounded-xl border border-cream/20 bg-white/5 px-6 py-3.5 text-center text-sm font-bold text-cream backdrop-blur-sm transition hover:border-cream/35 hover:bg-white/10;
+  }
+
+  .landing-btn-secondary-light {
+    @apply inline-flex items-center justify-center rounded-xl border border-charcoal/12 bg-white px-6 py-3.5 text-center text-sm font-bold text-charcoal transition hover:border-motionhub/30 hover:bg-motionhub-light/40;
+  }
+
+  .landing-btn-ghost {
+    @apply inline-flex items-center justify-center rounded-xl border border-gold/35 bg-gold/10 px-6 py-3.5 text-center text-sm font-bold text-cream transition hover:border-gold/55 hover:bg-gold/15;
+  }
+
+  .landing-feature-icon {
+    @apply flex h-11 w-11 items-center justify-center rounded-xl border border-motionhub/20 bg-motionhub-light/80 text-motionhub-deep;
+  }
+
+  .landing-preview {
+    @apply relative overflow-hidden rounded-2xl border border-white/10 bg-charcoal-light/80 p-5 shadow-2xl shadow-black/40 backdrop-blur-sm sm:p-6;
+  }
+
+  .landing-guide-step {
+    @apply relative rounded-2xl border border-charcoal/8 bg-white p-5 shadow-sm sm:p-6;
+  }
+
+  .landing-guide-step-active {
+    @apply border-motionhub/30 bg-gradient-to-br from-white to-motionhub-light/30 shadow-md shadow-motionhub/5;
+  }
 }
 
 @media print {

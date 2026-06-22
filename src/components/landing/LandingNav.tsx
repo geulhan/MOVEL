@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { MotionHubLogo } from '../brand/MotionHubLogo'
 import { MOTIONHUB_CENTER_GUIDE_PATH } from '../../constants/motionhubGuide'
@@ -7,81 +8,67 @@ type LandingNavProps = {
   onScrollTo?: (id: string) => void
 }
 
+const NAV_ITEMS = [
+  { id: 'problems', label: '문제' },
+  { id: 'features', label: '기능' },
+  { id: 'case-study', label: '사례' },
+  { id: 'contact', label: '문의' },
+] as const
+
 export function LandingNav({ activePage = 'landing', onScrollTo }: LandingNavProps) {
+  const [open, setOpen] = useState(false)
+
   const scroll = (id: string) => {
+    setOpen(false)
     if (onScrollTo) onScrollTo(id)
     else document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
   }
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-motionhub-deep/90 backdrop-blur-md">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-        <Link to="/" className="shrink-0">
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-white/[0.08] bg-motionhub-deep/80 backdrop-blur-xl">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
+        <Link to="/" className="shrink-0" onClick={() => setOpen(false)}>
           <MotionHubLogo tone="light" variant="symbol" />
         </Link>
-        <nav className="hidden items-center gap-6 text-sm font-medium text-cream/70 md:flex">
-          {activePage === 'landing' ? (
-            <>
-              <button
-                type="button"
-                onClick={() => scroll('problems')}
-                className="transition hover:text-cream"
-              >
-                문제
-              </button>
-              <button
-                type="button"
-                onClick={() => scroll('features')}
-                className="transition hover:text-cream"
-              >
-                기능
-              </button>
-              <button
-                type="button"
-                onClick={() => scroll('case-study')}
-                className="transition hover:text-cream"
-              >
-                사례
-              </button>
-              <button
-                type="button"
-                onClick={() => scroll('contact')}
-                className="transition hover:text-cream"
-              >
-                도입 문의
-              </button>
-            </>
-          ) : null}
+
+        <nav className="hidden items-center gap-1 md:flex">
+          {activePage === 'landing'
+            ? NAV_ITEMS.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => scroll(item.id)}
+                  className="rounded-lg px-3.5 py-2 text-sm font-medium text-cream/70 transition hover:bg-white/5 hover:text-cream"
+                >
+                  {item.label}
+                </button>
+              ))
+            : null}
           <Link
             to={MOTIONHUB_CENTER_GUIDE_PATH}
-            className={
+            className={`rounded-lg px-3.5 py-2 text-sm font-medium transition ${
               activePage === 'guide'
-                ? 'font-semibold text-motionhub'
-                : 'transition hover:text-cream'
-            }
+                ? 'bg-motionhub/15 text-motionhub'
+                : 'text-cream/70 hover:bg-white/5 hover:text-cream'
+            }`}
           >
             이용가이드
           </Link>
         </nav>
-        <div className="flex shrink-0 items-center gap-2">
+
+        <div className="hidden items-center gap-2 md:flex">
           <Link
-            to={MOTIONHUB_CENTER_GUIDE_PATH}
-            className="rounded-lg border border-cream/20 px-3 py-2 text-xs font-semibold text-cream/85 hover:bg-white/5 md:hidden"
-          >
-            가이드
-          </Link>
-          <a
-            href="/signup"
-            className="hidden rounded-lg border border-cream/20 px-3 py-2 text-xs font-semibold text-cream/85 hover:bg-white/5 sm:inline-block"
+            to="/signup"
+            className="rounded-lg px-3.5 py-2 text-xs font-semibold text-cream/80 transition hover:bg-white/5"
           >
             센터 등록
-          </a>
-          <a
-            href="/login"
-            className="rounded-lg border border-cream/20 px-3 py-2 text-xs font-semibold text-cream/85 hover:bg-white/5"
+          </Link>
+          <Link
+            to="/login"
+            className="rounded-lg border border-white/10 px-3.5 py-2 text-xs font-semibold text-cream transition hover:border-white/20 hover:bg-white/5"
           >
             로그인
-          </a>
+          </Link>
           {activePage === 'landing' ? (
             <button
               type="button"
@@ -91,15 +78,65 @@ export function LandingNav({ activePage = 'landing', onScrollTo }: LandingNavPro
               베타 신청
             </button>
           ) : (
-            <a
-              href="/signup"
+            <Link
+              to="/signup"
               className="rounded-lg bg-motionhub px-4 py-2 text-sm font-bold text-charcoal transition hover:bg-motionhub-dark"
             >
               센터 등록
-            </a>
+            </Link>
           )}
         </div>
+
+        <button
+          type="button"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 text-cream md:hidden"
+          aria-label="메뉴"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+        >
+          {open ? '✕' : '☰'}
+        </button>
       </div>
+
+      {open ? (
+        <div className="border-t border-white/8 bg-motionhub-deep/95 px-4 py-4 md:hidden">
+          <nav className="flex flex-col gap-1">
+            {activePage === 'landing'
+              ? NAV_ITEMS.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => scroll(item.id)}
+                    className="rounded-lg px-3 py-2.5 text-left text-sm font-medium text-cream/85"
+                  >
+                    {item.label}
+                  </button>
+                ))
+              : null}
+            <Link
+              to={MOTIONHUB_CENTER_GUIDE_PATH}
+              onClick={() => setOpen(false)}
+              className="rounded-lg px-3 py-2.5 text-sm font-semibold text-motionhub"
+            >
+              이용가이드
+            </Link>
+            <Link
+              to="/signup"
+              onClick={() => setOpen(false)}
+              className="rounded-lg px-3 py-2.5 text-sm text-cream/85"
+            >
+              센터 등록
+            </Link>
+            <Link
+              to="/login"
+              onClick={() => setOpen(false)}
+              className="rounded-lg px-3 py-2.5 text-sm text-cream/85"
+            >
+              로그인
+            </Link>
+          </nav>
+        </div>
+      ) : null}
     </header>
   )
 }
