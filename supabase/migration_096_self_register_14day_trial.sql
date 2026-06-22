@@ -220,7 +220,6 @@ exception
 end;
 $$;
 
-revoke all on function public.self_register_center(text, text, text, text, text, text) from public;
 grant execute on function public.self_register_center(
   text, text, text, text, text, text, boolean, boolean, boolean, boolean, date
 ) to anon, authenticated;
