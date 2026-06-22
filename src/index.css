@@ -166,6 +166,7 @@ body {
     height: 2.75rem;
     width: auto;
     max-width: none;
+    background: transparent;
   }
 
   @media (min-width: 640px) {
