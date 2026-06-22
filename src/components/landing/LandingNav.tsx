@@ -6,7 +6,6 @@ import { MOTIONHUB_CENTER_GUIDE_PATH } from '../../constants/motionhubGuide'
 export const LANDING_SECTION_LINKS = [
   { id: 'problems', label: '문제' },
   { id: 'features', label: '기능' },
-  { id: 'case-study', label: '사례' },
   { id: 'contact', label: '문의' },
 ] as const
 

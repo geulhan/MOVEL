@@ -18,17 +18,17 @@ export function LandingContainer({
 export function SectionEyebrow({
   children,
   light = false,
+  centered = false,
 }: {
   children: ReactNode
   light?: boolean
+  centered?: boolean
 }) {
   return (
     <p
-      className={
-        light
-          ? 'landing-eyebrow text-motionhub'
-          : 'landing-eyebrow text-motionhub-dark'
-      }
+      className={`landing-eyebrow ${
+        light ? 'text-motionhub' : 'text-motionhub-dark'
+      } ${centered ? 'text-center' : ''}`}
     >
       {children}
     </p>
@@ -38,17 +38,19 @@ export function SectionEyebrow({
 export function SectionTitle({
   children,
   light = false,
+  centered = false,
   className = '',
 }: {
   children: ReactNode
   light?: boolean
+  centered?: boolean
   className?: string
 }) {
   return (
     <h2
       className={`mt-3 text-3xl font-bold tracking-tight sm:text-4xl lg:text-[2.75rem] lg:leading-tight ${
         light ? 'text-cream' : 'text-charcoal'
-      } ${className}`}
+      } ${centered ? 'mx-auto text-center' : ''} ${className}`}
     >
       {children}
     </h2>
@@ -58,15 +60,17 @@ export function SectionTitle({
 export function SectionLead({
   children,
   light = false,
+  centered = false,
 }: {
   children: ReactNode
   light?: boolean
+  centered?: boolean
 }) {
   return (
     <p
       className={`mt-4 max-w-2xl text-base leading-relaxed sm:text-lg ${
         light ? 'text-cream/70' : 'text-charcoal/60'
-      }`}
+      } ${centered ? 'mx-auto text-center' : ''}`}
     >
       {children}
     </p>
@@ -199,9 +203,18 @@ export function GhostButton({
   )
 }
 
-export function FeatureIcon({ children }: { children: ReactNode }) {
+export function FeatureIcon({
+  children,
+  inline = false,
+}: {
+  children: ReactNode
+  inline?: boolean
+}) {
   return (
-    <span className="landing-feature-icon" aria-hidden>
+    <span
+      className={inline ? 'landing-feature-icon-inline' : 'landing-feature-icon'}
+      aria-hidden
+    >
       {children}
     </span>
   )

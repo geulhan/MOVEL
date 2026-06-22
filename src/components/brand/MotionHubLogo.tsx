@@ -25,12 +25,12 @@ function resolveSrc(
 
   if (variant === 'vertical') {
     return tone === 'light'
-      ? MOTIONHUB_BRAND_ASSETS.logoDark
+      ? MOTIONHUB_BRAND_ASSETS.logoTransparent
       : MOTIONHUB_BRAND_ASSETS.logoVerticalLight
   }
 
   if (tone === 'light') {
-    return MOTIONHUB_BRAND_ASSETS.logoDark
+    return MOTIONHUB_BRAND_ASSETS.logoTransparent
   }
 
   return locale === 'ko'
@@ -67,7 +67,7 @@ export function MotionHubLogo({
 
   const imageHasTagline =
     variant !== 'symbol' &&
-    (src === MOTIONHUB_BRAND_ASSETS.logoDark ||
+    (src === MOTIONHUB_BRAND_ASSETS.logoTransparent ||
       src === MOTIONHUB_BRAND_ASSETS.logoKoLight ||
       src === MOTIONHUB_BRAND_ASSETS.logoEnLight ||
       src === MOTIONHUB_BRAND_ASSETS.logoVerticalLight)

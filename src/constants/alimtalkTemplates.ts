@@ -46,10 +46,10 @@ export const ALIMTALK_TEMPLATE_EXAMPLES = {
 
 회원 등록이 완료되었습니다.
 
-아래 링크에서 회원가입 후
-예약, 출석, 운동기록 등을 확인하실 수 있습니다.
+아래 링크에서
+예약, 출석, 운동기록 등을
+확인하실 수 있습니다.
 
-회원가입
 ${MOTIONHUB_MEMBER_SIGNUP_PORTAL_URL}
 
 감사합니다.`,
@@ -107,10 +107,15 @@ ${MOTIONHUB_MEMBER_SIGNUP_PORTAL_URL}
 일시: #{scheduleDate}
 담당: #{trainerName}`,
 
-  center_welcome: `[모션허브]
-#{centerName} 센터 가입을 축하드립니다!
+  center_welcome: `모션허브 가입을 축하드립니다.
 
-시작 가이드: #{guideUrl}`,
+아래 가이드를 참고하여
+회원 등록부터 시작해보세요.
+
+이용가이드
+#{guideUrl}
+
+감사합니다.`,
 
   weekly_report: `[모션허브]
 #{centerName} 주간 리포트 (#{reportWeek})

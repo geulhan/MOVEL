@@ -211,17 +211,19 @@ function ProblemsSection() {
   return (
     <section id="problems" className="bg-[#f7f3ec] py-20 sm:py-24">
       <LandingContainer>
-        <SectionEyebrow>Problem</SectionEyebrow>
-        <SectionTitle>센터 운영, 왜 이렇게 복잡할까요?</SectionTitle>
-        <SectionLead>
-          PT샵·필라테스·프리랜서 트레이너 모두 비슷한 운영 부담을 겪습니다.
-          도구가 나뉘어 있을수록 현장 업무는 더 바빠집니다.
-        </SectionLead>
-        <ul className="mt-12 grid gap-4 sm:grid-cols-2">
+        <div className="landing-section-centered">
+          <SectionEyebrow centered>Problem</SectionEyebrow>
+          <SectionTitle centered>센터 운영, 왜 이렇게 복잡할까요?</SectionTitle>
+          <SectionLead centered>
+            PT샵·필라테스·프리랜서 트레이너 모두 비슷한 운영 부담을 겪습니다.
+            도구가 나뉘어 있을수록 현장 업무는 더 바빠집니다.
+          </SectionLead>
+        </div>
+        <ul className="mx-auto mt-12 grid max-w-4xl gap-4 sm:grid-cols-2">
           {PROBLEMS.map((problem, i) => (
             <li
               key={problem}
-              className="landing-card landing-card-hover flex gap-4 p-6"
+              className="landing-card landing-card-hover flex flex-col items-center gap-3 p-6 text-center"
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-charcoal text-sm font-bold text-cream">
                 {String(i + 1).padStart(2, '0')}
@@ -241,48 +243,30 @@ function FeaturesSection() {
   return (
     <section id="features" className="bg-white py-20 sm:py-24">
       <LandingContainer>
-        <SectionEyebrow>Solution</SectionEyebrow>
-        <SectionTitle>운영에 필요한 기능을 한곳에</SectionTitle>
-        <SectionLead>
-          회원 유지와 재등록, 현장 운영 효율을 돕는 핵심 기능을
-          모션허브 하나로 연결했습니다.
-        </SectionLead>
-        <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="landing-section-centered">
+          <SectionEyebrow centered>Solution</SectionEyebrow>
+          <SectionTitle centered>운영에 필요한 기능을 한곳에</SectionTitle>
+          <SectionLead centered>
+            회원 유지와 재등록, 현장 운영 효율을 돕는 핵심 기능을
+            모션허브 하나로 연결했습니다.
+          </SectionLead>
+        </div>
+        <ul className="mx-auto mt-12 grid max-w-5xl gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((feature) => (
             <li
               key={feature.title}
-              className="landing-card landing-card-hover p-6"
+              className="landing-card landing-card-hover p-6 text-center"
             >
-              <FeatureIcon>{feature.icon}</FeatureIcon>
-              <h3 className="mt-5 text-lg font-bold text-charcoal">{feature.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-charcoal/60">
+              <div className="flex items-center justify-center gap-3">
+                <FeatureIcon inline>{feature.icon}</FeatureIcon>
+                <h3 className="text-lg font-bold text-charcoal">{feature.title}</h3>
+              </div>
+              <p className="mt-4 text-sm leading-relaxed text-charcoal/60">
                 {feature.desc}
               </p>
             </li>
           ))}
         </ul>
-      </LandingContainer>
-    </section>
-  )
-}
-
-function CaseStudySection() {
-  return (
-    <section id="case-study" className="landing-hero-mesh py-20 sm:py-24">
-      <LandingContainer>
-        <SectionEyebrow light>Case Study</SectionEyebrow>
-        <SectionTitle light>실제 운영 사례</SectionTitle>
-        <article className="mt-12 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] p-8 sm:p-10 lg:max-w-3xl">
-          <p className="text-sm font-semibold text-motionhub">Partner Center</p>
-          <h3 className="mt-2 text-2xl font-bold text-cream sm:text-3xl">
-            모벨 퍼포먼스 트레이닝
-          </h3>
-          <p className="mt-5 text-base leading-relaxed text-cream/75">
-            모션허브는 모벨 퍼포먼스 트레이닝에서 실제 운영 중인 플랫폼입니다.
-            회원관리, 운동일지, 출석, 알림톡, 재등록 관리까지 하나의 시스템으로
-            사용하고 있습니다.
-          </p>
-        </article>
       </LandingContainer>
     </section>
   )
@@ -446,10 +430,12 @@ function ContactSection() {
   return (
     <section id="contact" className="bg-white py-20 sm:py-24">
       <LandingContainer>
-        <SectionEyebrow>Contact</SectionEyebrow>
-        <SectionTitle>도입 문의</SectionTitle>
-        <SectionLead>베타·기능·도입 상담은 아래 채널로 연락해 주세요.</SectionLead>
-        <div className="mt-10 grid gap-4 sm:grid-cols-2">
+        <div className="landing-section-centered">
+          <SectionEyebrow centered>Contact</SectionEyebrow>
+          <SectionTitle centered>도입 문의</SectionTitle>
+          <SectionLead centered>베타·기능·도입 상담은 아래 채널로 연락해 주세요.</SectionLead>
+        </div>
+        <div className="mx-auto mt-10 grid max-w-2xl gap-4 sm:grid-cols-2">
           <a
             href={getMotionHubKakaoUrl()}
             target="_blank"
@@ -523,7 +509,6 @@ export default function MotionHubLandingPage() {
         <TrustSection />
         <ProblemsSection />
         <FeaturesSection />
-        <CaseStudySection />
         <BetaSection />
         <ContactSection />
         <BottomCtaSection />

@@ -9,7 +9,7 @@ import { MOTIONHUB_BRAND_KO } from './motionhubSeo'
 export function getMotionHubKakaoUrl(): string {
   const fromEnv = import.meta.env.VITE_MOTIONHUB_KAKAO_URL as string | undefined
   if (fromEnv?.trim()) return fromEnv.trim()
-  return 'https://open.kakao.com/o/sPkR4Rzi'
+  return 'http://pf.kakao.com/_rDSXX'
 }
 
 export const MOTIONHUB_CONTACT = {
