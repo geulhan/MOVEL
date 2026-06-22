@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
-import { MotionHubLogo } from '../brand/MotionHubLogo'
+import { MOTIONHUB_BRAND_ASSETS } from '../../constants/motionhubBrand'
+import { MOTIONHUB_BRAND_KO, MOTIONHUB_MAIN_MESSAGE } from '../../constants/motionhubSeo'
 import { MOTIONHUB_CENTER_GUIDE_PATH } from '../../constants/motionhubGuide'
 
 export function LandingFooter() {
@@ -7,10 +8,21 @@ export function LandingFooter() {
     <footer className="border-t border-white/[0.06] bg-motionhub-deep">
       <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <MotionHubLogo tone="light" variant="vertical" size="header" />
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-cream/50">
-              회원이 운동을 지속하게 만드는 운동센터 운영 플랫폼
+          <div className="min-w-0">
+            <Link to="/" className="landing-footer-brand group inline-flex items-center gap-3">
+              <img
+                src={MOTIONHUB_BRAND_ASSETS.iconCyan}
+                alt=""
+                className="h-11 w-11 shrink-0 object-contain"
+                decoding="async"
+                aria-hidden
+              />
+              <span className="text-xl font-bold tracking-tight text-cream transition group-hover:text-motionhub">
+                {MOTIONHUB_BRAND_KO}
+              </span>
+            </Link>
+            <p className="landing-footer-tagline mt-4 text-sm leading-relaxed text-cream/50">
+              {MOTIONHUB_MAIN_MESSAGE}
             </p>
           </div>
           <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
