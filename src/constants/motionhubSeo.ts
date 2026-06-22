@@ -14,6 +14,12 @@ export const MOTIONHUB_BRAND_DISPLAY = `${MOTIONHUB_BRAND_KO} (${MOTIONHUB_BRAND
 export const MOTIONHUB_MAIN_MESSAGE =
   '회원이 운동을 지속하게 만드는 운동센터 운영 플랫폼'
 
+export const MOTIONHUB_HERO_SUBLINE =
+  '회원관리 · 재등록 · 출석 · 알림톡 · 운동일지를 하나의 플랫폼에서 운영하세요.'
+
+export const MOTIONHUB_TRUST_LINE =
+  '모션허브는 현장 PT 센터 운영 경험을 바탕으로 만들어졌습니다.'
+
 export const MOTIONHUB_SUB_MESSAGE_LINES = [
   '회원관리',
   '재등록 관리',

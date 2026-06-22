@@ -1,4 +1,5 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useLocation } from 'react-router-dom'
 import { submitBetaApplication, type CenterType } from '../api/betaApplication'
 import { LandingFooter } from '../components/landing/LandingFooter'
 import { LandingNav } from '../components/landing/LandingNav'
@@ -19,7 +20,7 @@ import {
   MOTIONHUB_CONTACT,
   MOTIONHUB_TRUST_FEATURES,
 } from '../constants/motionhub'
-import { MOTIONHUB_MAIN_MESSAGE } from '../constants/motionhubSeo'
+import { MOTIONHUB_HERO_SUBLINE, MOTIONHUB_MAIN_MESSAGE, MOTIONHUB_TRUST_LINE } from '../constants/motionhubSeo'
 import { useMotionHubSeo } from '../hooks/useMotionHubSeo'
 import { getErrorMessage } from '../lib/errors'
 
@@ -152,14 +153,13 @@ function HeroSection() {
       <div className="pointer-events-none absolute -right-24 top-20 h-72 w-72 rounded-full bg-motionhub/10 blur-3xl" aria-hidden />
       <LandingContainer>
         <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
-          <div className="max-w-xl">
+          <div className="max-w-xl lg:max-w-none">
             <p className="landing-eyebrow text-motionhub">Beta · 모션허브</p>
-            <h1 className="mt-4 text-3xl font-bold tracking-tight text-cream sm:text-4xl lg:text-[2.75rem] lg:leading-[1.15]">
+            <h1 className="landing-headline landing-single-line mt-4">
               {MOTIONHUB_MAIN_MESSAGE}
             </h1>
-            <p className="mt-5 text-sm leading-relaxed text-cream/60 sm:text-base">
-              회원관리 · 재등록 · 출석 · 알림톡 · 운동일지를
-              하나의 플랫폼에서 운영하세요.
+            <p className="landing-subline landing-single-line mt-5">
+              {MOTIONHUB_HERO_SUBLINE}
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
               <PrimaryButton onClick={() => scrollToId('beta')}>
@@ -186,20 +186,20 @@ function TrustSection() {
   return (
     <section className="border-b border-charcoal/8 bg-white py-14 sm:py-16">
       <LandingContainer>
-        <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-xl">
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+          <div className="lg:min-w-0 lg:flex-1">
             <span className="inline-flex rounded-full border border-motionhub/25 bg-motionhub-light px-3 py-1 text-xs font-bold text-motionhub-deep">
               실제 센터에서 운영 중
             </span>
-            <p className="mt-5 text-xl font-semibold leading-snug text-charcoal sm:text-2xl">
-              모션허브는 현장 PT 센터 운영 경험을 바탕으로 만들어졌습니다.
+            <p className="landing-body-line landing-single-line mt-5">
+              {MOTIONHUB_TRUST_LINE}
             </p>
           </div>
-          <ul className="flex flex-wrap gap-2 lg:max-w-md lg:justify-end">
+          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:max-w-md lg:shrink-0">
             {MOTIONHUB_TRUST_FEATURES.map((feature) => (
               <li
                 key={feature}
-                className="rounded-full border border-charcoal/10 bg-cream/50 px-3.5 py-1.5 text-sm font-medium text-charcoal/75"
+                className="rounded-full border border-charcoal/10 bg-cream/50 px-3.5 py-1.5 text-center text-sm font-medium whitespace-nowrap text-charcoal/75"
               >
                 {feature}
               </li>
@@ -508,10 +508,20 @@ function BottomCtaSection() {
 
 export default function MotionHubLandingPage() {
   useMotionHubSeo()
+  const location = useLocation()
+
+  useEffect(() => {
+    if (!location.hash) return
+    const id = location.hash.replace(/^#/, '')
+    const timer = window.setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
+    }, 80)
+    return () => window.clearTimeout(timer)
+  }, [location.hash])
 
   return (
     <div className="min-h-screen bg-surface">
-      <LandingNav />
+      <LandingNav onScrollTo={scrollToId} />
       <main>
         <HeroSection />
         <TrustSection />

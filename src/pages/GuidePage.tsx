@@ -40,8 +40,7 @@ const STEPS: GuideStep[] = [
     title: '시작하기',
     body: (
       <p className="landing-guide-text">
-        모션허브 가입을 축하드립니다. 아래 순서대로 설정하면 기본 운영을
-        시작할 수 있습니다.
+        모션허브 가입을 축하드립니다. 아래 순서대로 설정하면 기본 운영을 시작할 수 있습니다.
       </p>
     ),
   },
@@ -80,8 +79,7 @@ const STEPS: GuideStep[] = [
     title: '결제 / 수강권 등록',
     body: (
       <p className="landing-guide-text">
-        PT · 필라테스 · 요가 · GX · 시설이용권 등 센터 운영 형태에 맞는
-        수강권을 등록합니다.
+        PT · 필라테스 · 요가 · GX · 시설이용권 등 센터 운영 형태에 맞는 수강권을 등록합니다.
       </p>
     ),
   },
@@ -166,9 +164,8 @@ export default function GuidePage() {
               <h1 className="mt-3 text-3xl font-bold tracking-tight text-cream sm:text-4xl lg:text-5xl">
                 모션허브 시작 가이드
               </h1>
-              <p className="mt-5 text-base leading-relaxed text-cream/70 sm:text-lg">
-                센터 대표 · 관리자 · 프리랜서 트레이너를 위한 초기 설정
-                체크리스트입니다.
+              <p className="mt-5 text-base leading-relaxed text-cream/70 sm:text-lg lg:whitespace-nowrap">
+                센터 대표 · 관리자 · 프리랜서 트레이너를 위한 초기 설정 체크리스트입니다.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <PrimaryButton to="/login">관리자 로그인</PrimaryButton>
