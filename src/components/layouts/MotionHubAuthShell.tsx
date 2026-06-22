@@ -19,8 +19,8 @@ export function MotionHubAuthShell({ children, title, subtitle }: Props) {
     <div className="min-h-screen bg-surface">
       <header className="border-b border-white/10 bg-motionhub-deep">
         <div className="mx-auto flex max-w-md items-center justify-between gap-3 px-4 py-4">
-          <Link to={homeTo} className="transition hover:opacity-90">
-            <MotionHubLogo tone="light" variant="vertical" />
+          <Link to={homeTo} className="landing-nav-brand transition hover:opacity-90">
+            <MotionHubLogo tone="light" variant="vertical" size="nav" />
           </Link>
           <div className="flex gap-2 text-xs font-semibold">
             <Link

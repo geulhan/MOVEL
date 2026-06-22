@@ -8,11 +8,9 @@ export function LandingFooter() {
       <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <MotionHubLogo tone="light" variant="vertical" showTagline />
+            <MotionHubLogo tone="light" variant="vertical" size="header" />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-cream/50">
-              회원이 운동을 지속하게 만드는
-              <br />
-              운동센터 운영 플랫폼
+              회원이 운동을 지속하게 만드는 운동센터 운영 플랫폼
             </p>
           </div>
           <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">

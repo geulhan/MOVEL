@@ -149,19 +149,19 @@ function HeroSection() {
   const demoUrl = getMotionHubDemoUrl()
 
   return (
-    <section className="landing-hero-mesh relative overflow-hidden pt-20 pb-16 sm:pt-24 sm:pb-24">
+    <section className="landing-hero-mesh relative overflow-hidden pt-[4.5rem] pb-14 sm:pt-24 sm:pb-20">
       <div className="pointer-events-none absolute -right-24 top-20 h-72 w-72 rounded-full bg-motionhub/10 blur-3xl" aria-hidden />
       <LandingContainer>
-        <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
-          <div className="max-w-xl lg:max-w-none">
+        <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-14 xl:gap-16">
+          <div className="min-w-0">
             <p className="landing-eyebrow text-motionhub">Beta · 모션허브</p>
-            <h1 className="landing-headline landing-single-line mt-4">
+            <h1 className="landing-headline landing-single-line mt-4 text-balance">
               {MOTIONHUB_MAIN_MESSAGE}
             </h1>
-            <p className="landing-subline landing-single-line mt-5">
+            <p className="landing-subline landing-single-line mt-4 text-balance">
               {MOTIONHUB_HERO_SUBLINE}
             </p>
-            <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="mt-8 flex flex-wrap items-center gap-3">
               <PrimaryButton onClick={() => scrollToId('beta')}>
                 베타 신청하기
               </PrimaryButton>
@@ -173,7 +173,7 @@ function HeroSection() {
               </GhostButton>
             </div>
           </div>
-          <div className="lg:pl-4">
+          <div className="w-full max-w-md justify-self-center lg:max-w-none lg:justify-self-end">
             <HeroPreview />
           </div>
         </div>
@@ -184,28 +184,24 @@ function HeroSection() {
 
 function TrustSection() {
   return (
-    <section className="border-b border-charcoal/8 bg-white py-14 sm:py-16">
-      <LandingContainer>
-        <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
-          <div className="lg:min-w-0 lg:flex-1">
-            <span className="inline-flex rounded-full border border-motionhub/25 bg-motionhub-light px-3 py-1 text-xs font-bold text-motionhub-deep">
-              실제 센터에서 운영 중
-            </span>
-            <p className="landing-body-line landing-single-line mt-5">
-              {MOTIONHUB_TRUST_LINE}
-            </p>
-          </div>
-          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:max-w-md lg:shrink-0">
-            {MOTIONHUB_TRUST_FEATURES.map((feature) => (
-              <li
-                key={feature}
-                className="rounded-full border border-charcoal/10 bg-cream/50 px-3.5 py-1.5 text-center text-sm font-medium whitespace-nowrap text-charcoal/75"
-              >
-                {feature}
-              </li>
-            ))}
-          </ul>
-        </div>
+    <section className="border-b border-charcoal/8 bg-white py-12 sm:py-14">
+      <LandingContainer className="space-y-5">
+        <span className="inline-flex w-fit rounded-full border border-motionhub/25 bg-motionhub-light px-3 py-1 text-xs font-bold text-motionhub-deep">
+          실제 센터에서 운영 중
+        </span>
+        <p className="landing-body-line landing-single-line max-w-4xl">
+          {MOTIONHUB_TRUST_LINE}
+        </p>
+        <ul className="flex flex-wrap gap-2 pt-1">
+          {MOTIONHUB_TRUST_FEATURES.map((feature) => (
+            <li
+              key={feature}
+              className="rounded-full border border-charcoal/10 bg-cream/50 px-3.5 py-1.5 text-sm font-medium whitespace-nowrap text-charcoal/75"
+            >
+              {feature}
+            </li>
+          ))}
+        </ul>
       </LandingContainer>
     </section>
   )

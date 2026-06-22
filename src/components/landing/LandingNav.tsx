@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { MotionHubLogo } from '../brand/MotionHubLogo'
-import { MOTIONHUB_BRAND_EN } from '../../constants/motionhubSeo'
 import { MOTIONHUB_CENTER_GUIDE_PATH } from '../../constants/motionhubGuide'
 
 export const LANDING_SECTION_LINKS = [
@@ -47,9 +46,8 @@ export function LandingNav({ activePage = 'landing', onScrollTo }: LandingNavPro
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-white/[0.08] bg-motionhub-deep/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
-        <Link to="/" className="flex shrink-0 items-center gap-2.5" onClick={() => setOpen(false)}>
-          <MotionHubLogo tone="light" variant="symbol" size="nav" />
-          <span className="text-sm font-bold tracking-tight text-cream">{MOTIONHUB_BRAND_EN}</span>
+        <Link to="/" className="landing-nav-brand shrink-0" onClick={() => setOpen(false)}>
+          <MotionHubLogo tone="light" variant="vertical" size="nav" />
         </Link>
 
         <nav className="hidden items-center gap-0.5 md:flex">
