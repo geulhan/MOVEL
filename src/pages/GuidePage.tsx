@@ -18,6 +18,16 @@ import {
 import { MOTIONHUB_SITE_URL } from '../constants/motionhubSeo'
 import { useMotionHubGuideSeo } from '../hooks/useMotionHubSeo'
 
+function GuideList({ items }: { items: string[] }) {
+  return (
+    <ul className="landing-guide-list">
+      {items.map((item) => (
+        <li key={item}>{item}</li>
+      ))}
+    </ul>
+  )
+}
+
 type GuideStep = {
   n: number
   title: string
@@ -29,7 +39,7 @@ const STEPS: GuideStep[] = [
     n: 0,
     title: '시작하기',
     body: (
-      <p className="text-[15px] leading-relaxed text-charcoal/75">
+      <p className="landing-guide-text">
         모션허브 가입을 축하드립니다. 아래 순서대로 설정하면 기본 운영을
         시작할 수 있습니다.
       </p>
@@ -39,39 +49,37 @@ const STEPS: GuideStep[] = [
     n: 1,
     title: '센터 정보 확인',
     body: (
-      <ul className="space-y-2 text-[15px] text-charcoal/75">
-        <li className="flex gap-2"><span className="text-motionhub-dark">·</span>센터명 확인</li>
-        <li className="flex gap-2"><span className="text-motionhub-dark">·</span>센터 코드 확인</li>
-        <li className="flex gap-2"><span className="text-motionhub-dark">·</span>운영 기간 확인</li>
-      </ul>
+      <GuideList
+        items={['센터명 확인', '센터 코드 확인', '운영 기간 확인']}
+      />
     ),
   },
   {
     n: 2,
     title: '관리자 계정 확인',
     body: (
-      <ul className="space-y-2 text-[15px] text-charcoal/75">
-        <li className="flex gap-2"><span className="text-motionhub-dark">·</span>대표 계정</li>
-        <li className="flex gap-2"><span className="text-motionhub-dark">·</span>트레이너 계정</li>
-        <li className="flex gap-2"><span className="text-motionhub-dark">·</span>권한 구분</li>
-      </ul>
+      <GuideList
+        items={['대표 계정', '트레이너 계정', '권한 구분']}
+      />
     ),
   },
   {
     n: 3,
     title: '회원 등록',
     body: (
-      <ul className="space-y-2 text-[15px] text-charcoal/75">
-        <li className="flex gap-2"><span className="text-motionhub-dark">·</span>회원 이름 · 휴대폰 번호</li>
-        <li className="flex gap-2"><span className="text-motionhub-dark">·</span>수강권 정보 · 만료일 · 잔여횟수</li>
-      </ul>
+      <GuideList
+        items={[
+          '회원 이름 · 휴대폰 번호',
+          '수강권 정보 · 만료일 · 잔여횟수',
+        ]}
+      />
     ),
   },
   {
     n: 4,
     title: '결제 / 수강권 등록',
     body: (
-      <p className="text-[15px] leading-relaxed text-charcoal/75">
+      <p className="landing-guide-text">
         PT · 필라테스 · 요가 · GX · 시설이용권 등 센터 운영 형태에 맞는
         수강권을 등록합니다.
       </p>
@@ -81,10 +89,12 @@ const STEPS: GuideStep[] = [
     n: 5,
     title: '예약과 출석 관리',
     body: (
-      <ul className="space-y-2 text-[15px] text-charcoal/75">
-        <li className="flex gap-2"><span className="text-motionhub-dark">·</span>PT · 그룹수업 예약</li>
-        <li className="flex gap-2"><span className="text-motionhub-dark">·</span>출석 처리 · 예약 변경 · 취소</li>
-      </ul>
+      <GuideList
+        items={[
+          'PT · 그룹수업 예약',
+          '출석 처리 · 예약 변경 · 취소',
+        ]}
+      />
     ),
   },
   {
@@ -92,11 +102,13 @@ const STEPS: GuideStep[] = [
     title: '알림톡',
     body: (
       <>
-        <ul className="space-y-2 text-[15px] text-charcoal/75">
-          <li className="flex gap-2"><span className="text-motionhub-dark">·</span>회원가입 안내 · 결제 완료</li>
-          <li className="flex gap-2"><span className="text-motionhub-dark">·</span>수업 리마인더 · 잔여횟수 · 만료 안내</li>
-        </ul>
-        <p className="mt-4 rounded-xl border border-gold/25 bg-cream/60 px-4 py-3 text-sm leading-relaxed text-charcoal/70">
+        <GuideList
+          items={[
+            '회원가입 안내 · 결제 완료',
+            '수업 리마인더 · 잔여횟수 · 만료 안내',
+          ]}
+        />
+        <p className="landing-guide-callout">
           알림톡은 모션허브 공용 채널로 발송되며, 문구에 센터명이 표시됩니다.
         </p>
       </>
@@ -106,17 +118,17 @@ const STEPS: GuideStep[] = [
     n: 7,
     title: '회원앱 안내',
     body: (
-      <div className="space-y-3">
-        <p className="text-[15px] text-charcoal/75">
+      <div className="space-y-3 text-left">
+        <p className="landing-guide-text">
           회원에게 아래 주소를 안내해 주세요.
         </p>
         <a
           href={getMemberPortalUrl()}
-          className="block break-all rounded-xl border border-charcoal/10 bg-motionhub-light/40 px-4 py-3 text-sm font-semibold text-motionhub-deep transition hover:border-motionhub/30"
+          className="block break-all rounded-xl border border-charcoal/10 bg-motionhub-light/40 px-4 py-3 text-left text-sm font-semibold leading-normal text-motionhub-deep transition hover:border-motionhub/30"
         >
           {getMemberPortalUrl()}
         </a>
-        <p className="text-xs text-charcoal/50">
+        <p className="text-left text-xs leading-relaxed text-charcoal/50">
           센터 코드: {MOTIONHUB_SITE_URL}/member?center={'{센터코드}'}
         </p>
       </div>
@@ -144,9 +156,9 @@ export default function GuidePage() {
   const kakaoUrl = getMotionHubKakaoUrl()
 
   return (
-    <div className="min-h-screen bg-[#f7f3ec]">
+    <div className="min-h-screen bg-surface">
       <LandingNav activePage="guide" />
-      <main className="pt-[4.25rem]">
+      <main className="pt-[3.75rem]">
         <section className="landing-hero-mesh border-b border-white/[0.06] py-16 sm:py-20">
           <LandingContainer>
             <div className="max-w-2xl">
@@ -155,9 +167,8 @@ export default function GuidePage() {
                 모션허브 시작 가이드
               </h1>
               <p className="mt-5 text-base leading-relaxed text-cream/70 sm:text-lg">
-                센터 대표 · 관리자 · 프리랜서 트레이너를 위한
-                <br className="hidden sm:block" />
-                초기 설정 체크리스트입니다.
+                센터 대표 · 관리자 · 프리랜서 트레이너를 위한 초기 설정
+                체크리스트입니다.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <PrimaryButton to="/login">관리자 로그인</PrimaryButton>
@@ -173,7 +184,7 @@ export default function GuidePage() {
           </LandingContainer>
         </section>
 
-        <section className="py-14 sm:py-16">
+        <section className="bg-[#f7f3ec] py-14 sm:py-16">
           <LandingContainer>
             <div className="mb-10 max-w-xl">
               <SectionEyebrow>Checklist</SectionEyebrow>
@@ -186,21 +197,21 @@ export default function GuidePage() {
 
             <ol className="relative space-y-0">
               {STEPS.map((step, idx) => (
-                <li key={step.n} className="relative flex gap-5 pb-10 last:pb-0 sm:gap-8">
+                <li key={step.n} className="relative flex gap-4 pb-8 last:pb-0 sm:gap-6">
                   {idx < STEPS.length - 1 ? (
                     <span
                       className="absolute left-[1.125rem] top-12 bottom-0 w-px bg-gradient-to-b from-motionhub/40 to-charcoal/10 sm:left-5"
                       aria-hidden
                     />
                   ) : null}
-                  <span className="relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gold/40 bg-white text-sm font-bold text-gold-dark shadow-sm sm:h-10 sm:w-10">
+                  <span className="relative z-10 mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gold/40 bg-white text-sm font-bold text-gold-dark shadow-sm sm:h-10 sm:w-10">
                     {step.n === 0 ? '★' : step.n}
                   </span>
-                  <div className="landing-guide-step min-w-0 flex-1 pb-1">
-                    <h2 className="text-lg font-bold text-charcoal sm:text-xl">
+                  <div className="landing-guide-step min-w-0 flex-1">
+                    <h2 className="text-left text-lg font-bold text-charcoal sm:text-xl">
                       {step.title}
                     </h2>
-                    <div className="mt-3">{step.body}</div>
+                    <div className="mt-4">{step.body}</div>
                   </div>
                 </li>
               ))}
@@ -216,7 +227,7 @@ export default function GuidePage() {
               {FAQ.map((item) => (
                 <div
                   key={item.q}
-                  className="landing-card landing-card-hover p-5 sm:p-6"
+                  className="landing-card landing-card-hover p-5 text-left sm:p-6"
                 >
                   <p className="font-bold text-charcoal">{item.q}</p>
                   <p className="mt-2 text-sm leading-relaxed text-charcoal/65">

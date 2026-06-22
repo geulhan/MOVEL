@@ -60,7 +60,7 @@ export function MotionHubLogo({
           ? 'h-auto w-auto max-h-52 max-w-[min(100%,16rem)] sm:max-h-60 sm:max-w-[18rem]'
           : isHeader
             ? 'h-auto w-auto max-h-[7.5rem] max-w-[10.5rem] sm:max-h-36 sm:max-w-[11.5rem]'
-            : 'h-auto w-auto max-h-28 max-w-[9.5rem] sm:max-h-32'
+            : 'h-auto w-auto max-h-8 max-w-[5.75rem] sm:max-h-9 sm:max-w-[6.5rem]'
         : isHero
           ? 'h-auto w-auto max-h-16 max-w-[min(100%,20rem)] sm:max-h-[4.5rem]'
           : 'h-9 w-auto max-w-[11rem] sm:h-10 sm:max-w-[12rem]'

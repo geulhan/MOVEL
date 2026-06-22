@@ -1,6 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { submitBetaApplication, type CenterType } from '../api/betaApplication'
-import { MotionHubLogo } from '../components/brand/MotionHubLogo'
 import { LandingFooter } from '../components/landing/LandingFooter'
 import { LandingNav } from '../components/landing/LandingNav'
 import {
@@ -149,19 +148,16 @@ function HeroSection() {
   const demoUrl = getMotionHubDemoUrl()
 
   return (
-    <section className="landing-hero-mesh relative overflow-hidden pt-24 pb-16 sm:pt-28 sm:pb-24">
+    <section className="landing-hero-mesh relative overflow-hidden pt-20 pb-16 sm:pt-24 sm:pb-24">
       <div className="pointer-events-none absolute -right-24 top-20 h-72 w-72 rounded-full bg-motionhub/10 blur-3xl" aria-hidden />
       <LandingContainer>
         <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
           <div className="max-w-xl">
             <p className="landing-eyebrow text-motionhub">Beta · 모션허브</p>
-            <h1 className="mt-4">
-              <MotionHubLogo tone="light" variant="vertical" size="hero" locale="ko" />
-            </h1>
-            <p className="mt-6 text-lg font-medium leading-relaxed text-cream/85 sm:text-xl">
+            <h1 className="mt-4 text-3xl font-bold tracking-tight text-cream sm:text-4xl lg:text-[2.75rem] lg:leading-[1.15]">
               {MOTIONHUB_MAIN_MESSAGE}
-            </p>
-            <p className="mt-3 text-sm leading-relaxed text-cream/55 sm:text-base">
+            </h1>
+            <p className="mt-5 text-sm leading-relaxed text-cream/60 sm:text-base">
               회원관리 · 재등록 · 출석 · 알림톡 · 운동일지를
               하나의 플랫폼에서 운영하세요.
             </p>
@@ -499,7 +495,7 @@ function BottomCtaSection() {
     <section className="landing-hero-mesh border-t border-white/[0.06] py-16 sm:py-20">
       <LandingContainer className="text-center">
         <p className="text-lg font-bold text-cream sm:text-xl">베타 센터 모집 중</p>
-        <p className="mt-2 text-sm text-cream/55">14일 무료 · 승인 후 이용 시작일 설정</p>
+        <p className="mt-2 text-sm text-cream/55">가입 즉시 14일 무료 체험</p>
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row sm:items-center">
           <PrimaryButton onClick={() => scrollToId('beta')}>베타 신청</PrimaryButton>
           <SecondaryButton to="/signup">센터 등록</SecondaryButton>
@@ -515,7 +511,7 @@ export default function MotionHubLandingPage() {
 
   return (
     <div className="min-h-screen bg-surface">
-      <LandingNav onScrollTo={scrollToId} />
+      <LandingNav />
       <main>
         <HeroSection />
         <TrustSection />

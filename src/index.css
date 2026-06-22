@@ -187,6 +187,22 @@ body {
     @apply relative rounded-2xl border border-charcoal/8 bg-white p-5 shadow-sm sm:p-6;
   }
 
+  .landing-guide-text {
+    @apply text-left text-[15px] leading-[1.75] text-charcoal/75;
+  }
+
+  .landing-guide-list {
+    @apply space-y-2.5 text-left text-[15px] leading-[1.75] text-charcoal/75;
+  }
+
+  .landing-guide-list li {
+    @apply relative pl-4 before:absolute before:left-0 before:top-[0.65em] before:h-1.5 before:w-1.5 before:rounded-full before:bg-motionhub;
+  }
+
+  .landing-guide-callout {
+    @apply mt-4 rounded-xl border border-gold/25 bg-cream/60 px-4 py-3 text-left text-sm leading-[1.7] text-charcoal/70;
+  }
+
   .landing-guide-step-active {
     @apply border-motionhub/30 bg-gradient-to-br from-white to-motionhub-light/30 shadow-md shadow-motionhub/5;
   }
