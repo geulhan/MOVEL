@@ -28,10 +28,14 @@ async function extractInvokeErrorDetail(
       const body = (await response.clone().json()) as {
         error?: string
         status?: string
+        skippedReason?: string
       }
       if (body.error) return body.error
-      if (body.status === 'failed' && typeof body.error === 'string') {
-        return body.error
+      if (body.status === 'failed') {
+        return body.error ?? '알림 발송에 실패했습니다.'
+      }
+      if (body.status === 'skipped') {
+        return body.error ?? body.skippedReason ?? '발송이 생략되었습니다.'
       }
     }
   } catch {
@@ -79,8 +83,8 @@ async function invokeNotification(
       }
     }
 
-    if (result?.status === 'failed') {
-      console.warn(`[notifications] ${templateKey} 발송 실패:`, data)
+    if (result?.status === 'failed' || result?.status === 'skipped') {
+      console.warn(`[notifications] ${templateKey} 발송 실패/생략:`, result)
     }
 
     if (result?.status === 'sent') {

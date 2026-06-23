@@ -83,23 +83,69 @@ const BULK_DISMISS_LABEL: Record<MessageCampaignKind, string> = {
 
 function resultLabel(result: SendNotificationResult): string {
   if (result.status === 'sent') return MESSAGE_STATUS_LABELS.sent
-  if (result.error?.includes('Invalid templateKey')) {
-    return '발송 API 템플릿 오류 (서버 재배포 필요)'
+
+  const detail = result.error?.trim()
+  if (detail) {
+    if (detail.includes('Invalid templateKey')) {
+      return '발송 API 템플릿 오류 (서버 재배포 필요)'
+    }
+    if (detail.includes('크레딧') || detail.includes('credit')) {
+      return '메시지 크레딧이 부족합니다'
+    }
+    if (detail.includes('missing_template_id') || detail.includes('Template ID')) {
+      return '솔라피 템플릿 ID 미설정'
+    }
+    if (detail.includes('MESSAGING_ENABLED')) {
+      return '알림톡 발송이 꺼져 있습니다'
+    }
+    if (detail.includes('Unauthorized')) {
+      return '발송 인증 키 오류 (VITE_NOTIFICATION_TRIGGER_KEY 확인)'
+    }
+    if (detail.includes('허용되지 않은 IP') || detail.includes('IP')) {
+      return '솔라피 IP 화이트리스트 차단 — Supabase IP 허용 필요'
+    }
+    if (detail.includes('이미 발송')) {
+      return detail
+    }
+    return detail
   }
+
   if (result.status === 'skipped') {
     if (result.skippedReason === 'duplicate') return '이미 발송됨'
-    if (
-      result.skippedReason === 'insufficient_credits' ||
-      result.error?.includes('크레딧')
-    ) {
+    if (result.skippedReason === 'insufficient_credits') {
       return '메시지 크레딧이 부족합니다'
+    }
+    if (result.skippedReason === 'notifications_disabled') {
+      return '알림톡 발송이 꺼져 있습니다'
+    }
+    if (result.skippedReason === 'missing_template_id') {
+      return '솔라피 템플릿 ID 미설정'
+    }
+    if (result.skippedReason === 'template_not_approved') {
+      return '템플릿 검수 미승인'
+    }
+    if (result.skippedReason === 'terminated member') {
+      return '종료된 회원'
     }
     return result.skippedReason ?? MESSAGE_STATUS_LABELS.skipped
   }
-  if (result.error?.includes('크레딧')) {
-    return '메시지 크레딧이 부족합니다'
-  }
-  return result.error ?? MESSAGE_STATUS_LABELS.failed
+
+  return MESSAGE_STATUS_LABELS.failed
+}
+
+function summarizeBulkFailures(
+  ids: string[],
+  statuses: Record<string, RowStatus>,
+): string | null {
+  const messages = [
+    ...new Set(
+      ids
+        .map((id) => statuses[id]?.message?.trim())
+        .filter((message): message is string => Boolean(message)),
+    ),
+  ]
+  if (messages.length === 0) return null
+  return messages.slice(0, 3).join(' · ')
 }
 
 export function MessageCampaignPanel({ kind, onSent }: Props) {
@@ -120,7 +166,6 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
 
   const load = useCallback(async () => {
     setLoading(true)
-    setError(null)
     try {
       if (kind === 'welcome') {
         setWelcomeRows(await fetchWelcomeTargets())
@@ -132,7 +177,6 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
         setRenewalRows(await fetchRenewalTargets())
       }
       setSelected(new Set())
-      setRowStatus({})
     } catch (err) {
       setError(err instanceof Error ? err.message : '대상 회원을 불러올 수 없습니다.')
     } finally {
@@ -140,9 +184,19 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
     }
   }, [kind])
 
-  useEffect(() => {
-    void load()
+  const refreshTargets = useCallback(async () => {
+    setError(null)
+    setRowStatus({})
+    setSelected(new Set())
+    await load()
   }, [load])
+
+  useEffect(() => {
+    setRowStatus({})
+    setSelected(new Set())
+    setError(null)
+    void load()
+  }, [kind, load])
 
   const rowKeys = useMemo(() => {
     if (kind === 'welcome') return welcomeRows.map((row) => row.member.id)
@@ -207,6 +261,7 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
     visibleIds.length > 0 && visibleIds.every((id) => selected.has(id))
 
   const actionBusy = bulkSending || bulkDismissing
+  const notifyKeyMissing = !import.meta.env.VITE_NOTIFICATION_TRIGGER_KEY
 
   function toggleAllVisible() {
     setSelected((prev) => {
@@ -329,37 +384,42 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
     setError(null)
     let sent = 0
     let failed = 0
+    const nextStatuses: Record<string, RowStatus> = {}
 
     for (const rowKey of ids) {
       try {
         const result = await sendOne(rowKey)
-        setRowStatus((prev) => ({
-          ...prev,
-          [rowKey]: {
-            status: result.status,
-            message: resultLabel(result),
-          },
-        }))
+        const message = resultLabel(result)
+        nextStatuses[rowKey] = {
+          status: result.status,
+          message,
+        }
         if (result.status === 'sent') sent += 1
         else failed += 1
       } catch (err) {
         failed += 1
-        setRowStatus((prev) => ({
-          ...prev,
-          [rowKey]: {
-            status: 'failed',
-            message: err instanceof Error ? err.message : '발송 실패',
-          },
-        }))
+        nextStatuses[rowKey] = {
+          status: 'failed',
+          message: err instanceof Error ? err.message : '발송 실패',
+        }
       }
     }
 
+    setRowStatus((prev) => ({ ...prev, ...nextStatuses }))
     setBulkSending(false)
     onSent()
-    await load()
+
+    if (sent > 0) {
+      await load()
+      setRowStatus((prev) => ({ ...prev, ...nextStatuses }))
+    }
+
+    const failureSummary = summarizeBulkFailures(ids, nextStatuses)
     setError(
       failed > 0
-        ? `발송 완료 ${sent}건, 실패·생략 ${failed}건`
+        ? failureSummary
+          ? `발송 완료 ${sent}건, 실패·생략 ${failed}건 — ${failureSummary}`
+          : `발송 완료 ${sent}건, 실패·생략 ${failed}건`
         : null,
     )
   }
@@ -402,6 +462,20 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
 
   return (
     <div className="space-y-4">
+      {notifyKeyMissing && (
+        <div
+          role="alert"
+          className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+        >
+          <p className="font-semibold">알림톡 발송 키가 설정되지 않았습니다</p>
+          <p className="mt-1">
+            Vercel 환경변수 <code className="rounded bg-white px-1">VITE_NOTIFICATION_TRIGGER_KEY</code>를
+            Supabase <code className="rounded bg-white px-1">NOTIFICATION_INTERNAL_SECRET</code>와
+            동일하게 설정한 뒤 재배포해 주세요.
+          </p>
+        </div>
+      )}
+
       <div className={`${cardClass} card-pad`}>
         <h3 className="text-base font-semibold text-charcoal">{copy.title}</h3>
         <p className="mt-1 text-sm text-muted">{copy.description}</p>
@@ -415,7 +489,7 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
           />
           <button
             type="button"
-            onClick={() => void load()}
+            onClick={() => void refreshTargets()}
             disabled={loading || actionBusy}
             className={btnOutline}
           >
@@ -628,20 +702,21 @@ function CampaignRow({
       </td>
       <td className="px-4 py-3 align-middle text-xs text-muted">{detail}</td>
       <td className="px-4 py-3 align-middle text-xs">
-        {rowStatus ? (
+        {rowStatus?.message ? (
           <span
             className={
               rowStatus.status === 'sent'
-                ? 'text-emerald-700'
+                ? 'font-medium text-emerald-700'
                 : rowStatus.status === 'failed'
-                  ? 'text-red-700'
-                  : 'text-amber-700'
+                  ? 'font-medium text-red-700'
+                  : 'font-medium text-amber-700'
             }
+            title={rowStatus.message}
           >
             {rowStatus.message}
           </span>
         ) : (
-          '-'
+          <span className="text-muted">-</span>
         )}
       </td>
       <td className="px-4 py-3 align-middle">

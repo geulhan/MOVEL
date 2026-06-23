@@ -137,14 +137,23 @@ async function hasDuplicate(
   }
 
   if (templateKey === 'schedule_reminder' && metadata.schedule_id) {
-    const { count } = await supabase
+    const { count: newCount } = await supabase
       .from('message_logs')
       .select('id', { count: 'exact', head: true })
       .eq('member_id', memberId)
       .eq('template_key', 'schedule_reminder')
       .eq('metadata->>schedule_id', String(metadata.schedule_id))
       .in('status', ['sent', 'skipped'])
-    return (count ?? 0) > 0
+    if ((newCount ?? 0) > 0) return true
+
+    const { count: legacyCount } = await supabase
+      .from('message_logs')
+      .select('id', { count: 'exact', head: true })
+      .eq('member_id', memberId)
+      .eq('template_key', 'pt_reminder')
+      .eq('metadata->>schedule_id', String(metadata.schedule_id))
+      .in('status', ['sent', 'skipped'])
+    return (legacyCount ?? 0) > 0
   }
 
   if (
@@ -381,10 +390,33 @@ export async function sendMemberNotification(
   }
 
   if (await hasDuplicate(templateKey, input.memberId, metadata)) {
+    const now = new Date().toISOString()
+    const { data: logRow, error: logError } = await supabase
+      .from('message_logs')
+      .insert({
+        center_id: centerId,
+        member_id: input.memberId,
+        phone,
+        template_key: templateKey,
+        channel: 'skipped',
+        status: 'skipped',
+        error_message: '이미 발송됨 (중복)',
+        metadata: { ...metadata, skipped_reason: 'duplicate' },
+        sent_at: now,
+      })
+      .select('id')
+      .single()
+
+    if (logError) {
+      return { ok: false, status: 'failed', error: logError.message }
+    }
+
     return {
       ok: true,
       status: 'skipped',
+      logId: logRow.id,
       skippedReason: 'duplicate',
+      error: '이미 발송된 메시지입니다.',
     }
   }
 
