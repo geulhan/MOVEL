@@ -5,6 +5,7 @@ import { fetchMemberById } from './memberDetail'
 import {
   DEFAULT_PT_DURATION_MINUTES,
   deleteSchedule,
+  emitScheduleChangedNotification,
   type PtSchedule,
   updateScheduleStatus,
 } from './schedule'
@@ -264,6 +265,8 @@ export async function updateDetachedSchedule(
     .eq('id', scheduleId)
 
   if (error) throw error
+
+  void emitScheduleChangedNotification(scheduleId)
 }
 
 /** 고정 수업 전체 변경 — 분리되지 않은 미래 일정 일괄 반영 */
@@ -344,6 +347,7 @@ export async function updateFixedScheduleSeries(
         })
         .eq('id', id)
       if (updError) throw updError
+      void emitScheduleChangedNotification(id)
     }),
   )
 

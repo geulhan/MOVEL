@@ -107,6 +107,35 @@ export const RENEWAL_REMINDERS_KEYS = new Set<AlimtalkTemplateKey>([
   'membership_expire_today',
 ])
 
+/** 카카오 검수 승인 완료 — 운영 발송 가능 */
+export const APPROVED_ALIMTALK_TEMPLATE_KEYS = [
+  'member_signup_guide',
+  'payment_completed',
+  'schedule_reminder',
+  'schedule_changed',
+  'schedule_cancelled',
+  'membership_expire_14',
+  'membership_expire_7',
+  'membership_expire_today',
+  'center_welcome',
+] as const
+
+/** 검수 미승인 — 코드 유지, 발송 비활성화 */
+export const DISABLED_ALIMTALK_TEMPLATE_KEYS = [
+  'pt_remaining_3',
+  'pt_remaining_1',
+  'weekly_report',
+] as const
+
+export function getTemplateSendDisabledReason(
+  key: AlimtalkTemplateKey,
+): string | null {
+  if ((DISABLED_ALIMTALK_TEMPLATE_KEYS as readonly string[]).includes(key)) {
+    return 'template_not_approved'
+  }
+  return null
+}
+
 export const TEMPLATE_LABELS: Record<
   MemberAlimtalkTemplateKey | CenterAlimtalkTemplateKey | 'step_verification_result',
   string

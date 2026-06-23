@@ -40,20 +40,24 @@ export function MemberLayout({
     <button
       type="button"
       onClick={onDashboard}
-      className="transition hover:opacity-90"
+      className="flex shrink-0 items-center transition hover:opacity-90"
       aria-label="대시보드 (내 정보)"
     >
       {logo}
     </button>
   ) : (
-    <Link to="/member" className="transition hover:opacity-90" aria-label="회원 홈">
+    <Link
+      to="/member"
+      className="flex shrink-0 items-center transition hover:opacity-90"
+      aria-label="회원 홈"
+    >
       {logo}
     </Link>
   )
 
   return (
     <div
-      className={`min-h-screen ${isLoggedIn ? 'bg-surface' : 'bg-[#f3f5f7]'}`}
+      className={`min-h-screen ${isLoggedIn ? 'bg-[#f4f6f8]' : 'bg-[#f3f5f7]'}`}
       style={
         themed
           ? {
@@ -64,53 +68,60 @@ export function MemberLayout({
           : undefined
       }
     >
-      <header
-        className="relative"
-        style={{ backgroundColor: MOTIONHUB_BRAND.logoHeaderBg }}
-      >
-        <div
-          className={`relative mx-auto max-w-lg px-4 ${
-            isLoggedIn ? 'py-4' : 'pb-10 pt-5 sm:pb-12 sm:pt-6'
-          }`}
-        >
-          <div className="absolute top-4 right-4 z-10 sm:top-5 sm:right-5">
+      {isLoggedIn ? (
+        <header className="sticky top-0 z-20 border-b border-charcoal/10 bg-white/95 shadow-sm shadow-charcoal/5 backdrop-blur-md">
+          <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-3">
+            <div className="flex min-w-0 items-center gap-3">
+              {logoWrapper}
+              <div className="min-w-0 text-left">
+                <p className="truncate text-sm font-bold text-charcoal">
+                  {memberName} 님
+                </p>
+                <p className="text-[11px] font-medium text-charcoal/50">
+                  모션허브 회원
+                </p>
+              </div>
+            </div>
             {onLogout ? (
               <button
                 type="button"
                 onClick={onLogout}
-                className="text-xs text-white/70 transition hover:text-white"
+                className="shrink-0 rounded-lg border border-charcoal/15 bg-white px-3 py-1.5 text-xs font-bold text-charcoal transition hover:border-motionhub/40 hover:bg-motionhub-light/50"
               >
                 로그아웃
               </button>
-            ) : (
+            ) : null}
+          </div>
+        </header>
+      ) : (
+        <header
+          className="relative border-b border-charcoal/6 bg-white"
+          style={{ backgroundColor: MOTIONHUB_BRAND.surface }}
+        >
+          <div className="relative mx-auto max-w-lg px-4 pb-10 pt-5 sm:pb-12 sm:pt-6">
+            <div className="absolute top-4 right-4 z-10 sm:top-5 sm:right-5">
               <Link
                 to="/login"
-                className="text-xs font-semibold text-motionhub transition hover:text-motionhub-dark"
+                className="rounded-lg border border-charcoal/12 bg-white px-3 py-1.5 text-xs font-bold text-charcoal transition hover:border-motionhub/35 hover:bg-motionhub-light/40"
               >
-                관리자 →
+                관리자 로그인
               </Link>
-            )}
+            </div>
+            <div className="flex flex-col items-center text-center">{logoWrapper}</div>
           </div>
-
-          <div className="flex flex-col items-center text-center">
-            {logoWrapper}
-            {isLoggedIn && (
-              <p className="mt-3 text-base font-bold text-white">{memberName} 님</p>
-            )}
-          </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       <main
         className={`mx-auto max-w-lg ${
-          isLoggedIn ? 'space-y-4 px-4 py-6' : 'relative z-10 -mt-5 px-4 pb-8 sm:-mt-6'
+          isLoggedIn ? 'space-y-4 px-4 py-5' : 'relative z-10 -mt-5 px-4 pb-8 sm:-mt-6'
         }`}
       >
         {children}
       </main>
 
-      <footer className="mx-auto max-w-lg px-4 pb-8 text-center text-[10px] text-muted">
-        <Link to={homeTo} className="hover:text-charcoal">
+      <footer className="mx-auto max-w-lg px-4 pb-8 pt-2 text-center text-xs text-charcoal/45">
+        <Link to={homeTo} className="font-medium hover:text-charcoal">
           모션허브 홈
         </Link>
       </footer>

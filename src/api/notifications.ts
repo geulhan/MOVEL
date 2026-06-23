@@ -199,14 +199,23 @@ export function notifyStepVerificationResult(
   })
 }
 
-export async function fetchMessageLogs(limit = 100): Promise<MessageLog[]> {
+export async function fetchMessageLogs(
+  limit = 100,
+  status?: MessageLog['status'] | 'all',
+): Promise<MessageLog[]> {
   const centerId = await getCurrentCenterId()
-  const { data, error } = await supabase
+  let query = supabase
     .from('message_logs')
     .select('*')
     .eq('center_id', centerId)
     .order('created_at', { ascending: false })
     .limit(limit)
+
+  if (status && status !== 'all') {
+    query = query.eq('status', status)
+  }
+
+  const { data, error } = await query
 
   if (error) throw error
   return data ?? []

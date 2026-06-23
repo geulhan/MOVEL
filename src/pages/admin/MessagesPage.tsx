@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   fetchMessageLogs,
   triggerPtReminders,
   triggerRenewalReminders,
+  triggerScheduleReminders,
 } from '../../api/notifications'
 import { MessageCampaignPanel } from '../../components/admin/MessageCampaignPanel'
 import { MessagingCreditPanel } from '../../components/admin/MessagingCreditPanel'
@@ -13,13 +14,25 @@ import {
   MESSAGE_STATUS_LABELS,
   MESSAGE_TEMPLATE_LABELS,
   type MessageLog,
+  type MessageLogStatus,
 } from '../../types/database'
 
 const SEND_TABS: Array<{ id: MessageCampaignKind; label: string }> = [
-  { id: 'welcome', label: '신규회원' },
-  { id: 'payment_done', label: '결제안내' },
-  { id: 'renewal', label: '재등록' },
-  { id: 'pt_reminder', label: 'PT 리마인더' },
+  { id: 'welcome', label: '회원가입 안내' },
+  { id: 'payment_done', label: '결제 완료' },
+  { id: 'renewal', label: '회원권 만료' },
+  { id: 'pt_reminder', label: '수업 리마인더' },
+]
+
+const STATUS_FILTERS: Array<{
+  id: MessageLogStatus | 'all'
+  label: string
+}> = [
+  { id: 'all', label: '전체' },
+  { id: 'sent', label: '발송 성공' },
+  { id: 'failed', label: '발송 실패' },
+  { id: 'pending', label: '발송 대기' },
+  { id: 'skipped', label: '발송 생략' },
 ]
 
 function formatWhen(iso: string | null): string {
@@ -29,18 +42,22 @@ function formatWhen(iso: string | null): string {
 
 export default function MessagesPage() {
   const [activeTab, setActiveTab] = useState<MessageCampaignKind>('welcome')
+  const [statusFilter, setStatusFilter] = useState<MessageLogStatus | 'all'>(
+    'all',
+  )
   const [logs, setLogs] = useState<MessageLog[]>([])
   const [logsLoading, setLogsLoading] = useState(true)
   const [logsError, setLogsError] = useState<string | null>(null)
   const [cronMessage, setCronMessage] = useState<string | null>(null)
-  const [cronLoading, setCronLoading] = useState(false)
+  const [renewalCronLoading, setRenewalCronLoading] = useState(false)
+  const [scheduleCronLoading, setScheduleCronLoading] = useState(false)
   const [ptCronLoading, setPtCronLoading] = useState(false)
 
   const loadLogs = useCallback(async () => {
     setLogsLoading(true)
     setLogsError(null)
     try {
-      setLogs(await fetchMessageLogs(100))
+      setLogs(await fetchMessageLogs(200, statusFilter))
     } catch (err) {
       setLogsError(
         err instanceof Error ? err.message : '발송 이력을 불러올 수 없습니다.',
@@ -48,11 +65,35 @@ export default function MessagesPage() {
     } finally {
       setLogsLoading(false)
     }
-  }, [])
+  }, [statusFilter])
 
   useEffect(() => {
     void loadLogs()
   }, [loadLogs])
+
+  const filteredLogCount = useMemo(() => logs.length, [logs])
+
+  async function handleRunScheduleReminders() {
+    setScheduleCronLoading(true)
+    setCronMessage(null)
+    try {
+      const result = await triggerScheduleReminders()
+      const processed =
+        result && typeof result === 'object' && 'processed' in result
+          ? Number((result as { processed: number }).processed)
+          : 0
+      setCronMessage(`수업 리마인더(24시간 전) 실행 완료 (${processed}건)`)
+      await loadLogs()
+    } catch (err) {
+      setCronMessage(
+        err instanceof Error
+          ? err.message
+          : '수업 리마인더 실행에 실패했습니다.',
+      )
+    } finally {
+      setScheduleCronLoading(false)
+    }
+  }
 
   async function handleRunPtReminders() {
     setPtCronLoading(true)
@@ -63,11 +104,15 @@ export default function MessagesPage() {
         result && typeof result === 'object' && 'processed' in result
           ? Number((result as { processed: number }).processed)
           : 0
-      setCronMessage(`PT D-1 리마인더 실행 완료 (${processed}건)`)
+      setCronMessage(
+        `PT 잔여횟수 알림 실행 완료 (${processed}건, 미승인 템플릿은 생략 처리)`,
+      )
       await loadLogs()
     } catch (err) {
       setCronMessage(
-        err instanceof Error ? err.message : 'PT 리마인더 실행에 실패했습니다.',
+        err instanceof Error
+          ? err.message
+          : 'PT 잔여횟수 알림 실행에 실패했습니다.',
       )
     } finally {
       setPtCronLoading(false)
@@ -75,7 +120,7 @@ export default function MessagesPage() {
   }
 
   async function handleRunRenewalReminders() {
-    setCronLoading(true)
+    setRenewalCronLoading(true)
     setCronMessage(null)
     try {
       const result = await triggerRenewalReminders()
@@ -83,14 +128,16 @@ export default function MessagesPage() {
         result && typeof result === 'object' && 'processed' in result
           ? Number((result as { processed: number }).processed)
           : 0
-      setCronMessage(`갱신 안내 일괄 실행 완료 (${processed}건)`)
+      setCronMessage(`회원권 만료 안내 일괄 실행 완료 (${processed}건)`)
       await loadLogs()
     } catch (err) {
       setCronMessage(
-        err instanceof Error ? err.message : '갱신 안내 실행에 실패했습니다.',
+        err instanceof Error
+          ? err.message
+          : '회원권 만료 안내 실행에 실패했습니다.',
       )
     } finally {
-      setCronLoading(false)
+      setRenewalCronLoading(false)
     }
   }
 
@@ -98,7 +145,7 @@ export default function MessagesPage() {
     <div className="space-y-6">
       <PageHeader
         title="메시지 발송"
-        description="회원 유형별로 알림톡을 확인하고 수동 발송할 수 있습니다. 템플릿·채널 문의는 모션허브 카카오 채널을 이용해 주세요."
+        description="회원 유형별로 알림톡을 확인하고 수동 발송할 수 있습니다. 발송 이력에서 성공·실패·대기·생략 상태를 조회할 수 있습니다."
       />
 
       <MessagingCreditPanel onUpdated={() => void loadLogs()} />
@@ -129,25 +176,34 @@ export default function MessagesPage() {
           <div>
             <h2 className="text-sm font-semibold text-charcoal">발송 이력</h2>
             <p className="mt-1 text-sm text-muted">
-              최근 알림톡·문자 발송 기록입니다.
+              최근 알림톡·문자 발송 기록입니다. ({filteredLogCount}건)
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => void handleRunPtReminders()}
-              disabled={ptCronLoading}
+              onClick={() => void handleRunScheduleReminders()}
+              disabled={scheduleCronLoading}
               className="rounded-lg border border-gold/40 px-4 py-2 text-sm font-medium text-charcoal transition hover:bg-cream disabled:opacity-50"
             >
-              {ptCronLoading ? '실행 중…' : 'PT D-1 리마인더 실행'}
+              {scheduleCronLoading ? '실행 중…' : '수업 리마인더 실행'}
             </button>
             <button
               type="button"
               onClick={() => void handleRunRenewalReminders()}
-              disabled={cronLoading}
+              disabled={renewalCronLoading}
               className="rounded-lg border border-gold/40 px-4 py-2 text-sm font-medium text-charcoal transition hover:bg-cream disabled:opacity-50"
             >
-              {cronLoading ? '실행 중…' : '재등록 D-7·3·1 일괄 실행'}
+              {renewalCronLoading ? '실행 중…' : '회원권 만료 안내 실행'}
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleRunPtReminders()}
+              disabled={ptCronLoading}
+              title="pt_remaining_3/1 템플릿 검수 미승인 — 실행 시 생략 로그만 기록됩니다"
+              className="rounded-lg border border-dashed border-gold/40 px-4 py-2 text-sm font-medium text-muted transition hover:bg-cream disabled:opacity-50"
+            >
+              {ptCronLoading ? '실행 중…' : 'PT 잔여횟수 (미승인)'}
             </button>
             <button
               type="button"
@@ -158,6 +214,22 @@ export default function MessagesPage() {
             </button>
           </div>
         </div>
+
+        <nav className="chip-scroll -mx-1 px-1">
+          {STATUS_FILTERS.map((filter) => (
+            <button
+              key={filter.id}
+              type="button"
+              onClick={() => setStatusFilter(filter.id)}
+              className={`chip ${
+                statusFilter === filter.id ? 'chip-active' : 'chip-inactive'
+              }`}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </nav>
+
         {cronMessage && <p className="text-sm text-muted">{cronMessage}</p>}
 
         {logsError && (
@@ -201,7 +273,8 @@ export default function MessagesPage() {
                       {formatWhen(log.sent_at ?? log.created_at)}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      {MESSAGE_TEMPLATE_LABELS[log.template_key]}
+                      {MESSAGE_TEMPLATE_LABELS[log.template_key] ??
+                        log.template_key}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap font-mono text-xs">
                       {log.phone}
@@ -230,9 +303,11 @@ function StatusBadge({ status }: { status: MessageLog['status'] }) {
       ? 'bg-emerald-100 text-emerald-800'
       : status === 'failed'
         ? 'bg-red-100 text-red-800'
-        : status === 'skipped'
-          ? 'bg-amber-100 text-amber-800'
-          : 'bg-gray-100 text-gray-700'
+        : status === 'pending'
+          ? 'bg-blue-100 text-blue-800'
+          : status === 'skipped'
+            ? 'bg-amber-100 text-amber-800'
+            : 'bg-gray-100 text-gray-700'
 
   return (
     <span

@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase'
 import type { Json } from '../types/database'
+import { notifyCenterWelcome } from './notifications'
 
 export type CenterSignupInput = {
   name: string
@@ -116,6 +117,8 @@ export async function selfRegisterCenter(
   if (!centerId || !centerSlug) {
     throw new Error('센터 등록 응답이 올바르지 않습니다.')
   }
+
+  void notifyCenterWelcome(centerId)
 
   return { centerId, centerSlug, centerName, adminUsername }
 }

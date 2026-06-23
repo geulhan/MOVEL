@@ -89,22 +89,34 @@ DB: migration_064_center_messaging_config.sql 실행 필수
 
 6) Edge Function 배포 (Supabase CLI)
    supabase login
-   supabase link --project-ref YOUR_PROJECT_REF
+   supabase link --project-ref dcoitajktdaqejnhrnij
    supabase secrets set NOTIFICATION_INTERNAL_SECRET=랜덤문자열
-   supabase secrets set MESSAGING_ENABLED=false
+   supabase secrets set MESSAGING_ENABLED=true
    supabase secrets set SITE_URL=https://motionhub.kr
    supabase secrets set SOLAPI_API_KEY=...
    supabase secrets set SOLAPI_API_SECRET=...
    supabase secrets set SOLAPI_PF_ID=...        # MotionHub 채널 pfId
    supabase secrets set SOLAPI_FROM_NUMBER=...
-   supabase secrets set SOLAPI_TEMPLATE_WELCOME=...
-   supabase secrets set SOLAPI_TEMPLATE_PAYMENT=...
-   supabase secrets set SOLAPI_TEMPLATE_RENEWAL=...
-   supabase secrets set SOLAPI_TEMPLATE_STEP_RESULT=...
-   supabase secrets set SOLAPI_TEMPLATE_PT_REMINDER=...
+
+   [검수 승인 완료 템플릿 ID — 2026-06]
+   supabase secrets set SOLAPI_TEMPLATE_MEMBER_SIGNUP_GUIDE=KA01TP260622104246778fnm5ZHX5bqe
+   supabase secrets set SOLAPI_TEMPLATE_PAYMENT_COMPLETED=KA01TP260622082852833qhBGwbaUKkQ
+   supabase secrets set SOLAPI_TEMPLATE_SCHEDULE_REMINDER=KA01TP260622083315419cFDuoMsB4hk
+   supabase secrets set SOLAPI_TEMPLATE_SCHEDULE_CHANGED=KA01TP260622083931237yd7ID88IZUf
+   supabase secrets set SOLAPI_TEMPLATE_SCHEDULE_CANCELLED=KA01TP260622084001327tM1FHx94wUF
+   supabase secrets set SOLAPI_TEMPLATE_MEMBERSHIP_EXPIRE_14=KA01TP2606220837235770zw15TVLRAx
+   supabase secrets set SOLAPI_TEMPLATE_MEMBERSHIP_EXPIRE_7=KA01TP260622083800666jQ34XDz1ny5
+   supabase secrets set SOLAPI_TEMPLATE_MEMBERSHIP_EXPIRE_TODAY=KA01TP260622083835049JtFlDT4GkxK
+   supabase secrets set SOLAPI_TEMPLATE_CENTER_WELCOME=KA01TP260622084110354Q1dyVL4Imd6
+
+   [검수 미승인 — Secret 설정해도 코드에서 발송 비활성화]
+   pt_remaining_3, pt_remaining_1, weekly_report
+
    supabase functions deploy send-notification
+   supabase functions deploy schedule-reminders
    supabase functions deploy renewal-reminders
    supabase functions deploy pt-reminders
+   supabase functions deploy weekly-center-report
 
 7) Vercel 환경 변수
    VITE_NOTIFICATION_TRIGGER_KEY = NOTIFICATION_INTERNAL_SECRET 와 동일
@@ -114,8 +126,10 @@ DB: migration_064_center_messaging_config.sql 실행 필수
    supabase secrets set MESSAGING_ENABLED=true
 
 9) 자동 실행 Cron (Supabase Dashboard → Edge Functions → Cron)
-   [갱신] renewal-reminders — 0 0 * * * (UTC 00:00 = KST 09:00)
-   [PT D-1] pt-reminders — 0 * * * * (매시 정각, 수업 24시간 전 ±1시간 대상)
+   [회원권 만료] renewal-reminders — 0 0 * * * (UTC 00:00 = KST 09:00)
+   [수업 리마인더] schedule-reminders — 0 * * * * (매시, 24시간 전 ±1시간)
+   [PT 잔여] pt-reminders — 검수 승인 전 Cron 등록 보류
+   [주간 리포트] weekly-center-report — 검수 승인 전 Cron 등록 보류
    수동 테스트: 관리자 → 메시지 발송 → 발송 이력 상단 버튼
 
 10) SQL (아직이면)

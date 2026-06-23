@@ -1,4 +1,5 @@
 import {
+  getTemplateSendDisabledReason,
   normalizeTemplateKey,
   type AlimtalkTemplateKey,
   usesCenterCredits,
@@ -308,6 +309,38 @@ export async function sendMemberNotification(
     }
   }
 
+  const notApprovedReason = getTemplateSendDisabledReason(templateKey)
+  if (notApprovedReason) {
+    const now = new Date().toISOString()
+    const { data: logRow, error: logError } = await supabase
+      .from('message_logs')
+      .insert({
+        center_id: centerId,
+        member_id: input.memberId,
+        phone,
+        template_key: templateKey,
+        channel: 'skipped',
+        status: 'skipped',
+        error_message: notApprovedReason,
+        metadata,
+        sent_at: now,
+      })
+      .select('id')
+      .single()
+
+    if (logError) {
+      return { ok: false, status: 'failed', error: logError.message }
+    }
+
+    return {
+      ok: true,
+      status: 'skipped',
+      logId: logRow.id,
+      skippedReason: notApprovedReason,
+      error: '템플릿 검수 미승인으로 발송이 비활성화되었습니다.',
+    }
+  }
+
   const { data: summary } = await supabase.rpc('get_message_credit_summary', {
     p_center_id: centerId,
   })
@@ -586,6 +619,39 @@ export async function sendCenterNotification(
       ok: true,
       status: 'skipped',
       skippedReason: 'notifications_disabled',
+    }
+  }
+
+  const notApprovedReason = getTemplateSendDisabledReason(templateKey)
+  if (notApprovedReason) {
+    const now = new Date().toISOString()
+    const phone = phones[0]
+    const { data: logRow, error: logError } = await supabase
+      .from('message_logs')
+      .insert({
+        center_id: input.centerId,
+        member_id: null,
+        phone,
+        template_key: templateKey,
+        channel: 'skipped',
+        status: 'skipped',
+        error_message: notApprovedReason,
+        metadata: { ...metadata, recipient_phones: phones.join(',') },
+        sent_at: now,
+      })
+      .select('id')
+      .single()
+
+    if (logError) {
+      return { ok: false, status: 'failed', error: logError.message }
+    }
+
+    return {
+      ok: true,
+      status: 'skipped',
+      logId: logRow.id,
+      skippedReason: notApprovedReason,
+      error: '템플릿 검수 미승인으로 발송이 비활성화되었습니다.',
     }
   }
 

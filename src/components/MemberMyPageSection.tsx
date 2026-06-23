@@ -52,25 +52,33 @@ export function MemberMyPageSection({ phone, memberId, onThemeChange }: Props) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <MemberPaymentHistorySection memberId={memberId} />
 
-    <section className={`${cardClass} p-6`}>
-      <h3 className="text-lg font-semibold text-charcoal">마이페이지</h3>
-      <p className="mt-1 text-sm text-muted">계정 정보 및 비밀번호를 관리합니다.</p>
+      <section className={`${cardClass} p-6`}>
+        <h3 className="member-section-title">마이페이지</h3>
+        <p className="member-section-desc">
+          계정 정보 및 비밀번호를 관리합니다.
+        </p>
 
-      <dl className="mt-5 space-y-3 rounded-xl bg-cream/60 p-4 text-sm">
-        <div>
-          <dt className="text-muted">아이디 (휴대전화)</dt>
-          <dd className="mt-0.5 font-medium tabular-nums">{formatPhone(phone)}</dd>
-        </div>
-      </dl>
+        <dl className="mt-5 rounded-xl border border-charcoal/8 bg-motionhub-light/30 p-4 text-sm">
+          <div>
+            <dt className="text-xs font-semibold text-charcoal/50">
+              아이디 (휴대전화)
+            </dt>
+            <dd className="mt-1 text-base font-bold tabular-nums text-charcoal">
+              {formatPhone(phone)}
+            </dd>
+          </div>
+        </dl>
 
-      <form className="mt-6 space-y-4" onSubmit={(e) => void handleSubmit(e)}>
-        <h4 className="text-sm font-bold text-charcoal">비밀번호 변경</h4>
+        <form className="mt-6 space-y-4" onSubmit={(e) => void handleSubmit(e)}>
+          <h4 className="text-sm font-bold text-charcoal">비밀번호 변경</h4>
 
-        <label className="block text-sm">
-          <span className="mb-1.5 block font-medium">현재 비밀번호</span>
+          <label className="block text-sm">
+            <span className="mb-1.5 block font-semibold text-charcoal">
+              현재 비밀번호
+            </span>
           <input
             type="password"
             value={currentPassword}
@@ -82,7 +90,9 @@ export function MemberMyPageSection({ phone, memberId, onThemeChange }: Props) {
         </label>
 
         <label className="block text-sm">
-          <span className="mb-1.5 block font-medium">새 비밀번호</span>
+          <span className="mb-1.5 block font-semibold text-charcoal">
+            새 비밀번호
+          </span>
           <input
             type="password"
             value={newPassword}
@@ -95,7 +105,9 @@ export function MemberMyPageSection({ phone, memberId, onThemeChange }: Props) {
         </label>
 
         <label className="block text-sm">
-          <span className="mb-1.5 block font-medium">새 비밀번호 확인</span>
+          <span className="mb-1.5 block font-semibold text-charcoal">
+            새 비밀번호 확인
+          </span>
           <input
             type="password"
             value={confirmPassword}

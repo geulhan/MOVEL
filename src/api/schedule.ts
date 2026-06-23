@@ -2,6 +2,10 @@ import { getCurrentCenterId } from '../lib/center'
 import { supabase } from '../lib/supabase'
 import { isSameLocalDay } from '../utils/date'
 import { earnGrowthOnPtSessionCompleted } from './growth/growthEarnService'
+import {
+  notifyScheduleCancelled,
+  notifyScheduleChanged,
+} from './notifications'
 import { logPlatformActivity } from './platformActivity'
 
 export const DEFAULT_PT_DURATION_MINUTES = 50
@@ -23,6 +27,61 @@ export type PtSchedule = {
   is_detached?: boolean
   member_name?: string
   trainer_name?: string
+}
+
+function formatScheduleDateKst(iso: string): string {
+  return new Date(iso).toLocaleString('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+async function buildScheduleNotificationMetadata(
+  scheduleId: string,
+  scheduledAt: string,
+  trainerId: string | null,
+): Promise<Record<string, string | number>> {
+  let trainerName = '담당 트레이너'
+  if (trainerId) {
+    const { data: trainer } = await supabase
+      .from('trainers')
+      .select('name')
+      .eq('id', trainerId)
+      .maybeSingle()
+    if (trainer?.name) trainerName = String(trainer.name)
+  }
+
+  return {
+    schedule_id: scheduleId,
+    scheduled_at: scheduledAt,
+    schedule_date: formatScheduleDateKst(scheduledAt),
+    class_name: 'PT',
+    trainer_name: trainerName,
+  }
+}
+
+/** 고정 수업 등 직접 UPDATE 후 예약 변경 알림 */
+export async function emitScheduleChangedNotification(
+  scheduleId: string,
+): Promise<void> {
+  const { data: schedule, error } = await supabase
+    .from('pt_schedules')
+    .select('member_id, scheduled_at, trainer_id, status')
+    .eq('id', scheduleId)
+    .single()
+
+  if (error || !schedule?.member_id || schedule.status !== 'scheduled') return
+
+  const metadata = await buildScheduleNotificationMetadata(
+    scheduleId,
+    schedule.scheduled_at,
+    schedule.trainer_id,
+  )
+  notifyScheduleChanged(schedule.member_id, scheduleId, metadata)
 }
 
 export async function fetchSchedulesInRange(
@@ -92,6 +151,14 @@ export async function updateScheduleDetails(
     is_detached?: boolean
   },
 ): Promise<void> {
+  const { data: before, error: fetchError } = await supabase
+    .from('pt_schedules')
+    .select('member_id, scheduled_at, trainer_id, status')
+    .eq('id', id)
+    .single()
+
+  if (fetchError) throw fetchError
+
   const { error } = await supabase
     .from('pt_schedules')
     .update({
@@ -102,6 +169,27 @@ export async function updateScheduleDetails(
     .eq('id', id)
 
   if (error) throw error
+
+  const nextScheduledAt = input.scheduled_at ?? before.scheduled_at
+  const nextTrainerId =
+    input.trainer_id === undefined ? before.trainer_id : input.trainer_id
+  const timeChanged =
+    input.scheduled_at != null && input.scheduled_at !== before.scheduled_at
+  const trainerChanged =
+    input.trainer_id !== undefined && input.trainer_id !== before.trainer_id
+
+  if (
+    before.status === 'scheduled' &&
+    before.member_id &&
+    (timeChanged || trainerChanged)
+  ) {
+    const metadata = await buildScheduleNotificationMetadata(
+      id,
+      nextScheduledAt,
+      nextTrainerId,
+    )
+    notifyScheduleChanged(before.member_id, id, metadata)
+  }
 }
 
 export async function updateScheduleStatus(
@@ -110,7 +198,7 @@ export async function updateScheduleStatus(
 ): Promise<void> {
   const { data: before, error: fetchError } = await supabase
     .from('pt_schedules')
-    .select('member_id, status')
+    .select('member_id, status, scheduled_at, trainer_id')
     .eq('id', id)
     .single()
 
@@ -122,6 +210,20 @@ export async function updateScheduleStatus(
     .eq('id', id)
 
   if (error) throw error
+
+  if (
+    status === 'cancelled' &&
+    before &&
+    before.status !== 'cancelled' &&
+    before.member_id
+  ) {
+    const metadata = await buildScheduleNotificationMetadata(
+      id,
+      before.scheduled_at,
+      before.trainer_id,
+    )
+    notifyScheduleCancelled(before.member_id, id, metadata)
+  }
 
   if (
     status === 'completed' &&

@@ -80,12 +80,10 @@ export function MemberPaymentHistorySection({
   return (
     <>
       <section className={`${cardClass} ${compact ? 'p-5' : 'p-6'}`}>
-        <h3
-          className={`font-semibold text-charcoal ${compact ? 'text-base' : 'text-lg'}`}
-        >
+        <h3 className={`member-section-title ${compact ? 'text-base' : ''}`}>
           결제 내역
         </h3>
-        <p className="mt-1 text-sm text-muted">
+        <p className="member-section-desc">
           센터에서 완료된 결제 기록과 서명한 계약서를 확인합니다.
         </p>
 
