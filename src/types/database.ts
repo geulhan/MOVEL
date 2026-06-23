@@ -379,6 +379,7 @@ export type PtFixedSchedule = {
   day_of_week: number
   days_of_week?: number[] | null
   time_of_day: string
+  day_times?: Record<string, string> | null
   duration_minutes: number
   note: string | null
   is_active: boolean
@@ -937,6 +938,7 @@ export type Database = {
           day_of_week: number
           days_of_week?: number[] | null
           time_of_day: string
+          day_times?: Record<string, string> | null
           duration_minutes?: number
           note?: string | null
           is_active?: boolean
@@ -946,6 +948,7 @@ export type Database = {
           day_of_week?: number
           days_of_week?: number[] | null
           time_of_day?: string
+          day_times?: Record<string, string> | null
           duration_minutes?: number
           note?: string | null
           is_active?: boolean

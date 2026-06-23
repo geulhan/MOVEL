@@ -10,8 +10,12 @@ import {
   updateScheduleStatus,
 } from './schedule'
 import {
-  buildMultiDayScheduleDates,
+  buildMultiDayScheduleDatesWithTimes,
+  normalizeDayTimes,
   normalizeDaysOfWeek,
+  primaryTimeOfDay,
+  serializeDayTimesForDb,
+  type DayTimeMap,
 } from '../utils/fixedScheduleDates'
 import { isSameLocalDay, localDayEndIso, localDayStartIso } from '../utils/date'
 
@@ -23,6 +27,7 @@ export type PtFixedSchedule = {
   day_of_week: number
   days_of_week?: number[] | null
   time_of_day: string
+  day_times?: Record<string, string> | null
   duration_minutes: number
   note: string | null
   is_active: boolean
@@ -35,6 +40,11 @@ export function getFixedDaysOfWeek(fixed: PtFixedSchedule): number[] {
     return [...fixed.days_of_week].sort((a, b) => a - b)
   }
   return [fixed.day_of_week]
+}
+
+export function getFixedDayTimes(fixed: PtFixedSchedule): DayTimeMap {
+  const days = getFixedDaysOfWeek(fixed)
+  return normalizeDayTimes(days, fixed.day_times, fixed.time_of_day)
 }
 
 export async function fetchFixedSchedules(options?: {
@@ -91,13 +101,22 @@ export async function createFixedSchedule(input: {
   member_id: string
   trainer_id?: string | null
   days_of_week: number[]
-  time_of_day: string
+  time_of_day?: string
+  day_times?: DayTimeMap | Record<string, string>
   duration_minutes?: number
   note?: string
 }): Promise<{ fixed: PtFixedSchedule; createdCount: number }> {
   const days = normalizeDaysOfWeek(input.days_of_week)
   if (days.length === 0) {
     throw new Error('최소 1개 요일을 선택해 주세요.')
+  }
+
+  const fallbackTime = input.time_of_day?.trim() || '10:00'
+  const dayTimes = normalizeDayTimes(days, input.day_times, fallbackTime)
+  for (const day of days) {
+    if (!dayTimes[day]) {
+      throw new Error('선택한 모든 요일의 시간을 입력해 주세요.')
+    }
   }
 
   const member = await fetchMemberById(input.member_id)
@@ -109,6 +128,7 @@ export async function createFixedSchedule(input: {
   const duration = input.duration_minutes ?? DEFAULT_PT_DURATION_MINUTES
   const trainerId = input.trainer_id ?? member.trainer_id ?? null
   const note = input.note?.trim() || null
+  const timeOfDay = primaryTimeOfDay(dayTimes)
 
   const { data: fixedRow, error: fixedError } = await supabase
     .from('pt_fixed_schedules')
@@ -118,7 +138,8 @@ export async function createFixedSchedule(input: {
       trainer_id: trainerId,
       day_of_week: days[0],
       days_of_week: days,
-      time_of_day: input.time_of_day,
+      time_of_day: timeOfDay,
+      day_times: serializeDayTimesForDb(dayTimes),
       duration_minutes: duration,
       note,
       is_active: true,
@@ -129,9 +150,8 @@ export async function createFixedSchedule(input: {
   if (fixedError) throw fixedError
   const fixed = fixedRow as PtFixedSchedule
 
-  const dates = buildMultiDayScheduleDates(
-    days,
-    input.time_of_day,
+  const dates = buildMultiDayScheduleDatesWithTimes(
+    dayTimes,
     member.remaining_sessions,
   )
 
@@ -274,7 +294,8 @@ export async function updateFixedScheduleSeries(
   fixedScheduleId: string,
   input: {
     days_of_week: number[]
-    time_of_day: string
+    time_of_day?: string
+    day_times?: DayTimeMap | Record<string, string>
     trainer_id?: string | null
     note?: string | null
   },
@@ -284,6 +305,10 @@ export async function updateFixedScheduleSeries(
     throw new Error('최소 1개 요일을 선택해 주세요.')
   }
 
+  const fallbackTime = input.time_of_day?.trim() || '10:00'
+  const dayTimes = normalizeDayTimes(days, input.day_times, fallbackTime)
+  const timeOfDay = primaryTimeOfDay(dayTimes)
+
   const now = new Date().toISOString()
 
   const { error: fixedError } = await supabase
@@ -291,7 +316,8 @@ export async function updateFixedScheduleSeries(
     .update({
       day_of_week: days[0],
       days_of_week: days,
-      time_of_day: input.time_of_day,
+      time_of_day: timeOfDay,
+      day_times: serializeDayTimesForDb(dayTimes),
       trainer_id: input.trainer_id ?? null,
       note: input.note?.trim() || null,
       updated_at: new Date().toISOString(),
@@ -324,11 +350,7 @@ export async function updateFixedScheduleSeries(
     note: string | null
   }
 
-  const newDates = buildMultiDayScheduleDates(
-    days,
-    input.time_of_day,
-    ids.length,
-  )
+  const newDates = buildMultiDayScheduleDatesWithTimes(dayTimes, ids.length)
 
   await Promise.all(
     ids.map(async (id, index) => {
@@ -386,11 +408,8 @@ export async function syncFixedScheduleToRemaining(
 
   if (needed <= 0) return 0
 
-  const dates = buildMultiDayScheduleDates(
-    getFixedDaysOfWeek(fixed),
-    fixed.time_of_day,
-    needed,
-  )
+  const dayTimes = getFixedDayTimes(fixed)
+  const dates = buildMultiDayScheduleDatesWithTimes(dayTimes, needed)
 
   return insertScheduleRows(
     fixed.id,

@@ -12,6 +12,7 @@ import {
   createFixedSchedule,
   deleteScheduleAdmin,
   fetchFixedSchedules,
+  getFixedDayTimes,
   getFixedDaysOfWeek,
   syncFixedScheduleToRemaining,
   updateDetachedSchedule,
@@ -34,10 +35,11 @@ import type { Member, Trainer } from '../../types/database'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/theme'
 import { dateKey, getMonthMatrix, monthLabel, WEEKDAYS } from '../../utils/calendar'
 import {
-  buildMultiDayScheduleDates,
+  buildMultiDayScheduleDatesWithTimes,
   scheduleDateKey,
   scheduleTimeHHMM,
   toLocalScheduleIso,
+  type DayTimeMap,
 } from '../../utils/fixedScheduleDates'
 
 type FormMode = 'single' | 'fixed'
@@ -47,6 +49,48 @@ function formatDaysLabel(days: number[]): string {
     .sort((a, b) => a - b)
     .map((d) => WEEKDAYS[d])
     .join(', ')
+}
+
+function formatFixedScheduleTimes(fixed: PtFixedSchedule): string {
+  const days = getFixedDaysOfWeek(fixed)
+  const dayTimes = getFixedDayTimes(fixed)
+  const uniqueTimes = new Set(days.map((day) => dayTimes[day]))
+  if (uniqueTimes.size <= 1) {
+    return `매주 ${formatDaysLabel(days)} ${dayTimes[days[0]] ?? fixed.time_of_day}`
+  }
+  return days.map((day) => `${WEEKDAYS[day]} ${dayTimes[day]}`).join(' · ')
+}
+
+function FixedDayTimeFields({
+  days,
+  dayTimes,
+  defaultTime,
+  onChange,
+}: {
+  days: number[]
+  dayTimes: DayTimeMap
+  defaultTime: string
+  onChange: (day: number, time: string) => void
+}) {
+  if (days.length === 0) return null
+
+  return (
+    <div className="space-y-2 rounded-lg border border-gold/20 bg-cream/40 p-3">
+      <p className="text-xs font-medium text-charcoal/70">요일별 시간</p>
+      {days.map((day) => (
+        <label key={day} className="flex items-center justify-between gap-3 text-sm">
+          <span className="min-w-[3rem] font-medium text-charcoal">{WEEKDAYS[day]}</span>
+          <input
+            type="time"
+            required
+            value={dayTimes[day] ?? defaultTime}
+            onChange={(e) => onChange(day, e.target.value)}
+            className={`${inputClass} min-w-0 flex-1`}
+          />
+        </label>
+      ))}
+    </div>
+  )
 }
 
 const STATUS_LABELS: Record<ScheduleStatus, string> = {
@@ -111,6 +155,7 @@ export function PtScheduleCalendar({
   const [formTime, setFormTime] = useState('10:00')
   const [formNote, setFormNote] = useState('')
   const [formDays, setFormDays] = useState<number[]>([1])
+  const [formDayTimes, setFormDayTimes] = useState<DayTimeMap>({ 1: '10:00' })
   const [fixedList, setFixedList] = useState<PtFixedSchedule[]>([])
 
   const [editSchedule, setEditSchedule] = useState<PtSchedule | null>(null)
@@ -120,6 +165,7 @@ export function PtScheduleCalendar({
   const [editNote, setEditNote] = useState('')
   const [editSeries, setEditSeries] = useState(false)
   const [editSeriesDays, setEditSeriesDays] = useState<number[]>([1])
+  const [editFixedDayTimes, setEditFixedDayTimes] = useState<DayTimeMap>({ 1: '10:00' })
 
   const [editFixed, setEditFixed] = useState<PtFixedSchedule | null>(null)
 
@@ -200,12 +246,14 @@ export function PtScheduleCalendar({
 
   const fixedPreviewCount = useMemo(() => {
     if (!selectedMember || formDays.length === 0) return 0
-    return buildMultiDayScheduleDates(
-      formDays,
-      formTime,
+    const dayTimes = Object.fromEntries(
+      formDays.map((day) => [day, formDayTimes[day] ?? formTime]),
+    ) as DayTimeMap
+    return buildMultiDayScheduleDatesWithTimes(
+      dayTimes,
       selectedMember.remaining_sessions,
     ).length
-  }, [selectedMember, formDays, formTime])
+  }, [selectedMember, formDays, formDayTimes, formTime])
 
   const memberNameById = useMemo(
     () => new Map(members.map((m) => [m.id, m.name])),
@@ -216,8 +264,17 @@ export function PtScheduleCalendar({
     setFormDays((prev) => {
       if (prev.includes(day)) {
         const next = prev.filter((d) => d !== day)
+        setFormDayTimes((times) => {
+          const copy = { ...times }
+          delete copy[day]
+          return copy
+        })
         return next.length > 0 ? next : prev
       }
+      setFormDayTimes((times) => ({
+        ...times,
+        [day]: times[day] ?? formTime,
+      }))
       return [...prev, day].sort((a, b) => a - b)
     })
   }
@@ -226,8 +283,17 @@ export function PtScheduleCalendar({
     setEditSeriesDays((prev) => {
       if (prev.includes(day)) {
         const next = prev.filter((d) => d !== day)
+        setEditFixedDayTimes((times) => {
+          const copy = { ...times }
+          delete copy[day]
+          return copy
+        })
         return next.length > 0 ? next : prev
       }
+      setEditFixedDayTimes((times) => ({
+        ...times,
+        [day]: times[day] ?? editTime,
+      }))
       return [...prev, day].sort((a, b) => a - b)
     })
   }
@@ -312,10 +378,14 @@ export function PtScheduleCalendar({
     try {
       const member = members.find((m) => m.id === formMemberId)
       if (formMode === 'fixed') {
+        const dayTimes = Object.fromEntries(
+          formDays.map((day) => [day, formDayTimes[day] ?? formTime]),
+        ) as DayTimeMap
         const { createdCount } = await createFixedSchedule({
           member_id: formMemberId,
           trainer_id: formTrainerId || member?.trainer_id || null,
           days_of_week: formDays,
+          day_times: dayTimes,
           time_of_day: formTime,
           duration_minutes: DEFAULT_PT_DURATION_MINUTES,
           note: formNote,
@@ -717,7 +787,7 @@ export function PtScheduleCalendar({
                       {memberNameById.get(fixed.member_id) ?? '회원'}
                     </p>
                     <p className="mt-0.5 text-charcoal/60">
-                      매주 {formatDaysLabel(getFixedDaysOfWeek(fixed))} {fixed.time_of_day}
+                      {formatFixedScheduleTimes(fixed)}
                     </p>
                     {canManage && (
                       <div className="mt-1.5 flex flex-wrap gap-1">
@@ -727,7 +797,7 @@ export function PtScheduleCalendar({
                           onClick={() => {
                             setEditFixed(fixed)
                             setEditSeriesDays(getFixedDaysOfWeek(fixed))
-                            setEditTime(fixed.time_of_day)
+                            setEditFixedDayTimes(getFixedDayTimes(fixed))
                             setEditTrainerId(fixed.trainer_id ?? '')
                             setEditNote(fixed.note ?? '')
                           }}
@@ -797,7 +867,7 @@ export function PtScheduleCalendar({
           </div>
           <p className="mt-2 text-xs text-muted">
             {formMode === 'fixed'
-              ? '요일을 복수 선택하면 잔여 세션 수만큼 자동 배치됩니다.'
+              ? '요일을 복수 선택하고, 요일마다 다른 시간을 설정할 수 있습니다. 잔여 세션 수만큼 자동 배치됩니다.'
               : '선택한 날짜에 단건 예약을 추가합니다.'}
           </p>
 
@@ -825,23 +895,33 @@ export function PtScheduleCalendar({
             </label>
 
             {formMode === 'fixed' && (
-              <div className="text-sm">
-                <span className="mb-1.5 block font-medium text-charcoal/70">요일</span>
-                <div className="flex flex-wrap gap-1.5">
-                  {WEEKDAYS.map((label, index) => (
-                    <button
-                      key={label}
-                      type="button"
-                      onClick={() => toggleFormDay(index)}
-                      className={`chip text-xs ${
-                        formDays.includes(index) ? 'chip-active' : 'chip-inactive'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
+              <>
+                <div className="text-sm">
+                  <span className="mb-1.5 block font-medium text-charcoal/70">요일</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {WEEKDAYS.map((label, index) => (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => toggleFormDay(index)}
+                        className={`chip text-xs ${
+                          formDays.includes(index) ? 'chip-active' : 'chip-inactive'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+                <FixedDayTimeFields
+                  days={formDays}
+                  dayTimes={formDayTimes}
+                  defaultTime={formTime}
+                  onChange={(day, time) =>
+                    setFormDayTimes((prev) => ({ ...prev, [day]: time }))
+                  }
+                />
+              </>
             )}
 
             {formMode === 'single' && (
@@ -868,17 +948,21 @@ export function PtScheduleCalendar({
             </label>
 
             <div className="grid grid-cols-2 gap-3">
-              <label className="block min-w-0 text-sm">
-                <span className="mb-1 block font-medium text-charcoal/70">시간</span>
-                <input
-                  type="time"
-                  required
-                  value={formTime}
-                  onChange={(e) => setFormTime(e.target.value)}
-                  className={inputClass}
-                />
-              </label>
-              <label className="block min-w-0 text-sm">
+              {formMode === 'single' && (
+                <label className="block min-w-0 text-sm">
+                  <span className="mb-1 block font-medium text-charcoal/70">시간</span>
+                  <input
+                    type="time"
+                    required
+                    value={formTime}
+                    onChange={(e) => setFormTime(e.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+              )}
+              <label
+                className={`block min-w-0 text-sm ${formMode === 'fixed' ? 'col-span-2' : ''}`}
+              >
                 <span className="mb-1 block font-medium text-charcoal/70">수업</span>
                 <input
                   type="text"
@@ -934,7 +1018,12 @@ export function PtScheduleCalendar({
               setSaving(true)
               void updateFixedScheduleSeries(editFixed.id, {
                 days_of_week: editSeriesDays,
-                time_of_day: editTime,
+                day_times: Object.fromEntries(
+                  editSeriesDays.map((day) => [
+                    day,
+                    editFixedDayTimes[day] ?? editFixed.time_of_day,
+                  ]),
+                ) as DayTimeMap,
                 trainer_id: editTrainerId || null,
                 note: editNote,
               })
@@ -967,16 +1056,14 @@ export function PtScheduleCalendar({
                   ))}
                 </div>
               </div>
-              <label className="block text-sm">
-                <span className="mb-1 block font-medium text-charcoal/70">시간</span>
-                <input
-                  type="time"
-                  required
-                  value={editTime}
-                  onChange={(e) => setEditTime(e.target.value)}
-                  className={inputClass}
-                />
-              </label>
+              <FixedDayTimeFields
+                days={editSeriesDays}
+                dayTimes={editFixedDayTimes}
+                defaultTime={editFixed.time_of_day}
+                onChange={(day, time) =>
+                  setEditFixedDayTimes((prev) => ({ ...prev, [day]: time }))
+                }
+              />
               <label className="block text-sm">
                 <span className="mb-1 block font-medium text-charcoal/70">트레이너</span>
                 <select
