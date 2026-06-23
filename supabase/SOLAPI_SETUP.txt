@@ -112,6 +112,10 @@ DB: migration_064_center_messaging_config.sql 실행 필수
    [검수 미승인 — Secret 설정해도 코드에서 발송 비활성화]
    pt_remaining_3, pt_remaining_1, weekly_report
 
+   [알림톡만 발송 — 문자 대체발송 끔 (기본)]
+   SOLAPI_DISABLE_SMS_FALLBACK=true
+   ※ false 로 두면 알림톡 실패 시 자동 문자(SMS) 대체발송
+
    supabase functions deploy send-notification
    supabase functions deploy schedule-reminders
    supabase functions deploy renewal-reminders

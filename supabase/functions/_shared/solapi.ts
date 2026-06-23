@@ -76,6 +76,31 @@ async function createAuthorizationHeader(
   return `HMAC-SHA256 apiKey=${apiKey}, date=${date}, salt=${salt}, signature=${signature}`
 }
 
+type SolapiMessageListItem = {
+  messageId?: string
+  type?: string
+  statusCode?: string
+  statusMessage?: string
+}
+
+function resolveChannelFromSolapiType(type?: string): 'alimtalk' | 'sms' {
+  const normalized = (type ?? '').toUpperCase()
+  if (normalized === 'ATA') return 'alimtalk'
+  if (
+    normalized === 'SMS' ||
+    normalized === 'LMS' ||
+    normalized === 'MMS'
+  ) {
+    return 'sms'
+  }
+  return 'alimtalk'
+}
+
+function isAlimtalkOnlyMode(): boolean {
+  const raw = Deno.env.get('SOLAPI_DISABLE_SMS_FALLBACK') ?? 'true'
+  return raw.toLowerCase() !== 'false'
+}
+
 export type SolapiSendResult = {
   ok: boolean
   messageId?: string
@@ -102,6 +127,7 @@ export async function sendAlimtalk(
   )
 
   const body = {
+    showMessageList: true,
     messages: [
       {
         to: to.replace(/\D/g, ''),
@@ -110,7 +136,8 @@ export async function sendAlimtalk(
           pfId: config.pfId,
           templateId,
           variables,
-          disableSms: false,
+          // 알림톡 실패 시 문자 대체발송 비활성화 (기본). 명시적 허용: SOLAPI_DISABLE_SMS_FALLBACK=false
+          disableSms: !isAlimtalkOnlyMode(),
         },
       },
     ],
@@ -140,13 +167,26 @@ export async function sendAlimtalk(
 
   const groupInfo = (raw as { groupInfo?: { groupId?: string } }).groupInfo
   const firstMessage = (
-    raw as { messageList?: Array<{ messageId?: string; statusCode?: string }> }
+    raw as { messageList?: SolapiMessageListItem[] }
   ).messageList?.[0]
+  const channel = resolveChannelFromSolapiType(firstMessage?.type)
+  const statusMessage = firstMessage?.statusMessage?.trim() ?? ''
+
+  if (isAlimtalkOnlyMode() && channel === 'sms') {
+    return {
+      ok: false,
+      error:
+        statusMessage ||
+        '알림톡 대신 문자로 대체발송되었습니다. 솔라피 템플릿·채널 설정을 확인해 주세요.',
+      channel: 'sms',
+      raw,
+    }
+  }
 
   return {
     ok: true,
     messageId: firstMessage?.messageId ?? groupInfo?.groupId,
-    channel: 'alimtalk',
+    channel,
     raw,
   }
 }

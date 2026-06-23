@@ -283,7 +283,16 @@ export default function MessagesPage() {
                       <StatusBadge status={log.status} />
                     </td>
                     <td className="max-w-xs truncate px-4 py-3 text-xs text-muted">
-                      {log.error_message ?? log.provider_message_id ?? '-'}
+                      {[
+                        log.channel === 'sms'
+                          ? '문자'
+                          : log.channel === 'alimtalk'
+                            ? '알림톡'
+                            : null,
+                        log.error_message ?? log.provider_message_id,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ') || '-'}
                     </td>
                   </tr>
                 ))
