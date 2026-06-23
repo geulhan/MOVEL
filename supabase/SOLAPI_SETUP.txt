@@ -112,9 +112,10 @@ DB: migration_064_center_messaging_config.sql 실행 필수
    [검수 미승인 — Secret 설정해도 코드에서 발송 비활성화]
    pt_remaining_3, pt_remaining_1, weekly_report
 
-   [알림톡만 발송 — 문자 대체발송 끔 (기본)]
-   SOLAPI_DISABLE_SMS_FALLBACK=true
-   ※ false 로 두면 알림톡 실패 시 자동 문자(SMS) 대체발송
+   supabase secrets set SITE_URL=https://motionhub.kr
+   supabase secrets set SOLAPI_DISABLE_SMS_FALLBACK=false
+   ※ 알림톡 실패 시 문자 대체발송 (솔라피 기본). 알림톡만: SOLAPI_DISABLE_SMS_FALLBACK=true
+   ※ 3033/3105 미등록 템플릿 → SOLAPI_PF_ID 가 템플릿이 등록된 MotionHub 카카오 채널 pfId 와 일치해야 함
 
    supabase functions deploy send-notification
    supabase functions deploy schedule-reminders

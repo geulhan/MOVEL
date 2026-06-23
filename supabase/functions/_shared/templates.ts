@@ -1,7 +1,6 @@
 import { ALIMTALK_BRAND_HEADER } from './alimtalkBrand.ts'
 import type { AlimtalkTemplateKey } from './alimtalkTemplateRegistry.ts'
-
-export type TemplateKey = AlimtalkTemplateKey
+import { normalizePublicSiteUrl } from './publicSiteUrl.ts'
 
 export type MemberRow = {
   id: string
@@ -60,14 +59,15 @@ function buildMemberPortalUrl(config: {
   siteUrl: string
   centerSlug?: string
 }): string {
+  const origin = normalizePublicSiteUrl(config.siteUrl)
   const slug = config.centerSlug?.trim().toLowerCase() ?? ''
   return slug
-    ? `${config.siteUrl}/member?center=${encodeURIComponent(slug)}`
-    : `${config.siteUrl}/member`
+    ? `${origin}/member?center=${encodeURIComponent(slug)}`
+    : `${origin}/member`
 }
 
 function buildCenterStartGuideUrl(siteUrl: string): string {
-  return `${siteUrl.replace(/\/$/, '')}/guide`
+  return `${normalizePublicSiteUrl(siteUrl)}/guide`
 }
 
 function baseVariables(

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1'
 import { loadPlatformTemplateIds } from './alimtalkTemplateRegistry.ts'
+import { MOTIONHUB_PUBLIC_ORIGIN, normalizePublicSiteUrl } from './publicSiteUrl.ts'
 import type { SolapiConfig } from './solapi.ts'
 
 export type CenterMessagingContext = {
@@ -27,9 +28,8 @@ function platformSolapiConfig(): SolapiConfig {
     templateIds: loadPlatformTemplateIds(),
     enabled:
       (Deno.env.get('MESSAGING_ENABLED') ?? 'false').toLowerCase() === 'true',
-    siteUrl: (Deno.env.get('SITE_URL') ?? 'https://motionhub.kr').replace(
-      /\/$/,
-      '',
+    siteUrl: normalizePublicSiteUrl(
+      Deno.env.get('SITE_URL') ?? MOTIONHUB_PUBLIC_ORIGIN,
     ),
   }
 }

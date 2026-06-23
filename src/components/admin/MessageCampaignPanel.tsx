@@ -92,8 +92,8 @@ function resultLabel(result: SendNotificationResult): string {
     if (detail.includes('크레딧') || detail.includes('credit')) {
       return '메시지 크레딧이 부족합니다'
     }
-    if (detail.includes('missing_template_id') || detail.includes('Template ID')) {
-      return '솔라피 템플릿 ID 미설정'
+    if (detail.includes('3033') || detail.includes('3105') || detail.includes('미등록 템플릿')) {
+      return '카카오 템플릿 미등록 — SOLAPI_PF_ID를 MotionHub 채널 pfId로 변경'
     }
     if (detail.includes('MESSAGING_ENABLED')) {
       return '알림톡 발송이 꺼져 있습니다'

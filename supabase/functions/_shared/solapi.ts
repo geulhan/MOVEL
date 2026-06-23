@@ -2,6 +2,7 @@ import {
   loadPlatformTemplateIds,
   type AlimtalkTemplateKey,
 } from './alimtalkTemplateRegistry.ts'
+import { MOTIONHUB_PUBLIC_ORIGIN, normalizePublicSiteUrl } from './publicSiteUrl.ts'
 
 export type SolapiConfig = {
   apiKey: string
@@ -22,9 +23,8 @@ export function getSolapiConfig(): SolapiConfig {
     templateIds: loadPlatformTemplateIds(),
     enabled:
       (Deno.env.get('MESSAGING_ENABLED') ?? 'false').toLowerCase() === 'true',
-    siteUrl: (Deno.env.get('SITE_URL') ?? 'https://motionhub.kr').replace(
-      /\/$/,
-      '',
+    siteUrl: normalizePublicSiteUrl(
+      Deno.env.get('SITE_URL') ?? MOTIONHUB_PUBLIC_ORIGIN,
     ),
   }
 }
@@ -96,9 +96,34 @@ function resolveChannelFromSolapiType(type?: string): 'alimtalk' | 'sms' {
   return 'alimtalk'
 }
 
+/** true = 알림톡만 (문자 대체 끔). false = 알림톡 실패 시 문자 대체발송 (솔라피 기본) */
 function isAlimtalkOnlyMode(): boolean {
-  const raw = Deno.env.get('SOLAPI_DISABLE_SMS_FALLBACK') ?? 'true'
-  return raw.toLowerCase() !== 'false'
+  const raw = Deno.env.get('SOLAPI_DISABLE_SMS_FALLBACK') ?? 'false'
+  return raw.toLowerCase() === 'true'
+}
+
+function formatKakaoTemplateError(
+  message: string,
+  templateKey: string,
+  templateId: string,
+  pfId: string,
+): string {
+  const lower = message.toLowerCase()
+  if (
+    message.includes('3033') ||
+    message.includes('3105') ||
+    lower.includes('미등록 템플릿') ||
+    lower.includes('템플릿을 찾을 수 없')
+  ) {
+    const pfHint = pfId ? `pfId …${pfId.slice(-6)}` : 'pfId 미설정'
+    return [
+      '카카오 알림톡 템플릿을 찾을 수 없습니다 (3033/3105).',
+      '솔라피 콘솔에서 해당 템플릿이 연결된 카카오 채널의 pfId를',
+      'Supabase Secret SOLAPI_PF_ID에 설정했는지 확인해 주세요.',
+      `(템플릿: ${templateKey}, ID: ${templateId}, ${pfHint})`,
+    ].join(' ')
+  }
+  return message
 }
 
 export type SolapiSendResult = {
@@ -120,7 +145,7 @@ export async function sendAlimtalk(
     return { ok: false, error: readiness }
   }
 
-  const templateId = config.templateIds[templateKey]
+  const templateId = config.templateIds[templateKey] ?? ''
   const authorization = await createAuthorizationHeader(
     config.apiKey,
     config.apiSecret,
@@ -136,8 +161,7 @@ export async function sendAlimtalk(
           pfId: config.pfId,
           templateId,
           variables,
-          // 알림톡 실패 시 문자 대체발송 비활성화 (기본). 명시적 허용: SOLAPI_DISABLE_SMS_FALLBACK=false
-          disableSms: !isAlimtalkOnlyMode(),
+          disableSms: isAlimtalkOnlyMode(),
         },
       },
     ],
@@ -162,7 +186,16 @@ export async function sendAlimtalk(
       (raw as { errorMessage?: string }).errorMessage ??
       (raw as { message?: string }).message ??
       `Solapi HTTP ${response.status}`
-    return { ok: false, error: message, raw }
+    return {
+      ok: false,
+      error: formatKakaoTemplateError(
+        message,
+        String(templateKey),
+        templateId,
+        config.pfId,
+      ),
+      raw,
+    }
   }
 
   const groupInfo = (raw as { groupInfo?: { groupId?: string } }).groupInfo
@@ -172,14 +205,15 @@ export async function sendAlimtalk(
   const channel = resolveChannelFromSolapiType(firstMessage?.type)
   const statusMessage = firstMessage?.statusMessage?.trim() ?? ''
 
-  if (isAlimtalkOnlyMode() && channel === 'sms') {
-    return {
-      ok: false,
-      error:
-        statusMessage ||
-        '알림톡 대신 문자로 대체발송되었습니다. 솔라피 템플릿·채널 설정을 확인해 주세요.',
-      channel: 'sms',
-      raw,
+  if (statusMessage) {
+    const formatted = formatKakaoTemplateError(
+      statusMessage,
+      String(templateKey),
+      templateId,
+      config.pfId,
+    )
+    if (formatted !== statusMessage) {
+      return { ok: false, error: formatted, channel, raw }
     }
   }
 
