@@ -33,6 +33,7 @@ import { formatSupabaseError } from '../../lib/errors'
 import { useCenterFeatures } from '../../hooks/useCenterFeatures'
 import type { Member, Trainer } from '../../types/database'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/theme'
+import { FixedDayTimeFields as SharedFixedDayTimeFields } from './FixedDayTimeFields'
 import { dateKey, getMonthMatrix, monthLabel, WEEKDAYS } from '../../utils/calendar'
 import {
   buildMultiDayScheduleDatesWithTimes,
@@ -59,38 +60,6 @@ function formatFixedScheduleTimes(fixed: PtFixedSchedule): string {
     return `매주 ${formatDaysLabel(days)} ${dayTimes[days[0]] ?? fixed.time_of_day}`
   }
   return days.map((day) => `${WEEKDAYS[day]} ${dayTimes[day]}`).join(' · ')
-}
-
-function FixedDayTimeFields({
-  days,
-  dayTimes,
-  defaultTime,
-  onChange,
-}: {
-  days: number[]
-  dayTimes: DayTimeMap
-  defaultTime: string
-  onChange: (day: number, time: string) => void
-}) {
-  if (days.length === 0) return null
-
-  return (
-    <div className="space-y-2 rounded-lg border border-gold/20 bg-cream/40 p-3">
-      <p className="text-xs font-medium text-charcoal/70">요일별 시간</p>
-      {days.map((day) => (
-        <label key={day} className="flex items-center justify-between gap-3 text-sm">
-          <span className="min-w-[3rem] font-medium text-charcoal">{WEEKDAYS[day]}</span>
-          <input
-            type="time"
-            required
-            value={dayTimes[day] ?? defaultTime}
-            onChange={(e) => onChange(day, e.target.value)}
-            className={`${inputClass} min-w-0 flex-1`}
-          />
-        </label>
-      ))}
-    </div>
-  )
 }
 
 const STATUS_LABELS: Record<ScheduleStatus, string> = {
@@ -913,7 +882,7 @@ export function PtScheduleCalendar({
                     ))}
                   </div>
                 </div>
-                <FixedDayTimeFields
+                <SharedFixedDayTimeFields
                   days={formDays}
                   dayTimes={formDayTimes}
                   defaultTime={formTime}
@@ -1056,7 +1025,7 @@ export function PtScheduleCalendar({
                   ))}
                 </div>
               </div>
-              <FixedDayTimeFields
+              <SharedFixedDayTimeFields
                 days={editSeriesDays}
                 dayTimes={editFixedDayTimes}
                 defaultTime={editFixed.time_of_day}

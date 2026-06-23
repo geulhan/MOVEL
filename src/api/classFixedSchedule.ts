@@ -1,8 +1,13 @@
 import { getCurrentCenterId } from '../lib/center'
 import { supabase } from '../lib/supabase'
+import { WEEKDAYS } from '../utils/calendar'
 import {
-  buildClassFixedScheduleDates,
+  buildClassFixedScheduleDatesWithTimes,
+  normalizeDayTimes,
   normalizeDaysOfWeek,
+  primaryTimeOfDay,
+  serializeDayTimesForDb,
+  type DayTimeMap,
 } from '../utils/fixedScheduleDates'
 import type { ClassSchedule } from './classes'
 
@@ -13,6 +18,7 @@ export type ClassFixedSchedule = {
   day_of_week: number
   days_of_week?: number[] | null
   time_of_day: string
+  day_times?: Record<string, string> | null
   capacity: number | null
   weeks_ahead: number
   note: string | null
@@ -26,6 +32,22 @@ export function getClassFixedDaysOfWeek(fixed: ClassFixedSchedule): number[] {
     return [...fixed.days_of_week].sort((a, b) => a - b)
   }
   return [fixed.day_of_week]
+}
+
+export function getClassFixedDayTimes(fixed: ClassFixedSchedule): DayTimeMap {
+  const days = getClassFixedDaysOfWeek(fixed)
+  return normalizeDayTimes(days, fixed.day_times, fixed.time_of_day)
+}
+
+export function formatClassFixedScheduleTimes(fixed: ClassFixedSchedule): string {
+  const days = getClassFixedDaysOfWeek(fixed)
+  const dayTimes = getClassFixedDayTimes(fixed)
+  const uniqueTimes = new Set(days.map((day) => dayTimes[day]))
+  const dayLabels = days.map((d) => WEEKDAYS[d]).join(', ')
+  if (uniqueTimes.size <= 1) {
+    return `매주 ${dayLabels} ${dayTimes[days[0]] ?? fixed.time_of_day}`
+  }
+  return days.map((day) => `${WEEKDAYS[day]} ${dayTimes[day]}`).join(' · ')
 }
 
 export async function fetchClassFixedSchedules(options?: {
@@ -81,7 +103,8 @@ async function insertClassScheduleRows(
 export async function createClassFixedSchedule(input: {
   class_id: string
   days_of_week: number[]
-  time_of_day: string
+  time_of_day?: string
+  day_times?: DayTimeMap | Record<string, string>
   capacity?: number | null
   weeks_ahead?: number
   note?: string
@@ -91,6 +114,10 @@ export async function createClassFixedSchedule(input: {
   if (days.length === 0) {
     throw new Error('최소 1개 요일을 선택해 주세요.')
   }
+
+  const fallbackTime = input.time_of_day?.trim() || '10:00'
+  const dayTimes = normalizeDayTimes(days, input.day_times, fallbackTime)
+  const timeOfDay = primaryTimeOfDay(dayTimes)
 
   const centerId = await getCurrentCenterId()
   const weeksAhead = input.weeks_ahead ?? 8
@@ -114,7 +141,8 @@ export async function createClassFixedSchedule(input: {
       class_id: input.class_id,
       day_of_week: days[0],
       days_of_week: days,
-      time_of_day: input.time_of_day,
+      time_of_day: timeOfDay,
+      day_times: serializeDayTimesForDb(dayTimes),
       capacity,
       weeks_ahead: weeksAhead,
       note,
@@ -125,7 +153,7 @@ export async function createClassFixedSchedule(input: {
 
   if (fixedError) throw fixedError
 
-  const dates = buildClassFixedScheduleDates(days, input.time_of_day, weeksAhead)
+  const dates = buildClassFixedScheduleDatesWithTimes(dayTimes, weeksAhead)
   const createdCount = await insertClassScheduleRows(
     String(fixedRow.id),
     input.class_id,
@@ -152,7 +180,7 @@ export async function syncClassFixedScheduleAhead(
   const row = fixed as ClassFixedSchedule & {
     classes?: { duration_minutes?: number } | null
   }
-  const days = getClassFixedDaysOfWeek(row)
+  const dayTimes = getClassFixedDayTimes(row)
   const durationMinutes = Number(row.classes?.duration_minutes) || 60
 
   const { data: existing, error: existingError } = await supabase
@@ -167,9 +195,8 @@ export async function syncClassFixedScheduleAhead(
     (existing ?? []).map((item) => new Date(String(item.starts_at)).toISOString()),
   )
 
-  const dates = buildClassFixedScheduleDates(
-    days,
-    row.time_of_day,
+  const dates = buildClassFixedScheduleDatesWithTimes(
+    dayTimes,
     row.weeks_ahead,
   ).filter((d) => !existingKeys.has(d.toISOString()))
 
@@ -181,6 +208,102 @@ export async function syncClassFixedScheduleAhead(
     row.capacity,
     row.note,
   )
+}
+
+export async function updateClassFixedScheduleSeries(
+  fixedId: string,
+  input: {
+    days_of_week: number[]
+    time_of_day?: string
+    day_times?: DayTimeMap | Record<string, string>
+    capacity?: number | null
+    weeks_ahead?: number
+    note?: string | null
+  },
+): Promise<number> {
+  const days = normalizeDaysOfWeek(input.days_of_week)
+  if (days.length === 0) {
+    throw new Error('최소 1개 요일을 선택해 주세요.')
+  }
+
+  const fallbackTime = input.time_of_day?.trim() || '10:00'
+  const dayTimes = normalizeDayTimes(days, input.day_times, fallbackTime)
+  const timeOfDay = primaryTimeOfDay(dayTimes)
+  const now = new Date().toISOString()
+
+  const { error: fixedError } = await supabase
+    .from('class_fixed_schedules')
+    .update({
+      day_of_week: days[0],
+      days_of_week: days,
+      time_of_day: timeOfDay,
+      day_times: serializeDayTimesForDb(dayTimes),
+      capacity: input.capacity ?? null,
+      weeks_ahead: input.weeks_ahead,
+      note: input.note?.trim() || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', fixedId)
+
+  if (fixedError) throw fixedError
+
+  const { data: fixedRow, error: fetchFixedError } = await supabase
+    .from('class_fixed_schedules')
+    .select('class_id, capacity, note, classes(duration_minutes)')
+    .eq('id', fixedId)
+    .single()
+
+  if (fetchFixedError) throw fetchFixedError
+
+  const fixed = fixedRow as {
+    class_id: string
+    capacity: number | null
+    note: string | null
+    classes?: { duration_minutes?: number } | null
+  }
+  const durationMinutes = Number(fixed.classes?.duration_minutes) || 60
+  const capacity = input.capacity ?? fixed.capacity
+  const note = input.note?.trim() ?? fixed.note
+
+  const { data, error } = await supabase
+    .from('class_schedules')
+    .select('id')
+    .eq('fixed_schedule_id', fixedId)
+    .eq('is_detached', false)
+    .eq('status', 'scheduled')
+    .gte('starts_at', now)
+
+  if (error) throw error
+  const ids = ((data ?? []) as { id: string }[]).map((r) => r.id)
+
+  const newDates = buildClassFixedScheduleDatesWithTimes(dayTimes, ids.length)
+
+  await Promise.all(
+    ids.map(async (id, index) => {
+      const at = newDates[index]
+      if (!at) {
+        await supabase
+          .from('class_schedules')
+          .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+          .eq('id', id)
+        return
+      }
+      const ends = new Date(at.getTime() + durationMinutes * 60 * 1000)
+      const { error: updError } = await supabase
+        .from('class_schedules')
+        .update({
+          starts_at: at.toISOString(),
+          ends_at: ends.toISOString(),
+          capacity,
+          note,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+      if (updError) throw updError
+    }),
+  )
+
+  return ids.length
 }
 
 export async function deactivateClassFixedSchedule(fixedId: string): Promise<number> {

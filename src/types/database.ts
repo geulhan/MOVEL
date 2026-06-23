@@ -1251,6 +1251,7 @@ export type Database = {
           day_of_week: number
           days_of_week: number[] | null
           time_of_day: string
+          day_times?: Record<string, string> | null
           capacity: number | null
           weeks_ahead: number
           note: string | null
@@ -1264,6 +1265,7 @@ export type Database = {
           day_of_week: number
           days_of_week?: number[] | null
           time_of_day: string
+          day_times?: Record<string, string> | null
           capacity?: number | null
           weeks_ahead?: number
           note?: string | null
@@ -1273,6 +1275,7 @@ export type Database = {
           day_of_week?: number
           days_of_week?: number[] | null
           time_of_day?: string
+          day_times?: Record<string, string> | null
           capacity?: number | null
           weeks_ahead?: number
           note?: string | null

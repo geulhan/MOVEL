@@ -24,7 +24,17 @@ import {
   classRequiresSessionPass,
   fetchEligibleMemberIdsForClassPass,
 } from '../../api/memberSessionPasses'
-import { createClassFixedSchedule } from '../../api/classFixedSchedule'
+import {
+  createClassFixedSchedule,
+  deactivateClassFixedSchedule,
+  fetchClassFixedSchedules,
+  formatClassFixedScheduleTimes,
+  getClassFixedDayTimes,
+  getClassFixedDaysOfWeek,
+  syncClassFixedScheduleAhead,
+  updateClassFixedScheduleSeries,
+  type ClassFixedSchedule,
+} from '../../api/classFixedSchedule'
 import { fetchTrainers } from '../../api/trainers'
 import { getAdminSession } from '../../lib/adminSession'
 import { getErrorMessage } from '../../lib/errors'
@@ -36,8 +46,16 @@ import {
   startOfWeekMonday,
   weekDaysFrom,
 } from '../../utils/weekRange'
-import { buildClassFixedScheduleDates } from '../../utils/fixedScheduleDates'
+import { buildClassFixedScheduleDatesWithTimes } from '../../utils/fixedScheduleDates'
+import type { DayTimeMap } from '../../utils/fixedScheduleDates'
 import { WEEKDAYS } from '../../utils/calendar'
+import {
+  DEFAULT_CLASS_CONTENT_FIELDS,
+  classContentPreview,
+  normalizeClassContentFields,
+  type ClassContentFields,
+} from '../../constants/classContentFields'
+import { FixedDayTimeFields } from '../../components/admin/FixedDayTimeFields'
 import { PageHeader } from '../../components/admin/PageHeader'
 import { AdminToast, useAdminToast } from '../../components/admin/AdminToast'
 import { MemberSearchCombobox } from '../../components/admin/MemberSearchCombobox'
@@ -45,13 +63,20 @@ import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/them
 import type { Member } from '../../types/database'
 import type { Trainer } from '../../types/database'
 
-type ModalKind = 'class' | 'edit-class' | 'schedule' | null
+type ModalKind = 'class' | 'edit-class' | 'schedule' | 'edit-fixed' | null
+
+function emptyContentFields(): ClassContentFields {
+  return Object.fromEntries(
+    DEFAULT_CLASS_CONTENT_FIELDS.map((field) => [field.key, '']),
+  )
+}
 
 export default function ClassesPage() {
   const session = getAdminSession()
   const { toast, setToast, clearToast } = useAdminToast()
   const [weekStart, setWeekStart] = useState(() => startOfWeekMonday(todayDateString()))
   const [classes, setClasses] = useState<FitnessClass[]>([])
+  const [fixedSchedules, setFixedSchedules] = useState<ClassFixedSchedule[]>([])
   const [schedules, setSchedules] = useState<ClassSchedule[]>([])
   const [members, setMembers] = useState<Member[]>([])
   const [trainers, setTrainers] = useState<Trainer[]>([])
@@ -65,6 +90,12 @@ export default function ClassesPage() {
   const [newClassType, setNewClassType] = useState<ClassType>('pilates')
   const [newClassCapacity, setNewClassCapacity] = useState(8)
   const [newClassTrainerId, setNewClassTrainerId] = useState('')
+  const [newClassDescription, setNewClassDescription] = useState('')
+  const [newClassDuration, setNewClassDuration] = useState(60)
+  const [newClassDeductSessions, setNewClassDeductSessions] = useState(true)
+  const [newClassWaitlist, setNewClassWaitlist] = useState(false)
+  const [newClassContentFields, setNewClassContentFields] =
+    useState<ClassContentFields>(emptyContentFields)
   const [editingClassId, setEditingClassId] = useState<string | null>(null)
   const [newScheduleClassId, setNewScheduleClassId] = useState('')
   const [newScheduleDate, setNewScheduleDate] = useState(todayDateString())
@@ -72,7 +103,15 @@ export default function ClassesPage() {
   const [newScheduleCapacity, setNewScheduleCapacity] = useState(8)
   const [newScheduleMode, setNewScheduleMode] = useState<'single' | 'fixed'>('single')
   const [newScheduleDays, setNewScheduleDays] = useState<number[]>([1])
+  const [newScheduleDayTimes, setNewScheduleDayTimes] = useState<DayTimeMap>({ 1: '10:00' })
   const [newScheduleWeeksAhead, setNewScheduleWeeksAhead] = useState(8)
+  const [newScheduleNote, setNewScheduleNote] = useState('')
+  const [editFixed, setEditFixed] = useState<ClassFixedSchedule | null>(null)
+  const [editFixedDays, setEditFixedDays] = useState<number[]>([1])
+  const [editFixedDayTimes, setEditFixedDayTimes] = useState<DayTimeMap>({ 1: '10:00' })
+  const [editFixedWeeksAhead, setEditFixedWeeksAhead] = useState(8)
+  const [editFixedCapacity, setEditFixedCapacity] = useState(8)
+  const [editFixedNote, setEditFixedNote] = useState('')
   const [reserveQuery, setReserveQuery] = useState('')
   const [reserveMember, setReserveMember] = useState<Member | null>(null)
   const [eligibleMemberIds, setEligibleMemberIds] = useState<Set<string> | null>(null)
@@ -84,13 +123,15 @@ export default function ClassesPage() {
     setLoading(true)
     setError(null)
     try {
-      const [cls, sched, mem, trainerRows] = await Promise.all([
+      const [cls, sched, mem, trainerRows, fixedRows] = await Promise.all([
         fetchClasses(),
         fetchClassSchedulesInRange(`${weekStart}T00:00:00`, `${weekEnd}T23:59:59`),
         fetchMembers(),
         fetchTrainers(),
+        fetchClassFixedSchedules({ activeOnly: true }),
       ])
       setClasses(cls.filter((c) => c.status === 'active'))
+      setFixedSchedules(fixedRows)
       setSchedules(sched)
       setMembers(mem)
       setTrainers(trainerRows)
@@ -221,12 +262,26 @@ export default function ClassesPage() {
     }
   }
 
-  function openClassModal() {
-    setEditingClassId(null)
+  const classNameById = useMemo(
+    () => new Map(classes.map((c) => [c.id, c.name])),
+    [classes],
+  )
+
+  function resetClassForm() {
     setNewClassName('')
     setNewClassType('pilates')
     setNewClassCapacity(8)
     setNewClassTrainerId('')
+    setNewClassDescription('')
+    setNewClassDuration(60)
+    setNewClassDeductSessions(true)
+    setNewClassWaitlist(false)
+    setNewClassContentFields(emptyContentFields())
+  }
+
+  function openClassModal() {
+    setEditingClassId(null)
+    resetClassForm()
     setModal('class')
   }
 
@@ -236,6 +291,16 @@ export default function ClassesPage() {
     setNewClassType(cls.class_type)
     setNewClassCapacity(cls.capacity)
     setNewClassTrainerId(cls.trainer_id ?? '')
+    setNewClassDescription(cls.description ?? '')
+    setNewClassDuration(cls.duration_minutes)
+    setNewClassDeductSessions(cls.deduct_sessions)
+    setNewClassWaitlist(cls.waitlist_enabled)
+    const merged = emptyContentFields()
+    const saved = normalizeClassContentFields(cls.content_fields)
+    for (const field of DEFAULT_CLASS_CONTENT_FIELDS) {
+      merged[field.key] = saved[field.key] ?? ''
+    }
+    setNewClassContentFields(merged)
     setModal('edit-class')
   }
 
@@ -252,28 +317,73 @@ export default function ClassesPage() {
     setNewScheduleCapacity(firstClass?.capacity ?? 8)
     setNewScheduleMode('single')
     setNewScheduleDays([1])
+    setNewScheduleDayTimes({ 1: '10:00' })
     setNewScheduleWeeksAhead(8)
+    setNewScheduleNote('')
     setModal('schedule')
+  }
+
+  function openEditFixedModal(fixed: ClassFixedSchedule) {
+    setEditFixed(fixed)
+    setEditFixedDays(getClassFixedDaysOfWeek(fixed))
+    setEditFixedDayTimes(getClassFixedDayTimes(fixed))
+    setEditFixedWeeksAhead(fixed.weeks_ahead)
+    setEditFixedCapacity(fixed.capacity ?? 8)
+    setEditFixedNote(fixed.note ?? '')
+    setModal('edit-fixed')
   }
 
   function toggleScheduleDay(day: number) {
     setNewScheduleDays((prev) => {
       if (prev.includes(day)) {
         const next = prev.filter((item) => item !== day)
+        setNewScheduleDayTimes((times) => {
+          const copy = { ...times }
+          delete copy[day]
+          return copy
+        })
         return next.length > 0 ? next : prev
       }
+      setNewScheduleDayTimes((times) => ({
+        ...times,
+        [day]: times[day] ?? newScheduleTime,
+      }))
+      return [...prev, day].sort((a, b) => a - b)
+    })
+  }
+
+  function toggleEditFixedDay(day: number) {
+    setEditFixedDays((prev) => {
+      if (prev.includes(day)) {
+        const next = prev.filter((item) => item !== day)
+        setEditFixedDayTimes((times) => {
+          const copy = { ...times }
+          delete copy[day]
+          return copy
+        })
+        return next.length > 0 ? next : prev
+      }
+      setEditFixedDayTimes((times) => ({
+        ...times,
+        [day]: times[day] ?? editFixed?.time_of_day ?? '10:00',
+      }))
       return [...prev, day].sort((a, b) => a - b)
     })
   }
 
   const fixedSchedulePreviewCount = useMemo(() => {
     if (newScheduleMode !== 'fixed' || newScheduleDays.length === 0) return 0
-    return buildClassFixedScheduleDates(
-      newScheduleDays,
-      newScheduleTime,
-      newScheduleWeeksAhead,
-    ).length
-  }, [newScheduleMode, newScheduleDays, newScheduleTime, newScheduleWeeksAhead])
+    const dayTimes = Object.fromEntries(
+      newScheduleDays.map((day) => [day, newScheduleDayTimes[day] ?? newScheduleTime]),
+    ) as DayTimeMap
+    return buildClassFixedScheduleDatesWithTimes(dayTimes, newScheduleWeeksAhead).length
+  }, [
+    newScheduleMode,
+    newScheduleDays,
+    newScheduleDayTimes,
+    newScheduleTime,
+    newScheduleWeeksAhead,
+  ])
 
   function handleScheduleClassChange(classId: string) {
     setNewScheduleClassId(classId)
@@ -293,15 +403,18 @@ export default function ClassesPage() {
     await runAction(async () => {
       await createClass({
         name: newClassName.trim(),
+        description: newClassDescription,
+        content_fields: newClassContentFields,
         class_type: newClassType,
         capacity: newClassCapacity,
+        duration_minutes: newClassDuration,
+        deduct_sessions: newClassDeductSessions,
+        waitlist_enabled: newClassWaitlist,
         trainer_id: newClassTrainerId || null,
       })
       setModal(null)
       setEditingClassId(null)
-      setNewClassName('')
-      setNewClassTrainerId('')
-      setNewClassCapacity(8)
+      resetClassForm()
       await load()
     }, '클래스가 등록되었습니다.')
   }
@@ -319,9 +432,14 @@ export default function ClassesPage() {
     await runAction(async () => {
       await updateClass(editingClassId, {
         name: newClassName.trim(),
+        description: newClassDescription.trim() || null,
+        content_fields: newClassContentFields,
         class_type: newClassType,
         pass_type: newClassType,
         capacity: newClassCapacity,
+        duration_minutes: newClassDuration,
+        deduct_sessions: newClassDeductSessions,
+        waitlist_enabled: newClassWaitlist,
         trainer_id: newClassTrainerId || null,
       })
       closeClassModal()
@@ -347,6 +465,33 @@ export default function ClassesPage() {
     }, `"${cls.name}" 클래스가 삭제되었습니다.`)
   }
 
+  async function handleUpdateFixedSchedule() {
+    if (!editFixed) return
+    if (editFixedDays.length === 0) {
+      setError('최소 1개 요일을 선택해 주세요.')
+      return
+    }
+    await runAction(async () => {
+      const dayTimes = Object.fromEntries(
+        editFixedDays.map((day) => [
+          day,
+          editFixedDayTimes[day] ?? editFixed.time_of_day,
+        ]),
+      ) as DayTimeMap
+      const count = await updateClassFixedScheduleSeries(editFixed.id, {
+        days_of_week: editFixedDays,
+        day_times: dayTimes,
+        capacity: editFixedCapacity,
+        weeks_ahead: editFixedWeeksAhead,
+        note: editFixedNote,
+      })
+      setModal(null)
+      setEditFixed(null)
+      await load()
+      setToast(`고정 일정 변경 · ${count}건`)
+    }, '고정 일정이 수정되었습니다.')
+  }
+
   async function handleCreateSchedule() {
     if (!newScheduleClassId) {
       setError('클래스를 선택해 주세요.')
@@ -365,12 +510,17 @@ export default function ClassesPage() {
         return
       }
       await runAction(async () => {
+        const dayTimes = Object.fromEntries(
+          newScheduleDays.map((day) => [day, newScheduleDayTimes[day] ?? newScheduleTime]),
+        ) as DayTimeMap
         const result = await createClassFixedSchedule({
           class_id: newScheduleClassId,
           days_of_week: newScheduleDays,
+          day_times: dayTimes,
           time_of_day: newScheduleTime,
           capacity: newScheduleCapacity,
           weeks_ahead: newScheduleWeeksAhead,
+          note: newScheduleNote,
           duration_minutes: duration,
         })
         setModal(null)
@@ -390,6 +540,7 @@ export default function ClassesPage() {
         starts_at: starts.toISOString(),
         ends_at: ends.toISOString(),
         capacity: newScheduleCapacity,
+        note: newScheduleNote,
       })
       setModal(null)
       await load()
@@ -566,9 +717,17 @@ export default function ClassesPage() {
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-charcoal">{cls.name}</p>
                   <p className="text-xs text-muted">
-                    {CLASS_TYPE_LABELS[cls.class_type]} · 정원 {cls.capacity}명
+                    {CLASS_TYPE_LABELS[cls.class_type]} · {cls.duration_minutes}분 · 정원{' '}
+                    {cls.capacity}명
                     {cls.trainer_name ? ` · ${cls.trainer_name}` : ' · 선생님 미지정'}
+                    {cls.deduct_sessions ? '' : ' · 회차 미차감'}
+                    {cls.waitlist_enabled ? ' · 대기 가능' : ''}
                   </p>
+                  {(cls.description || classContentPreview(cls.content_fields)) && (
+                    <p className="mt-1 line-clamp-2 text-xs text-charcoal/70">
+                      {cls.description || classContentPreview(cls.content_fields)}
+                    </p>
+                  )}
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2">
                   <button
@@ -593,6 +752,74 @@ export default function ClassesPage() {
           </ul>
         )}
       </section>
+
+      {fixedSchedules.length > 0 && (
+        <section className={`${cardClass} card-pad`}>
+          <h2 className="mb-3 text-sm font-semibold text-charcoal">고정 일정</h2>
+          <ul className="space-y-2">
+            {fixedSchedules.map((fixed) => (
+              <li
+                key={fixed.id}
+                className="flex flex-wrap items-center gap-3 rounded-xl border border-gold/20 bg-white px-3 py-3 text-sm"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-charcoal">
+                    {classNameById.get(fixed.class_id) ?? '클래스'}
+                  </p>
+                  <p className="text-xs text-charcoal/65">
+                    {formatClassFixedScheduleTimes(fixed)} · {fixed.weeks_ahead}주 앞까지
+                    {fixed.capacity ? ` · 정원 ${fixed.capacity}명` : ''}
+                  </p>
+                  {fixed.note && (
+                    <p className="mt-0.5 text-xs text-muted">메모: {fixed.note}</p>
+                  )}
+                </div>
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={actionLoading}
+                    className={btnOutline}
+                    onClick={() => openEditFixedModal(fixed)}
+                  >
+                    수정
+                  </button>
+                  <button
+                    type="button"
+                    disabled={actionLoading}
+                    className={btnOutline}
+                    onClick={() =>
+                      void runAction(async () => {
+                        const n = await syncClassFixedScheduleAhead(fixed.id)
+                        await load()
+                        setToast(n > 0 ? `일정 보충 · ${n}건` : '추가 일정 없음')
+                      }, '일정 보충 완료')
+                    }
+                  >
+                    일정 보충
+                  </button>
+                  <button
+                    type="button"
+                    disabled={actionLoading}
+                    className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50"
+                    onClick={() => {
+                      if (!window.confirm('고정 일정을 비활성화하고 미래 일정을 취소할까요?')) {
+                        return
+                      }
+                      void runAction(async () => {
+                        const n = await deactivateClassFixedSchedule(fixed.id)
+                        await load()
+                        setToast(`고정 일정 취소 · ${n}건`)
+                      }, '고정 일정이 비활성화되었습니다.')
+                    }}
+                  >
+                    비활성화
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <section className={`${cardClass} card-pad min-h-[20rem]`}>
@@ -688,7 +915,23 @@ export default function ClassesPage() {
                       : ''}{' '}
                     · 예약 {selectedSchedule.reserved_count ?? 0}/
                     {selectedSchedule.capacity ?? 8}
+                    {selectedSchedule.fixed_schedule_id ? ' · 고정' : ''}
                   </p>
+                  {selectedClass && (
+                    <div className="mt-2 space-y-1 text-xs text-charcoal/70">
+                      {selectedClass.description && <p>{selectedClass.description}</p>}
+                      {DEFAULT_CLASS_CONTENT_FIELDS.filter(
+                        (field) =>
+                          field.key !== 'notes' &&
+                          normalizeClassContentFields(selectedClass.content_fields)[field.key],
+                      ).map((field) => (
+                        <p key={field.key}>
+                          <span className="font-medium text-charcoal/80">{field.label}:</span>{' '}
+                          {normalizeClassContentFields(selectedClass.content_fields)[field.key]}
+                        </p>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <button
                   type="button"
@@ -842,7 +1085,11 @@ export default function ClassesPage() {
 
       {modal && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-charcoal/45 p-4 sm:items-center">
-          <div className={`${cardClass} w-full max-w-md space-y-4 p-5 shadow-xl`}>
+          <div
+            className={`${cardClass} max-h-[90vh] w-full max-w-md space-y-4 overflow-y-auto p-5 shadow-xl ${
+              modal === 'edit-fixed' ? 'max-w-lg' : ''
+            }`}
+          >
             {modal === 'class' || modal === 'edit-class' ? (
               <>
                 <h3 className="text-lg font-semibold">
@@ -880,17 +1127,92 @@ export default function ClassesPage() {
                     ))}
                   </select>
                 </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="block text-sm">
+                    <span className="mb-1 block font-medium text-charcoal/70">기본 정원</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={99}
+                      className={inputClass}
+                      value={newClassCapacity}
+                      onChange={(e) => setNewClassCapacity(Number(e.target.value) || 1)}
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    <span className="mb-1 block font-medium text-charcoal/70">수업 시간(분)</span>
+                    <input
+                      type="number"
+                      min={15}
+                      max={180}
+                      className={inputClass}
+                      value={newClassDuration}
+                      onChange={(e) => setNewClassDuration(Number(e.target.value) || 60)}
+                    />
+                  </label>
+                </div>
                 <label className="block text-sm">
-                  <span className="mb-1 block font-medium text-charcoal/70">기본 정원</span>
-                  <input
-                    type="number"
-                    min={1}
-                    max={99}
-                    className={inputClass}
-                    value={newClassCapacity}
-                    onChange={(e) => setNewClassCapacity(Number(e.target.value) || 1)}
+                  <span className="mb-1 block font-medium text-charcoal/70">간단 설명</span>
+                  <textarea
+                    className={`${inputClass} min-h-[4rem] resize-y`}
+                    placeholder="회원에게 보이는 한 줄 소개 (선택)"
+                    value={newClassDescription}
+                    onChange={(e) => setNewClassDescription(e.target.value)}
                   />
                 </label>
+                <div className="space-y-2 rounded-lg border border-gold/20 bg-cream/30 p-3">
+                  <p className="text-xs font-semibold text-charcoal">수업 내용 정리</p>
+                  {DEFAULT_CLASS_CONTENT_FIELDS.map((field) => (
+                    <label key={field.key} className="block text-sm">
+                      <span className="mb-1 block font-medium text-charcoal/70">
+                        {field.label}
+                      </span>
+                      {field.multiline ? (
+                        <textarea
+                          className={`${inputClass} min-h-[3.5rem] resize-y`}
+                          placeholder={field.placeholder}
+                          value={newClassContentFields[field.key] ?? ''}
+                          onChange={(e) =>
+                            setNewClassContentFields((prev) => ({
+                              ...prev,
+                              [field.key]: e.target.value,
+                            }))
+                          }
+                        />
+                      ) : (
+                        <input
+                          className={inputClass}
+                          placeholder={field.placeholder}
+                          value={newClassContentFields[field.key] ?? ''}
+                          onChange={(e) =>
+                            setNewClassContentFields((prev) => ({
+                              ...prev,
+                              [field.key]: e.target.value,
+                            }))
+                          }
+                        />
+                      )}
+                    </label>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-4 text-sm">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={newClassDeductSessions}
+                      onChange={(e) => setNewClassDeductSessions(e.target.checked)}
+                    />
+                    수강권/회차 차감
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={newClassWaitlist}
+                      onChange={(e) => setNewClassWaitlist(e.target.checked)}
+                    />
+                    대기 예약 허용
+                  </label>
+                </div>
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -903,6 +1225,98 @@ export default function ClassesPage() {
                     {modal === 'edit-class' ? '저장' : '등록'}
                   </button>
                   <button type="button" className={btnOutline} onClick={closeClassModal}>
+                    닫기
+                  </button>
+                </div>
+              </>
+            ) : modal === 'edit-fixed' && editFixed ? (
+              <>
+                <h3 className="text-lg font-semibold">고정 일정 수정</h3>
+                <p className="text-sm text-muted">
+                  {classNameById.get(editFixed.class_id) ?? '클래스'} · 분리되지 않은 미래 일정에
+                  반영됩니다.
+                </p>
+                <div>
+                  <p className="mb-2 text-sm font-medium text-charcoal/70">반복 요일</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {WEEKDAYS.map((label, day) => (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => toggleEditFixedDay(day)}
+                        className={`rounded-lg border px-2.5 py-1 text-xs font-semibold ${
+                          editFixedDays.includes(day)
+                            ? 'border-gold bg-gold/20 text-charcoal'
+                            : 'border-gold/25 bg-white text-charcoal/60'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <FixedDayTimeFields
+                  days={editFixedDays}
+                  dayTimes={editFixedDayTimes}
+                  defaultTime={editFixed.time_of_day}
+                  onChange={(day, time) =>
+                    setEditFixedDayTimes((prev) => ({ ...prev, [day]: time }))
+                  }
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="block text-sm">
+                    <span className="mb-1 block font-medium text-charcoal/70">생성 기간 (주)</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={52}
+                      className={inputClass}
+                      value={editFixedWeeksAhead}
+                      onChange={(e) =>
+                        setEditFixedWeeksAhead(
+                          Math.min(52, Math.max(1, Number(e.target.value) || 8)),
+                        )
+                      }
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    <span className="mb-1 block font-medium text-charcoal/70">정원</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={99}
+                      className={inputClass}
+                      value={editFixedCapacity}
+                      onChange={(e) => setEditFixedCapacity(Number(e.target.value) || 1)}
+                    />
+                  </label>
+                </div>
+                <label className="block text-sm">
+                  <span className="mb-1 block font-medium text-charcoal/70">메모</span>
+                  <input
+                    className={inputClass}
+                    value={editFixedNote}
+                    onChange={(e) => setEditFixedNote(e.target.value)}
+                    placeholder="선택 사항"
+                  />
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className={btnPrimary}
+                    disabled={actionLoading}
+                    onClick={() => void handleUpdateFixedSchedule()}
+                  >
+                    저장
+                  </button>
+                  <button
+                    type="button"
+                    className={btnOutline}
+                    onClick={() => {
+                      setModal(null)
+                      setEditFixed(null)
+                    }}
+                  >
                     닫기
                   </button>
                 </div>
@@ -955,12 +1369,17 @@ export default function ClassesPage() {
                     </label>
                   </div>
                 </label>
-                <input
-                  type="time"
-                  className={inputClass}
-                  value={newScheduleTime}
-                  onChange={(e) => setNewScheduleTime(e.target.value)}
-                />
+                {newScheduleMode === 'single' ? (
+                  <label className="block text-sm">
+                    <span className="mb-1 block font-medium text-charcoal/70">시간</span>
+                    <input
+                      type="time"
+                      className={inputClass}
+                      value={newScheduleTime}
+                      onChange={(e) => setNewScheduleTime(e.target.value)}
+                    />
+                  </label>
+                ) : null}
                 {newScheduleMode === 'single' ? (
                   <input
                     type="date"
@@ -989,6 +1408,14 @@ export default function ClassesPage() {
                         ))}
                       </div>
                     </div>
+                    <FixedDayTimeFields
+                      days={newScheduleDays}
+                      dayTimes={newScheduleDayTimes}
+                      defaultTime={newScheduleTime}
+                      onChange={(day, time) =>
+                        setNewScheduleDayTimes((prev) => ({ ...prev, [day]: time }))
+                      }
+                    />
                     <label className="block text-sm">
                       <span className="mb-1 block font-medium text-charcoal/70">
                         생성 기간 (주)
@@ -1011,6 +1438,15 @@ export default function ClassesPage() {
                     </p>
                   </>
                 )}
+                <label className="block text-sm">
+                  <span className="mb-1 block font-medium text-charcoal/70">메모</span>
+                  <input
+                    className={inputClass}
+                    value={newScheduleNote}
+                    onChange={(e) => setNewScheduleNote(e.target.value)}
+                    placeholder="선택 사항"
+                  />
+                </label>
                 <div className="flex gap-2">
                   <button
                     type="button"

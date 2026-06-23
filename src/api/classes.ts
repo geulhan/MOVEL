@@ -1,4 +1,5 @@
 import { getCurrentCenterId } from '../lib/center'
+import { normalizeClassContentFields, type ClassContentFields } from '../constants/classContentFields'
 import { supabase } from '../lib/supabase'
 import { earnGrowthOnGroupClassAttendance } from './growth/growthEarnService'
 
@@ -33,6 +34,7 @@ export type FitnessClass = {
   center_id: string
   name: string
   description: string | null
+  content_fields?: ClassContentFields | null
   trainer_id: string | null
   capacity: number
   duration_minutes: number
@@ -200,6 +202,7 @@ export async function fetchClasses(): Promise<FitnessClass[]> {
 export async function createClass(input: {
   name: string
   description?: string
+  content_fields?: ClassContentFields
   trainer_id?: string | null
   capacity?: number
   duration_minutes?: number
@@ -214,6 +217,7 @@ export async function createClass(input: {
     center_id: centerId,
     name: input.name.trim(),
     description: input.description?.trim() || null,
+    content_fields: normalizeClassContentFields(input.content_fields),
     trainer_id: input.trainer_id || null,
     capacity: input.capacity ?? 8,
     duration_minutes: input.duration_minutes ?? 60,
@@ -234,9 +238,13 @@ export async function updateClass(
   id: string,
   input: Partial<Omit<FitnessClass, 'id' | 'center_id' | 'created_at' | 'updated_at'>>,
 ): Promise<FitnessClass> {
+  const patch = { ...input }
+  if (input.content_fields !== undefined) {
+    patch.content_fields = normalizeClassContentFields(input.content_fields)
+  }
   const { data, error } = await supabase
     .from('classes')
-    .update(input)
+    .update(patch)
     .eq('id', id)
     .select('*')
     .single()

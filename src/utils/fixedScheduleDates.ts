@@ -116,10 +116,25 @@ export function buildClassFixedScheduleDates(
   timeHHMM: string,
   weeksAhead: number,
 ): Date[] {
-  if (weeksAhead <= 0 || daysOfWeek.length === 0) return []
+  const dayTimes = Object.fromEntries(
+    daysOfWeek.map((day) => [day, timeHHMM]),
+  ) as DayTimeMap
+  return buildClassFixedScheduleDatesWithTimes(dayTimes, weeksAhead)
+}
 
-  const daySet = new Set(daysOfWeek)
-  const [hours, minutes] = timeHHMM.split(':').map((v) => parseInt(v, 10))
+/** 요일별 서로 다른 시간 — weeksAhead 주 동안 미래 일정 생성 */
+export function buildClassFixedScheduleDatesWithTimes(
+  dayTimes: DayTimeMap,
+  weeksAhead: number,
+): Date[] {
+  if (weeksAhead <= 0) return []
+
+  const days = Object.keys(dayTimes)
+    .map((d) => parseInt(d, 10))
+    .filter((d) => d >= 0 && d <= 6 && dayTimes[d])
+  if (days.length === 0) return []
+
+  const daySet = new Set(days)
   const dates: Date[] = []
   const cursor = new Date()
   cursor.setHours(0, 0, 0, 0)
@@ -128,7 +143,10 @@ export function buildClassFixedScheduleDates(
   endDate.setDate(endDate.getDate() + weeksAhead * 7)
 
   while (cursor.getTime() <= endDate.getTime()) {
-    if (daySet.has(cursor.getDay())) {
+    const dow = cursor.getDay()
+    if (daySet.has(dow)) {
+      const timeHHMM = dayTimes[dow]
+      const [hours, minutes] = timeHHMM.split(':').map((v) => parseInt(v, 10))
       const slot = new Date(cursor)
       slot.setHours(hours, minutes, 0, 0)
       if (slot.getTime() > Date.now()) {
