@@ -3,6 +3,7 @@ import { fetchMembers, formatDate, todayDateString } from './members'
 import { sendNotification, type SendNotificationResult } from './notifications'
 import { supabase } from '../lib/supabase'
 import type { Member, MessageTemplateKey, PaymentHistory } from '../types/database'
+import { resolveMembershipExpireTemplateKey } from '../constants/alimtalkTemplates'
 import { isExpiringSoon, isRenewalTarget } from '../utils/renewal'
 
 export type MessageCampaignKind =
@@ -54,11 +55,18 @@ async function fetchNotifiedMemberIds(
   templateKey: MessageTemplateKey,
 ): Promise<Set<string>> {
   const centerId = await getCurrentCenterId()
+  const keys =
+    templateKey === 'welcome'
+      ? (['welcome', 'member_signup_guide', 'member_welcome'] as const)
+      : templateKey === 'payment_done'
+        ? (['payment_done', 'payment_completed'] as const)
+        : ([templateKey] as const)
+
   const { data, error } = await supabase
     .from('message_logs')
     .select('member_id')
     .eq('center_id', centerId)
-    .eq('template_key', templateKey)
+    .in('template_key', [...keys])
     .in('status', ['sent', 'skipped'])
 
   if (error) throw error
@@ -76,9 +84,14 @@ async function fetchRenewalTierState(): Promise<{
   const centerId = await getCurrentCenterId()
   const { data, error } = await supabase
     .from('message_logs')
-    .select('member_id, metadata, status')
+    .select('member_id, template_key, metadata, status')
     .eq('center_id', centerId)
-    .eq('template_key', 'renewal')
+    .in('template_key', [
+      'renewal',
+      'membership_expire_14',
+      'membership_expire_7',
+      'membership_expire_today',
+    ])
     .in('status', ['sent', 'skipped'])
 
   if (error) throw error
@@ -89,9 +102,16 @@ async function fetchRenewalTierState(): Promise<{
     if (!row.member_id) continue
     const metadata = row.metadata as {
       days_left?: number
+      expire_date?: string
       skipped_reason?: string
     } | null
-    const daysLeft = metadata?.days_left
+    let daysLeft = metadata?.days_left
+    if (daysLeft == null) {
+      const templateKey = String(row.template_key ?? '')
+      if (templateKey === 'membership_expire_14') daysLeft = 14
+      else if (templateKey === 'membership_expire_7') daysLeft = 7
+      else if (templateKey === 'membership_expire_today') daysLeft = 0
+    }
     if (daysLeft == null) continue
     const key = `${row.member_id}:${daysLeft}`
     if (row.status === 'sent') {
@@ -111,7 +131,7 @@ async function fetchNotifiedPaymentIds(): Promise<Set<string>> {
     .from('message_logs')
     .select('metadata')
     .eq('center_id', centerId)
-    .eq('template_key', 'payment_done')
+    .in('template_key', ['payment_done', 'payment_completed'])
     .in('status', ['sent', 'skipped'])
 
   if (error) throw error
@@ -210,7 +230,7 @@ async function fetchNotifiedPtScheduleIds(): Promise<Set<string>> {
     .from('message_logs')
     .select('metadata')
     .eq('center_id', centerId)
-    .eq('template_key', 'pt_reminder')
+    .in('template_key', ['pt_reminder', 'schedule_reminder'])
     .in('status', ['sent', 'skipped'])
 
   if (error) throw error
@@ -305,7 +325,8 @@ export async function sendRenewalMessage(
   memberId: string,
   daysLeft: number,
 ): Promise<SendNotificationResult> {
-  return sendNotification('renewal', memberId, {
+  const templateKey = resolveMembershipExpireTemplateKey(daysLeft)
+  return sendNotification(templateKey, memberId, {
     metadata: { days_left: daysLeft },
   })
 }
@@ -313,11 +334,13 @@ export async function sendRenewalMessage(
 export async function sendPtReminderMessage(
   target: Pick<PtReminderTarget, 'member' | 'scheduleId' | 'scheduledAt' | 'trainerName'>,
 ): Promise<SendNotificationResult> {
-  return sendNotification('pt_reminder', target.member.id, {
+  return sendNotification('schedule_reminder', target.member.id, {
     metadata: {
       schedule_id: target.scheduleId,
-      scheduled_at: formatScheduledAtKst(target.scheduledAt),
+      scheduled_at: target.scheduledAt,
+      schedule_date: formatScheduledAtKst(target.scheduledAt),
       trainer_name: target.trainerName,
+      class_name: 'PT',
     },
   })
 }
@@ -394,7 +417,7 @@ export async function dismissPtReminderTargets(
   await insertSkippedMessageLogs(
     targets.map((target) => ({
       member: target.member,
-      templateKey: 'pt_reminder' as const,
+      templateKey: 'schedule_reminder' as const,
       metadata: { schedule_id: target.scheduleId },
     })),
   )

@@ -65,9 +65,9 @@ const PANEL_COPY: Record<
     dismissConfirm: '이 회원을 재등록 안내 목록에서 제외할까요?',
   },
   pt_reminder: {
-    title: 'PT D-1 리마인더',
+    title: '수업 리마인더',
     description:
-      '수업 24시간 전 알림톡이 아직 발송되지 않은 예약입니다. 자동 발송 대상(24시간 전 ±1시간)과 그 이전에 누락된 예약이 표시됩니다.',
+      '수업 24시간 전 알림톡(schedule_reminder)이 아직 발송되지 않은 예약입니다. 자동 발송 대상(24시간 전 ±1시간)과 그 이전에 누락된 예약이 표시됩니다.',
     empty: '발송 대기 중인 PT 리마인더가 없습니다.',
     dismissConfirm: '이 예약을 PT 리마인더 목록에서 제외할까요?',
   },
@@ -83,6 +83,9 @@ const BULK_DISMISS_LABEL: Record<MessageCampaignKind, string> = {
 
 function resultLabel(result: SendNotificationResult): string {
   if (result.status === 'sent') return MESSAGE_STATUS_LABELS.sent
+  if (result.error?.includes('Invalid templateKey')) {
+    return '발송 API 템플릿 오류 (서버 재배포 필요)'
+  }
   if (result.status === 'skipped') {
     if (result.skippedReason === 'duplicate') return '이미 발송됨'
     if (

@@ -3,6 +3,7 @@ import {
   normalizeTemplateKey,
   SEND_NOTIFICATION_CENTER_KEYS,
   SEND_NOTIFICATION_EVENT_KEYS,
+  SEND_NOTIFICATION_MANUAL_KEYS,
   SEND_NOTIFICATION_MEMBER_KEYS,
 } from '../_shared/alimtalkTemplateRegistry.ts'
 import { isNotificationAuthorized } from '../_shared/notificationAuth.ts'
@@ -15,6 +16,7 @@ const ALLOWED_KEYS = new Set([
   ...SEND_NOTIFICATION_MEMBER_KEYS,
   ...SEND_NOTIFICATION_CENTER_KEYS,
   ...SEND_NOTIFICATION_EVENT_KEYS,
+  ...SEND_NOTIFICATION_MANUAL_KEYS,
 ])
 
 Deno.serve(async (req) => {

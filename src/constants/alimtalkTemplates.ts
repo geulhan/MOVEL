@@ -142,3 +142,12 @@ export const ALIMTALK_TEMPLATE_VARIABLES = [
   '#{activeMembers}',
   '#{newMembers}',
 ] as const
+
+/** 만료 D-day → 승인된 membership_expire_* 템플릿 */
+export function resolveMembershipExpireTemplateKey(
+  daysLeft: number,
+): 'membership_expire_14' | 'membership_expire_7' | 'membership_expire_today' {
+  if (daysLeft >= 14) return 'membership_expire_14'
+  if (daysLeft >= 7) return 'membership_expire_7'
+  return 'membership_expire_today'
+}

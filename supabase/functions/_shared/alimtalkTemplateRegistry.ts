@@ -92,6 +92,14 @@ export const SEND_NOTIFICATION_EVENT_KEYS = new Set<AlimtalkTemplateKey>([
   'schedule_cancelled',
 ])
 
+/** 관리자 수동 발송·크론 (send-notification 허용) */
+export const SEND_NOTIFICATION_MANUAL_KEYS = new Set<AlimtalkTemplateKey>([
+  'schedule_reminder',
+  'membership_expire_14',
+  'membership_expire_7',
+  'membership_expire_today',
+])
+
 export const SCHEDULE_REMINDERS_KEYS = new Set<AlimtalkTemplateKey>([
   'schedule_reminder',
 ])
