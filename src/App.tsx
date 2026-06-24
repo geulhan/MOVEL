@@ -26,6 +26,7 @@ import BusinessAnalyticsPage from './pages/admin/BusinessAnalyticsPage'
 import ClassesPage from './pages/admin/ClassesPage'
 import FacilityOpsPage from './pages/admin/FacilityOpsPage'
 import MemberPortalPage from './pages/MemberPortalPage'
+import MemberWelcomePage from './pages/MemberWelcomePage'
 import { RootPage } from './pages/RootPage'
 import LoginPage from './pages/LoginPage'
 import CenterSignupPage from './pages/CenterSignupPage'
@@ -100,6 +101,7 @@ export default function App() {
           </Route>
         </Route>
         <Route path="/member/:memberId" element={<MemberAdminDetailRedirect />} />
+        <Route path="/member/welcome" element={<MemberWelcomePage />} />
         <Route path="/member" element={<MemberPortalPage />} />
         <Route path="/trainer" element={<Navigate to="/admin" replace />} />
         <Route path="/user" element={<Navigate to="/member" replace />} />

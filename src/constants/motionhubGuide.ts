@@ -5,13 +5,18 @@ export const MOTIONHUB_CENTER_GUIDE_PATH = '/guide' as const
 
 export const MOTIONHUB_CENTER_GUIDE_URL = `${MOTIONHUB_SITE_URL}${MOTIONHUB_CENTER_GUIDE_PATH}`
 
+/** 회원 온보딩 welcome 페이지 */
+export const MOTIONHUB_MEMBER_WELCOME_PATH = '/member/welcome' as const
+
+export const MOTIONHUB_MEMBER_WELCOME_URL = `${MOTIONHUB_SITE_URL}${MOTIONHUB_MEMBER_WELCOME_PATH}`
+
 /** 회원가입 안내 알림톡 고정 URL (변수 없음, 템플릿 본문 고정) */
-export const MOTIONHUB_MEMBER_SIGNUP_PORTAL_URL = `${MOTIONHUB_SITE_URL}/member`
+export const MOTIONHUB_MEMBER_SIGNUP_PORTAL_URL = MOTIONHUB_MEMBER_WELCOME_URL
 
 /** 회원 포털 URL (회원용 알림톡 안내) */
 export function getMemberPortalUrl(centerSlug?: string): string {
   const slug = centerSlug?.trim().toLowerCase() ?? ''
   return slug
-    ? `${MOTIONHUB_SITE_URL}/member?center=${encodeURIComponent(slug)}`
-    : MOTIONHUB_MEMBER_SIGNUP_PORTAL_URL
+    ? `${MOTIONHUB_MEMBER_WELCOME_URL}?center=${encodeURIComponent(slug)}`
+    : MOTIONHUB_MEMBER_WELCOME_URL
 }

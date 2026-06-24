@@ -148,6 +148,12 @@ export default function MemberPortalPage() {
   }, [searchParams])
 
   useEffect(() => {
+    const mode = searchParams.get('mode')
+    if (mode === 'signup') setAuthMode('signup')
+    else if (mode === 'login') setAuthMode('login')
+  }, [searchParams])
+
+  useEffect(() => {
     setSignupCentersLoading(true)
     void fetchSignupCenters()
       .then(setSignupCenters)
