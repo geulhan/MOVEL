@@ -25,6 +25,7 @@ import CenterSettingsPage from './pages/admin/CenterSettingsPage'
 import BusinessAnalyticsPage from './pages/admin/BusinessAnalyticsPage'
 import ClassesPage from './pages/admin/ClassesPage'
 import FacilityOpsPage from './pages/admin/FacilityOpsPage'
+import LeadsPage from './pages/admin/LeadsPage'
 import MemberPortalPage from './pages/MemberPortalPage'
 import MemberWelcomePage from './pages/MemberWelcomePage'
 import { RootPage } from './pages/RootPage'
@@ -73,6 +74,7 @@ export default function App() {
           <Route element={<AdminLayout />}>
             <Route index element={<AdminHomePage />} />
             <Route path="members" element={<MembersPage />} />
+            <Route path="leads" element={<LeadsPage />} />
             <Route path="member/:memberId" element={<MemberDetailShell />}>
               <Route index element={<MemberOverviewTab />} />
               <Route path="pt" element={<MemberPtPaymentTab />} />

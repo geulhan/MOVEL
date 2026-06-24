@@ -28,6 +28,14 @@ export type AdminNavItem = {
 export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { to: '/admin', end: true, label: '대시보드', icon: '◈', roles: ['admin'] },
   {
+    to: '/admin/leads',
+    end: false,
+    label: '상담·리드',
+    icon: '◌',
+    roles: ['admin', 'trainer'],
+    featureKeys: ['membership'],
+  },
+  {
     to: '/admin/members',
     end: false,
     label: '회원 관리',
@@ -110,6 +118,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
 ]
 
 const TRAINER_ALLOWED_PREFIXES = [
+  '/admin/leads',
   '/admin/members',
   '/admin/member/',
   '/admin/schedule',
@@ -133,6 +142,7 @@ const PATH_FEATURE_RULES: Array<{
   { prefix: '/admin/messages', check: (f) => f.notifications },
   { prefix: '/admin/payments', check: (f) => f.membership },
   { prefix: '/admin/members', check: (f) => f.membership },
+  { prefix: '/admin/leads', check: (f) => f.membership },
   { prefix: '/admin/member/', check: (f) => f.membership },
 ]
 

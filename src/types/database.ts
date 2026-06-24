@@ -1222,6 +1222,16 @@ export type Database = {
         },
         never
       >
+      consultation_leads: TableDef<
+        Record<string, unknown>,
+        Record<string, unknown>,
+        Record<string, unknown>
+      >
+      lead_activities: TableDef<
+        Record<string, unknown>,
+        Record<string, unknown>,
+        Record<string, unknown>
+      >
       admin_users: TableDef<
         AdminUser,
         {
@@ -1500,6 +1510,12 @@ export type Database = {
           p_session_token: string
         }
         Returns: Json
+      }
+      purge_expired_consultation_leads: {
+        Args: {
+          p_center_id?: string | null
+        }
+        Returns: number
       }
       list_trainer_admin_accounts: {
         Args: {
