@@ -11,6 +11,8 @@ type Props = {
   memberTheme?: CenterTheme
   onLogout?: () => void
   onDashboard?: () => void
+  /** 가입 전 온보딩 화면 — 눈부심을 줄인 저채도 배경 */
+  appearance?: 'default' | 'soft'
 }
 
 export function MemberLayout({
@@ -19,6 +21,7 @@ export function MemberLayout({
   memberTheme,
   onLogout,
   onDashboard,
+  appearance = 'default',
 }: Props) {
   const homeTo = isPlatformLandingHost() ? '/' : '/motionhub'
   const activeTheme = memberTheme ?? DEFAULT_CENTER_THEME
@@ -26,10 +29,11 @@ export function MemberLayout({
   const themed = Boolean(memberTheme)
   useApplyMemberTheme(activeTheme, { enabled: themed, memberName })
   const isLoggedIn = Boolean(memberName)
+  const softOnboarding = appearance === 'soft' && !isLoggedIn
 
   const logo = (
     <MotionHubLogo
-      tone="light"
+      tone={softOnboarding ? 'dark' : 'light'}
       variant="vertical"
       size={isLoggedIn ? 'nav' : 'header'}
       className="items-center"
@@ -57,7 +61,13 @@ export function MemberLayout({
 
   return (
     <div
-      className={`min-h-screen ${isLoggedIn ? 'bg-[#f4f6f8]' : 'bg-[#f3f5f7]'}`}
+      className={`min-h-screen ${
+        isLoggedIn
+          ? 'bg-[#f4f6f8]'
+          : softOnboarding
+            ? 'bg-[#dce2e9]'
+            : 'bg-[#f3f5f7]'
+      }`}
       style={
         themed
           ? {
@@ -95,14 +105,22 @@ export function MemberLayout({
         </header>
       ) : (
         <header
-          className="relative border-b border-charcoal/6 bg-white"
-          style={{ backgroundColor: MOTIONHUB_BRAND.surface }}
+          className={
+            softOnboarding
+              ? 'relative border-b border-charcoal/12 bg-gradient-to-b from-[#cfd6df] to-[#dce2e9]'
+              : 'relative border-b border-charcoal/6 bg-white'
+          }
+          style={softOnboarding ? undefined : { backgroundColor: MOTIONHUB_BRAND.surface }}
         >
           <div className="relative mx-auto max-w-lg px-4 pb-10 pt-5 sm:pb-12 sm:pt-6">
             <div className="absolute top-4 right-4 z-10 sm:top-5 sm:right-5">
               <Link
                 to="/login"
-                className="rounded-lg border border-charcoal/12 bg-white px-3 py-1.5 text-xs font-bold text-charcoal transition hover:border-motionhub/35 hover:bg-motionhub-light/40"
+                className={
+                  softOnboarding
+                    ? 'rounded-lg border border-charcoal/18 bg-[#e8ecf1] px-3 py-1.5 text-xs font-bold text-charcoal/90 transition hover:border-charcoal/28 hover:bg-[#eef2f6]'
+                    : 'rounded-lg border border-charcoal/12 bg-white px-3 py-1.5 text-xs font-bold text-charcoal transition hover:border-motionhub/35 hover:bg-motionhub-light/40'
+                }
               >
                 관리자 로그인
               </Link>
@@ -120,7 +138,11 @@ export function MemberLayout({
         {children}
       </main>
 
-      <footer className="mx-auto max-w-lg px-4 pb-8 pt-2 text-center text-xs text-charcoal/45">
+      <footer
+        className={`mx-auto max-w-lg px-4 pb-8 pt-2 text-center text-xs ${
+          softOnboarding ? 'text-charcoal/55' : 'text-charcoal/45'
+        }`}
+      >
         <Link to={homeTo} className="font-medium hover:text-charcoal">
           모션허브 홈
         </Link>
