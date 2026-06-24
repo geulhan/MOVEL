@@ -30,19 +30,20 @@ export function MemberLayout({
   const isLoggedIn = Boolean(memberName)
   const softOnboarding = appearance === 'soft' && !isLoggedIn
 
-  const logo = (
+  const logo = isLoggedIn ? (
+    <div
+      className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#0b0e11] shadow-sm"
+      aria-hidden="true"
+    >
+      <MotionHubLogo variant="symbol" tone="light" size="nav" className="items-center" />
+    </div>
+  ) : (
     <MotionHubLogo
       surface="member"
       variant="vertical"
-      size={isLoggedIn ? 'nav' : 'header'}
+      size="header"
       className="items-center"
     />
-  )
-
-  const logoOnDark = isLoggedIn ? (
-    <div className="shrink-0 bg-black">{logo}</div>
-  ) : (
-    logo
   )
 
   const logoWrapper = onDashboard ? (
@@ -52,7 +53,7 @@ export function MemberLayout({
       className="flex shrink-0 items-center transition hover:opacity-90"
       aria-label="대시보드 (내 정보)"
     >
-      {logoOnDark}
+      {logo}
     </button>
   ) : (
     <Link
@@ -60,7 +61,7 @@ export function MemberLayout({
       className="flex shrink-0 items-center transition hover:opacity-90"
       aria-label="회원 홈"
     >
-      {logoOnDark}
+      {logo}
     </Link>
   )
 
@@ -85,10 +86,10 @@ export function MemberLayout({
     >
       {isLoggedIn ? (
         <header className="sticky top-0 z-20 border-b border-charcoal/10 bg-white/95 shadow-sm shadow-charcoal/5 backdrop-blur-md">
-          <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-3">
-            <div className="flex min-w-0 items-center gap-3">
+          <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-2.5">
+            <div className="flex min-w-0 items-center gap-2.5">
               {logoWrapper}
-              <div className="min-w-0 text-left">
+              <div className="min-w-0 border-l border-charcoal/10 pl-2.5 text-left">
                 <p className="truncate text-sm font-bold text-charcoal">
                   {memberName} 님
                 </p>
