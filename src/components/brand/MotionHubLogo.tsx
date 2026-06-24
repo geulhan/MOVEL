@@ -85,14 +85,23 @@ export function MotionHubLogo({
       src === MOTIONHUB_BRAND_ASSETS.logoMemberVertical)
 
   const memberLogoClass =
-    surface === 'member' && variant === 'vertical' ? 'rounded-xl' : ''
+    surface === 'member' && variant === 'vertical'
+      ? 'mx-auto block'
+      : ''
+
+  const memberSizeClass =
+    surface === 'member' && variant === 'vertical' && isHeader
+      ? 'h-auto w-auto max-h-[8.5rem] max-w-[11rem] sm:max-h-40 sm:max-w-[12rem]'
+      : surface === 'member' && variant === 'vertical' && !isHeader
+        ? 'h-auto w-auto max-h-11 max-w-[5.5rem] sm:max-h-12 sm:max-w-24'
+        : sizeClass
 
   return (
     <div className={`inline-flex flex-col items-start ${className}`}>
       <img
         src={src}
         alt="모션허브 MotionHub"
-        className={`object-contain ${memberLogoClass} ${variant === 'vertical' ? 'object-center' : 'object-left'} ${sizeClass}`}
+        className={`object-contain ${memberLogoClass} ${variant === 'vertical' ? 'object-center' : 'object-left'} ${surface === 'member' && variant === 'vertical' ? memberSizeClass : sizeClass}`}
         decoding="async"
       />
       {showTagline && !imageHasTagline && (

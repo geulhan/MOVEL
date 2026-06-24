@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom'
 import { MotionHubLogo } from '../brand/MotionHubLogo'
-import { MOTIONHUB_BRAND } from '../../constants/motionhubBrand'
 import { useApplyMemberTheme, useMemberThemeVars } from '../../hooks/useMemberTheme'
 import { isPlatformLandingHost } from '../../pages/RootPage'
 import { DEFAULT_CENTER_THEME, type CenterTheme } from '../../types/centerBranding'
@@ -40,6 +39,12 @@ export function MemberLayout({
     />
   )
 
+  const logoOnDark = isLoggedIn ? (
+    <div className="shrink-0 bg-black">{logo}</div>
+  ) : (
+    logo
+  )
+
   const logoWrapper = onDashboard ? (
     <button
       type="button"
@@ -47,7 +52,7 @@ export function MemberLayout({
       className="flex shrink-0 items-center transition hover:opacity-90"
       aria-label="대시보드 (내 정보)"
     >
-      {logo}
+      {logoOnDark}
     </button>
   ) : (
     <Link
@@ -55,7 +60,7 @@ export function MemberLayout({
       className="flex shrink-0 items-center transition hover:opacity-90"
       aria-label="회원 홈"
     >
-      {logo}
+      {logoOnDark}
     </Link>
   )
 
@@ -104,23 +109,12 @@ export function MemberLayout({
           </div>
         </header>
       ) : (
-        <header
-          className={
-            softOnboarding
-              ? 'relative border-b border-charcoal/12 bg-gradient-to-b from-[#cfd6df] to-[#dce2e9]'
-              : 'relative border-b border-charcoal/6 bg-white'
-          }
-          style={softOnboarding ? undefined : { backgroundColor: MOTIONHUB_BRAND.surface }}
-        >
+        <header className="relative border-b border-white/10 bg-black">
           <div className="relative mx-auto max-w-lg px-4 pb-10 pt-5 sm:pb-12 sm:pt-6">
             <div className="absolute top-4 right-4 z-10 sm:top-5 sm:right-5">
               <Link
                 to="/login"
-                className={
-                  softOnboarding
-                    ? 'rounded-lg border border-charcoal/18 bg-[#e8ecf1] px-3 py-1.5 text-xs font-bold text-charcoal/90 transition hover:border-charcoal/28 hover:bg-[#eef2f6]'
-                    : 'rounded-lg border border-charcoal/12 bg-white px-3 py-1.5 text-xs font-bold text-charcoal transition hover:border-motionhub/35 hover:bg-motionhub-light/40'
-                }
+                className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold text-white/90 transition hover:border-white/30 hover:bg-white/15"
               >
                 관리자 로그인
               </Link>
