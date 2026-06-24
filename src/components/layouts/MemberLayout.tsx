@@ -33,7 +33,7 @@ export function MemberLayout({
 
   const logo = (
     <MotionHubLogo
-      tone={softOnboarding ? 'dark' : 'light'}
+      surface="member"
       variant="vertical"
       size={isLoggedIn ? 'nav' : 'header'}
       className="items-center"

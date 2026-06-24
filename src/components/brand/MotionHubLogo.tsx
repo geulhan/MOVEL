@@ -10,13 +10,20 @@ type Props = {
   variant?: 'combination' | 'vertical' | 'symbol'
   /** 한글 로고 우선 (밝은 배경) */
   locale?: 'ko' | 'en'
+  /** 회원 포털 전용 로고 */
+  surface?: 'default' | 'member'
 }
 
 function resolveSrc(
   tone: 'light' | 'dark',
   variant: 'combination' | 'vertical' | 'symbol',
   locale: 'ko' | 'en',
+  surface: 'default' | 'member',
 ): string {
+  if (surface === 'member' && variant === 'vertical') {
+    return MOTIONHUB_BRAND_ASSETS.logoMemberVertical
+  }
+
   if (variant === 'symbol') {
     return tone === 'light'
       ? MOTIONHUB_BRAND_ASSETS.iconDark
@@ -45,11 +52,12 @@ export function MotionHubLogo({
   size = 'nav',
   variant = 'combination',
   locale = 'ko',
+  surface = 'default',
 }: Props) {
   const isHero = size === 'hero'
   const isHeader = size === 'header'
   const isFooter = size === 'footer'
-  const src = resolveSrc(tone, variant, locale)
+  const src = resolveSrc(tone, variant, locale, surface)
 
   const sizeClass =
     variant === 'symbol'
@@ -73,14 +81,18 @@ export function MotionHubLogo({
     (src === MOTIONHUB_BRAND_ASSETS.logoTransparent ||
       src === MOTIONHUB_BRAND_ASSETS.logoKoLight ||
       src === MOTIONHUB_BRAND_ASSETS.logoEnLight ||
-      src === MOTIONHUB_BRAND_ASSETS.logoVerticalLight)
+      src === MOTIONHUB_BRAND_ASSETS.logoVerticalLight ||
+      src === MOTIONHUB_BRAND_ASSETS.logoMemberVertical)
+
+  const memberLogoClass =
+    surface === 'member' && variant === 'vertical' ? 'rounded-xl' : ''
 
   return (
     <div className={`inline-flex flex-col items-start ${className}`}>
       <img
         src={src}
         alt="모션허브 MotionHub"
-        className={`object-contain ${variant === 'vertical' ? 'object-center' : 'object-left'} ${sizeClass}`}
+        className={`object-contain ${memberLogoClass} ${variant === 'vertical' ? 'object-center' : 'object-left'} ${sizeClass}`}
         decoding="async"
       />
       {showTagline && !imageHasTagline && (

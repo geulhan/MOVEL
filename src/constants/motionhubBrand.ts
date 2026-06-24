@@ -23,6 +23,8 @@ export const MOTIONHUB_BRAND_ASSETS = {
   logoVerticalLight: '/brand/motionhub/logo-vertical-light.png',
   /** 어두운 배경 · 투명 PNG 세로 조합 (아이콘+MotionHub) */
   logoTransparent: '/brand/motionhub/logo-transparent.png',
+  /** 회원 포털 헤더 · 세로 조합 (아이콘 + MotionHub) */
+  logoMemberVertical: '/brand/motionhub/logo-member-vertical.png',
   /** @deprecated logo-transparent.png 우선 사용 */
   logoDark: '/brand/motionhub/logo-transparent.png',
   /** 시안 배경 앱 아이콘 */
