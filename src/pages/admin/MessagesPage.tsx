@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   fetchMessageLogs,
+  triggerNotificationCron,
   triggerPtReminders,
   triggerRenewalReminders,
   triggerScheduleReminders,
@@ -52,6 +53,7 @@ export default function MessagesPage() {
   const [renewalCronLoading, setRenewalCronLoading] = useState(false)
   const [scheduleCronLoading, setScheduleCronLoading] = useState(false)
   const [ptCronLoading, setPtCronLoading] = useState(false)
+  const [autoCronLoading, setAutoCronLoading] = useState(false)
 
   const loadLogs = useCallback(async () => {
     setLogsLoading(true)
@@ -105,7 +107,7 @@ export default function MessagesPage() {
           ? Number((result as { processed: number }).processed)
           : 0
       setCronMessage(
-        `PT 잔여횟수 알림 실행 완료 (${processed}건, 미승인 템플릿은 생략 처리)`,
+        `PT 잔여횟수 알림 실행 완료 (${processed}건)`,
       )
       await loadLogs()
     } catch (err) {
@@ -116,6 +118,28 @@ export default function MessagesPage() {
       )
     } finally {
       setPtCronLoading(false)
+    }
+  }
+
+  async function handleRunAutoCron() {
+    setAutoCronLoading(true)
+    setCronMessage(null)
+    try {
+      const result = await triggerNotificationCron()
+      const total =
+        result && typeof result === 'object' && 'totalProcessed' in result
+          ? Number((result as { totalProcessed: number }).totalProcessed)
+          : 0
+      setCronMessage(
+        `자동발송 일괄 실행 완료 (PT 잔여 + 수업 리마인더, ${total}건 처리)`,
+      )
+      await loadLogs()
+    } catch (err) {
+      setCronMessage(
+        err instanceof Error ? err.message : '자동발송 실행에 실패했습니다.',
+      )
+    } finally {
+      setAutoCronLoading(false)
     }
   }
 
@@ -150,6 +174,13 @@ export default function MessagesPage() {
 
       <MessagingCreditPanel onUpdated={() => void loadLogs()} />
 
+      <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+        <span className="font-medium">자동발송</span> — PT 잔여 3·1회, 수업
+        24시간 이내 리마인더는 <strong>매시 정각</strong>에 자동 실행됩니다
+        (발송 이력 없으면 보완 발송). PT 차감 시 잔여 3·1회면 즉시 발송을
+        시도합니다.
+      </p>
+
       <p className="text-sm text-muted">
         알림톡 채널·템플릿 심사 문의: <MotionHubSupportLink />
       </p>
@@ -182,6 +213,14 @@ export default function MessagesPage() {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
+              onClick={() => void handleRunAutoCron()}
+              disabled={autoCronLoading}
+              className="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-900 transition hover:bg-emerald-100 disabled:opacity-50"
+            >
+              {autoCronLoading ? '실행 중…' : '자동발송 지금 실행'}
+            </button>
+            <button
+              type="button"
               onClick={() => void handleRunScheduleReminders()}
               disabled={scheduleCronLoading}
               className="rounded-lg border border-gold/40 px-4 py-2 text-sm font-medium text-charcoal transition hover:bg-cream disabled:opacity-50"
@@ -200,10 +239,9 @@ export default function MessagesPage() {
               type="button"
               onClick={() => void handleRunPtReminders()}
               disabled={ptCronLoading}
-              title="pt_remaining_3/1 템플릿 검수 미승인 — 실행 시 생략 로그만 기록됩니다"
-              className="rounded-lg border border-dashed border-gold/40 px-4 py-2 text-sm font-medium text-muted transition hover:bg-cream disabled:opacity-50"
+              className="rounded-lg border border-gold/40 px-4 py-2 text-sm font-medium text-charcoal transition hover:bg-cream disabled:opacity-50"
             >
-              {ptCronLoading ? '실행 중…' : 'PT 잔여횟수 (미승인)'}
+              {ptCronLoading ? '실행 중…' : 'PT 잔여횟수만 실행'}
             </button>
             <button
               type="button"

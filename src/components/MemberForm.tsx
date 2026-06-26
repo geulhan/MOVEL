@@ -40,7 +40,8 @@ export function MemberForm({ trainers, members = [], onCreated }: Props) {
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const sessions = Number(totalSessions)
+  const sessions =
+    totalSessions.trim() === '' ? 0 : Number(totalSessions)
   const previewExpiry = useMemo(() => {
     if (!registeredAt || !Number.isInteger(sessions) || sessions < 1) return null
     return calcSessionExpiry(registeredAt, sessions)
@@ -68,8 +69,8 @@ export function MemberForm({ trainers, members = [], onCreated }: Props) {
       setError('등록일을 입력해 주세요.')
       return
     }
-    if (!Number.isInteger(sessions) || sessions < 1) {
-      setError('등록 횟수는 1 이상의 숫자여야 합니다.')
+    if (!Number.isInteger(sessions) || sessions < 0) {
+      setError('등록 횟수는 0 이상의 숫자여야 합니다.')
       return
     }
     if (!Number.isFinite(amount) || amount < 0) {
@@ -124,8 +125,8 @@ export function MemberForm({ trainers, members = [], onCreated }: Props) {
     <section className={`${cardClass} p-6`}>
       <h2 className="text-lg font-semibold text-charcoal">회원 등록</h2>
       <p className="mt-1 text-sm leading-relaxed text-muted">
-        1세션 = {SESSION_DAYS_PER_SESSION}일 · 만료일 자동 계산 · 기간 연장은 회원
-        상세에서
+        1세션 = {SESSION_DAYS_PER_SESSION}일 · 만료일 자동 계산 · PT 없이 연락처만
+        등록하려면 등록 횟수 0 · 기간 연장은 회원 상세에서
       </p>
 
       <form onSubmit={handleSubmit} className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -254,12 +255,15 @@ export function MemberForm({ trainers, members = [], onCreated }: Props) {
           </span>
           <input
             type="number"
-            min={1}
+            min={0}
             value={totalSessions}
             onChange={(e) => setTotalSessions(e.target.value)}
-            placeholder="10"
+            placeholder="0"
             className={inputClass}
           />
+          <span className="mt-1 block text-xs text-charcoal/40">
+            0이면 PT 미등록 회원으로 등록됩니다.
+          </span>
         </label>
 
         <label className="block">

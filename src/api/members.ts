@@ -1,8 +1,9 @@
 import { supabase } from '../lib/supabase'
 import { getCurrentCenterId, resolveCenterIdForMember } from '../lib/center'
+import { ptRemainingTemplateKey } from '../constants/alimtalkTemplates'
+import { notifyMemberSignupGuide, notifyPaymentDone, sendNotification } from './notifications'
 import { normalizeMember } from '../lib/memberNormalize'
 import type { Member, MemberInsert, MemberStatus } from '../types/database'
-import { notifyMemberSignupGuide, notifyPaymentDone } from './notifications'
 import { logPlatformActivity } from './platformActivity'
 import { awardCustomRulesOnMemberRegistered, awardReferralOnPayment } from './rewards'
 import { calcSessionExpiry } from '../utils/period'
@@ -96,7 +97,10 @@ export async function createMember(input: {
     throw duplicateMemberPhoneError()
   }
 
-  const expires_at = calcSessionExpiry(input.registered_at, input.total_sessions)
+  const expires_at =
+    input.total_sessions > 0
+      ? calcSessionExpiry(input.registered_at, input.total_sessions)
+      : null
 
   const payload: MemberInsert = {
     center_id: centerId,
@@ -121,29 +125,31 @@ export async function createMember(input: {
 
   if (error) throw error
 
-  const { data: paymentRow, error: paymentError } = await supabase
-    .from('payment_history')
-    .insert({
-      center_id: centerId,
-      member_id: data.id,
-      amount: input.payment_amount,
-      sessions: input.total_sessions,
-      paid_at: input.registered_at,
-      note: '회원 등록',
-    })
-    .select('id')
-    .single()
+  if (input.payment_amount > 0 || input.total_sessions > 0) {
+    const { data: paymentRow, error: paymentError } = await supabase
+      .from('payment_history')
+      .insert({
+        center_id: centerId,
+        member_id: data.id,
+        amount: input.payment_amount,
+        sessions: input.total_sessions,
+        paid_at: input.registered_at,
+        note: '회원 등록',
+      })
+      .select('id')
+      .single()
 
-  if (paymentError) {
-    console.warn('payment_history 저장 실패:', paymentError.message)
-  } else if (paymentRow) {
-    const paymentId = (paymentRow as { id: string }).id
-    try {
-      await awardReferralOnPayment(data.id, paymentId, input.payment_amount)
-    } catch (rewardErr) {
-      console.warn('소개 리워드 적립 실패:', rewardErr)
+    if (paymentError) {
+      console.warn('payment_history 저장 실패:', paymentError.message)
+    } else if (paymentRow) {
+      const paymentId = (paymentRow as { id: string }).id
+      try {
+        await awardReferralOnPayment(data.id, paymentId, input.payment_amount)
+      } catch (rewardErr) {
+        console.warn('소개 리워드 적립 실패:', rewardErr)
+      }
+      notifyPaymentDone(data.id, paymentId)
     }
-    notifyPaymentDone(data.id, paymentId)
   }
 
   notifyMemberSignupGuide(data.id)
@@ -274,6 +280,16 @@ export async function deductSession(memberId: string): Promise<Member> {
       .update({ remaining_sessions: member.remaining_sessions })
       .eq('id', memberId)
     throw logError
+  }
+
+  const ptTemplateKey = ptRemainingTemplateKey(newRemaining)
+  if (ptTemplateKey) {
+    void sendNotification(ptTemplateKey, memberId, {
+      metadata: {
+        remaining_count: newRemaining,
+        membership_key: `${memberId}:${newRemaining}`,
+      },
+    }).catch(() => undefined)
   }
 
   return normalizeMember(data)

@@ -13,5 +13,8 @@ verify_jwt = false
 [functions.schedule-reminders]
 verify_jwt = false
 
+[functions.notification-cron]
+verify_jwt = false
+
 [functions.weekly-center-report]
 verify_jwt = false

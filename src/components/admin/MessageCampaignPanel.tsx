@@ -12,7 +12,6 @@ import {
   formatPaymentSummary,
   formatPtReminderSummary,
   formatRenewalSummary,
-  renewalReminderLabel,
   sendPaymentMessage,
   sendPtReminderMessage,
   sendRenewalMessage,
@@ -300,7 +299,7 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
     }
     const row = renewalRows.find((item) => item.member.id === rowKey)
     if (!row) throw new Error('회원 정보를 찾을 수 없습니다.')
-    return sendRenewalMessage(rowKey, row.notifyTier)
+    return sendRenewalMessage(row)
   }
 
   async function dismissSelected(ids: string[]): Promise<void> {
@@ -589,14 +588,14 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
                 />
               ))
             ) : kind === 'renewal' ? (
-              filteredRenewal.map(({ member, daysLeft, notifyTier, alreadySent }) => (
+              filteredRenewal.map(({ member, daysLeft, sendLabel, sendTemplateKey, alreadySent }) => (
                 <CampaignRow
                   key={member.id}
                   memberId={member.id}
                   name={member.name}
                   phone={member.phone}
-                  detail={`${formatRenewalSummary(member, daysLeft)} · 발송 구간 ${renewalReminderLabel(notifyTier)}`}
-                  badge={alreadySent ? '발송 완료' : renewalReminderLabel(notifyTier)}
+                  detail={`${formatRenewalSummary(member, daysLeft)} · 발송 구간 ${sendLabel}`}
+                  badge={alreadySent ? '발송 완료' : sendLabel}
                   badgeTone={alreadySent ? 'muted' : 'alert'}
                   selected={selected.has(member.id)}
                   onToggle={() => toggleOne(member.id)}
@@ -605,7 +604,7 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
                   dismissing={dismissingId === member.id}
                   onSend={() => void handleSendOne(member.id)}
                   onDismiss={() => void handleDismissOne(member.id)}
-                  sendDisabled={alreadySent}
+                  sendDisabled={alreadySent || !sendTemplateKey}
                 />
               ))
             ) : kind === 'pt_reminder' ? (

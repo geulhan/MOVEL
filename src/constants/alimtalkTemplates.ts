@@ -143,11 +143,28 @@ export const ALIMTALK_TEMPLATE_VARIABLES = [
   '#{newMembers}',
 ] as const
 
-/** 만료 D-day → 승인된 membership_expire_* 템플릿 */
-export function resolveMembershipExpireTemplateKey(
+type MembershipExpireTemplateKey =
+  | 'membership_expire_14'
+  | 'membership_expire_7'
+  | 'membership_expire_today'
+
+type PtRemainingTemplateKey = 'pt_remaining_3' | 'pt_remaining_1'
+
+/** Cron·수동 발송 공통 — 정확한 D-day(14·7·0)만 매칭 */
+export function membershipExpireTemplateKey(
   daysLeft: number,
-): 'membership_expire_14' | 'membership_expire_7' | 'membership_expire_today' {
-  if (daysLeft >= 14) return 'membership_expire_14'
-  if (daysLeft >= 7) return 'membership_expire_7'
-  return 'membership_expire_today'
+): MembershipExpireTemplateKey | null {
+  if (daysLeft === 14) return 'membership_expire_14'
+  if (daysLeft === 7) return 'membership_expire_7'
+  if (daysLeft === 0) return 'membership_expire_today'
+  return null
+}
+
+/** PT 잔여 3회·1회 알림 */
+export function ptRemainingTemplateKey(
+  remaining: number,
+): PtRemainingTemplateKey | null {
+  if (remaining === 3) return 'pt_remaining_3'
+  if (remaining === 1) return 'pt_remaining_1'
+  return null
 }

@@ -3,7 +3,11 @@ import { fetchMembers, formatDate, todayDateString } from './members'
 import { sendNotification, type SendNotificationResult } from './notifications'
 import { supabase } from '../lib/supabase'
 import type { Member, MessageTemplateKey, PaymentHistory } from '../types/database'
-import { resolveMembershipExpireTemplateKey } from '../constants/alimtalkTemplates'
+import { MESSAGE_TEMPLATE_LABELS } from '../types/database'
+import {
+  membershipExpireTemplateKey,
+  ptRemainingTemplateKey,
+} from '../constants/alimtalkTemplates'
 import { isExpiringSoon, isRenewalTarget } from '../utils/renewal'
 
 export type MessageCampaignKind =
@@ -24,8 +28,11 @@ export type PaymentTarget = {
 export type RenewalTarget = {
   member: Member
   daysLeft: number
-  notifyTier: number
   alreadySent: boolean
+  sendTemplateKey: MessageTemplateKey | null
+  sendLabel: string
+  sendMetadata: Record<string, string | number>
+  dedupKey: string
 }
 
 export type PtReminderTarget = {
@@ -36,7 +43,6 @@ export type PtReminderTarget = {
 }
 
 const PT_REMINDER_HOURS = 24
-const PT_REMINDER_WINDOW_HOURS = 1
 
 type ScheduleQueryRow = {
   id: string
@@ -91,6 +97,8 @@ async function fetchRenewalTierState(): Promise<{
       'membership_expire_14',
       'membership_expire_7',
       'membership_expire_today',
+      'pt_remaining_3',
+      'pt_remaining_1',
     ])
     .in('status', ['sent', 'skipped'])
 
@@ -103,11 +111,26 @@ async function fetchRenewalTierState(): Promise<{
     const metadata = row.metadata as {
       days_left?: number
       expire_date?: string
+      membership_key?: string
       skipped_reason?: string
     } | null
+    const templateKey = String(row.template_key ?? '')
+
+    if (templateKey === 'pt_remaining_3' || templateKey === 'pt_remaining_1') {
+      const tierKey = metadata?.membership_key
+      if (!tierKey) continue
+      if (row.status === 'sent') {
+        sentKeys.add(tierKey)
+        continue
+      }
+      if (metadata?.skipped_reason === 'manual_dismiss') {
+        dismissedKeys.add(tierKey)
+      }
+      continue
+    }
+
     let daysLeft = metadata?.days_left
     if (daysLeft == null) {
-      const templateKey = String(row.template_key ?? '')
       if (templateKey === 'membership_expire_14') daysLeft = 14
       else if (templateKey === 'membership_expire_7') daysLeft = 7
       else if (templateKey === 'membership_expire_today') daysLeft = 0
@@ -205,18 +228,18 @@ async function buildRenewalTargets(): Promise<RenewalTarget[]> {
     .map((member) => {
       const expiresAt = member.expires_at?.split('T')[0]
       const daysLeft = expiresAt ? Math.max(0, daysBetween(today, expiresAt)) : 0
-      const notifyTier = suggestRenewalDaysLeft(daysLeft)
-      const tierKey = `${member.id}:${notifyTier}`
+      const plan = resolveRenewalSendPlan(member, daysLeft)
       return {
         member,
         daysLeft,
-        notifyTier,
-        alreadySent: sentKeys.has(tierKey),
-        tierKey,
+        alreadySent: sentKeys.has(plan.dedupKey),
+        sendTemplateKey: plan.templateKey,
+        sendLabel: plan.sendLabel,
+        sendMetadata: plan.metadata,
+        dedupKey: plan.dedupKey,
       }
     })
-    .filter((row) => !dismissedKeys.has(row.tierKey))
-    .map(({ tierKey: _ignored, ...row }) => row)
+    .filter((row) => !dismissedKeys.has(row.dedupKey))
     .sort((a, b) => a.daysLeft - b.daysLeft)
 }
 
@@ -259,10 +282,8 @@ export async function fetchPtReminderPendingTargets(): Promise<PtReminderTarget[
   const centerId = await getCurrentCenterId()
   const now = Date.now()
   const hourMs = 60 * 60 * 1000
-  const maxAhead =
-    PT_REMINDER_HOURS * hourMs + PT_REMINDER_WINDOW_HOURS * hourMs
   const windowStart = new Date(now).toISOString()
-  const windowEnd = new Date(now + maxAhead).toISOString()
+  const windowEnd = new Date(now + PT_REMINDER_HOURS * hourMs).toISOString()
 
   const [members, schedulesResult, trainersResult, notifiedIds] =
     await Promise.all([
@@ -272,7 +293,7 @@ export async function fetchPtReminderPendingTargets(): Promise<PtReminderTarget[
         .select('id, member_id, scheduled_at, trainer_id')
         .eq('center_id', centerId)
         .eq('status', 'scheduled')
-        .gte('scheduled_at', windowStart)
+        .gt('scheduled_at', windowStart)
         .lte('scheduled_at', windowEnd),
       supabase.from('trainers').select('id, name').eq('center_id', centerId),
       fetchNotifiedPtScheduleIds(),
@@ -322,12 +343,20 @@ export async function sendPaymentMessage(
 }
 
 export async function sendRenewalMessage(
-  memberId: string,
-  daysLeft: number,
+  target: Pick<
+    RenewalTarget,
+    'member' | 'sendTemplateKey' | 'sendMetadata'
+  >,
 ): Promise<SendNotificationResult> {
-  const templateKey = resolveMembershipExpireTemplateKey(daysLeft)
-  return sendNotification(templateKey, memberId, {
-    metadata: { days_left: daysLeft },
+  if (!target.sendTemplateKey) {
+    return {
+      ok: false,
+      status: 'failed',
+      error: '지금 발송할 수 있는 알림 구간이 아닙니다.',
+    }
+  }
+  return sendNotification(target.sendTemplateKey, target.member.id, {
+    metadata: target.sendMetadata,
   })
 }
 
@@ -399,15 +428,71 @@ export async function dismissPaymentTargets(
 }
 
 export async function dismissRenewalTargets(
-  targets: Pick<RenewalTarget, 'member' | 'notifyTier'>[],
+  targets: RenewalTarget[],
 ): Promise<void> {
   await insertSkippedMessageLogs(
     targets.map((target) => ({
       member: target.member,
-      templateKey: 'renewal' as const,
-      metadata: { days_left: target.notifyTier },
+      templateKey: target.sendTemplateKey ?? ('renewal' as const),
+      metadata:
+        Object.keys(target.sendMetadata).length > 0
+          ? target.sendMetadata
+          : { days_left: target.daysLeft },
     })),
   )
+}
+
+export function resolveRenewalSendPlan(
+  member: Member,
+  daysLeft: number,
+): {
+  templateKey: MessageTemplateKey | null
+  sendLabel: string
+  dedupKey: string
+  metadata: Record<string, string | number>
+} {
+  const expiresAt = member.expires_at?.split('T')[0]
+  const remaining = member.remaining_sessions
+
+  const ptKey = ptRemainingTemplateKey(remaining)
+  if (
+    ptKey &&
+    member.status !== 'terminated' &&
+    member.total_sessions > 0 &&
+    remaining <= 5
+  ) {
+    return {
+      templateKey: ptKey,
+      sendLabel: MESSAGE_TEMPLATE_LABELS[ptKey],
+      dedupKey: `${member.id}:${remaining}`,
+      metadata: {
+        remaining_count: remaining,
+        membership_key: `${member.id}:${remaining}`,
+      },
+    }
+  }
+
+  const membershipKey = membershipExpireTemplateKey(daysLeft)
+  if (membershipKey && expiresAt) {
+    return {
+      templateKey: membershipKey,
+      sendLabel: MESSAGE_TEMPLATE_LABELS[membershipKey],
+      dedupKey: `${member.id}:${daysLeft}`,
+      metadata: {
+        days_left: daysLeft,
+        expire_date: expiresAt,
+        remaining_count: remaining,
+      },
+    }
+  }
+
+  return {
+    templateKey: null,
+    sendLabel:
+      remaining <= 5 ? `잔여 ${remaining}회 (발송 대기)` : `D-${daysLeft} (발송 대기)`,
+    dedupKey: `${member.id}:pending`,
+    metadata: {},
+  }
 }
 
 /** PT 리마인더 목록에서 선택 건 제외 (발송 없이 skipped 로그 기록) */

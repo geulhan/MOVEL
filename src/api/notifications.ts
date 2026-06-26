@@ -254,6 +254,10 @@ export async function triggerScheduleReminders(): Promise<unknown> {
   return invokeReminderFunction('schedule-reminders')
 }
 
+export async function triggerNotificationCron(): Promise<unknown> {
+  return invokeReminderFunction('notification-cron')
+}
+
 export async function triggerWeeklyCenterReport(): Promise<unknown> {
   return invokeReminderFunction('weekly-center-report')
 }

@@ -120,6 +120,8 @@ export const APPROVED_ALIMTALK_TEMPLATE_KEYS = [
   'member_signup_guide',
   'payment_completed',
   'schedule_reminder',
+  'pt_remaining_3',
+  'pt_remaining_1',
   'schedule_changed',
   'schedule_cancelled',
   'membership_expire_14',
@@ -128,10 +130,8 @@ export const APPROVED_ALIMTALK_TEMPLATE_KEYS = [
   'center_welcome',
 ] as const
 
-/** 검수 미승인 — 코드 유지, 발송 비활성화 */
+/** 검수 미승인 — 코드 유지, Secret 미설정 시 발송 비활성화 */
 export const DISABLED_ALIMTALK_TEMPLATE_KEYS = [
-  'pt_remaining_3',
-  'pt_remaining_1',
   'weekly_report',
 ] as const
 
@@ -141,6 +141,15 @@ export function getTemplateSendDisabledReason(
   if ((DISABLED_ALIMTALK_TEMPLATE_KEYS as readonly string[]).includes(key)) {
     return 'template_not_approved'
   }
+
+  const envName =
+    TEMPLATE_SECRET_ENV_NAMES[
+      key as keyof typeof TEMPLATE_SECRET_ENV_NAMES
+    ]
+  if (envName && !Deno.env.get(envName)?.trim()) {
+    return 'template_id_not_configured'
+  }
+
   return null
 }
 
@@ -202,6 +211,13 @@ export function loadPlatformTemplateIds(): Record<string, string> {
   if (!ids.member_signup_guide?.trim()) {
     ids.member_signup_guide =
       Deno.env.get('SOLAPI_TEMPLATE_MEMBER_WELCOME') ?? ''
+  }
+
+  if (!ids.pt_remaining_3?.trim()) {
+    ids.pt_remaining_3 = Deno.env.get('SOLAPI_TEMPLATE_PT_REMINDER') ?? ''
+  }
+  if (!ids.pt_remaining_1?.trim()) {
+    ids.pt_remaining_1 = Deno.env.get('SOLAPI_TEMPLATE_PT_REMINDER') ?? ''
   }
 
   for (const legacyKey of LEGACY_ALIMTALK_TEMPLATE_KEYS) {

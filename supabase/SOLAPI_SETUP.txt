@@ -130,12 +130,22 @@ DB: migration_064_center_messaging_config.sql 실행 필수
 8) 솔라피 키 입력 후 실발송 켜기
    supabase secrets set MESSAGING_ENABLED=true
 
-9) 자동 실행 Cron (Supabase Dashboard → Edge Functions → Cron)
-   [회원권 만료] renewal-reminders — 0 0 * * * (UTC 00:00 = KST 09:00)
-   [수업 리마인더] schedule-reminders — 0 * * * * (매시, 24시간 전 ±1시간)
-   [PT 잔여] pt-reminders — 검수 승인 전 Cron 등록 보류
+9) 자동 실행 Cron (migration_100_notification_automation_cron.sql)
+   Vault secret 등록 후 pg_cron이 매시 notification-cron 호출:
+     - PT 잔여 3회·1회 (미발송 건만)
+     - 수업 24시간 이내 리마인더 (미발송 건 보완 포함)
+   [회원권 만료] renewal-reminders — 0 0 * * * (UTC 00:00 = KST 09:00, 별도)
    [주간 리포트] weekly-center-report — 검수 승인 전 Cron 등록 보류
-   수동 테스트: 관리자 → 메시지 발송 → 발송 이력 상단 버튼
+
+   supabase functions deploy notification-cron
+   supabase functions deploy schedule-reminders
+   supabase functions deploy pt-reminders
+
+   Vault (SQL Editor):
+     vault.create_secret('https://dcoitajktdaqejnhrnij.supabase.co', 'notification_cron_project_url', ...)
+     vault.create_secret('YOUR_NOTIFICATION_INTERNAL_SECRET', 'notification_cron_internal_secret', ...)
+
+   수동 테스트: 관리자 → 메시지 발송 → 「자동발송 지금 실행」
 
 10) SQL (아직이면)
    migration_022_pt_reminder_dedup.sql
