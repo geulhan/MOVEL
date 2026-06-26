@@ -133,6 +133,20 @@ function resultLabel(result: SendNotificationResult): string {
   return MESSAGE_STATUS_LABELS.failed
 }
 
+function errorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error && err.message.trim()) return err.message
+  if (
+    typeof err === 'object' &&
+    err !== null &&
+    'message' in err &&
+    typeof (err as { message: unknown }).message === 'string'
+  ) {
+    const message = (err as { message: string }).message.trim()
+    if (message) return message
+  }
+  return fallback
+}
+
 function summarizeBulkFailures(
   ids: string[],
   statuses: Record<string, RowStatus>,
@@ -406,9 +420,7 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
       onSent()
       await load()
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : '목록에서 제외하지 못했습니다.',
-      )
+      setError(errorMessage(err, '목록에서 제외하지 못했습니다.'))
     } finally {
       setDismissingId(null)
     }
@@ -485,9 +497,7 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
       onSent()
       await load()
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : '목록에서 제외하지 못했습니다.',
-      )
+      setError(errorMessage(err, '목록에서 제외하지 못했습니다.'))
     } finally {
       setBulkDismissing(false)
     }

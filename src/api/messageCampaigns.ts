@@ -115,19 +115,53 @@ async function fetchRenewalTierState(): Promise<{
       days_left?: number
       expire_date?: string
       membership_key?: string
+      dismiss_tier_key?: string
       skipped_reason?: string
+      campaign_dismissed?: boolean
     } | null
     const templateKey = String(row.template_key ?? '')
+
+    const markDismissed = (tierKey: string) => {
+      dismissedKeys.add(tierKey)
+      if (metadata?.dismiss_tier_key) {
+        dismissedKeys.add(String(metadata.dismiss_tier_key))
+      }
+    }
+
+    if (isRenewalCampaignDismissed(metadata)) {
+      if (templateKey === 'pt_remaining_3' || templateKey === 'pt_remaining_1') {
+        const tierKey = metadata?.membership_key
+        if (tierKey) markDismissed(tierKey)
+        continue
+      }
+
+      if (templateKey === 'renewal') {
+        if (metadata?.dismiss_tier_key) {
+          markDismissed(String(metadata.dismiss_tier_key))
+        }
+        if (metadata?.days_left != null) {
+          markDismissed(`${row.member_id}:${metadata.days_left}`)
+        }
+        continue
+      }
+
+      let daysLeft = metadata?.days_left
+      if (daysLeft == null) {
+        if (templateKey === 'membership_expire_14') daysLeft = 14
+        else if (templateKey === 'membership_expire_7') daysLeft = 7
+        else if (templateKey === 'membership_expire_today') daysLeft = 0
+      }
+      if (daysLeft != null) {
+        markDismissed(`${row.member_id}:${daysLeft}`)
+      }
+      continue
+    }
 
     if (templateKey === 'pt_remaining_3' || templateKey === 'pt_remaining_1') {
       const tierKey = metadata?.membership_key
       if (!tierKey) continue
       if (row.status === 'sent') {
         sentKeys.add(tierKey)
-        continue
-      }
-      if (metadata?.skipped_reason === 'manual_dismiss') {
-        dismissedKeys.add(tierKey)
       }
       continue
     }
@@ -142,10 +176,6 @@ async function fetchRenewalTierState(): Promise<{
     const key = `${row.member_id}:${daysLeft}`
     if (row.status === 'sent') {
       sentKeys.add(key)
-      continue
-    }
-    if (metadata?.skipped_reason === 'manual_dismiss') {
-      dismissedKeys.add(key)
     }
   }
   return { sentKeys, dismissedKeys }
@@ -379,6 +409,95 @@ export async function sendPtReminderMessage(
 }
 
 /** 목록에서 제외 (발송 없이 skipped 로그 기록) */
+function isRenewalCampaignDismissed(
+  metadata: {
+    skipped_reason?: string
+    campaign_dismissed?: boolean
+  } | null,
+): boolean {
+  if (!metadata) return false
+  if (metadata.campaign_dismissed) return true
+  return metadata.skipped_reason === 'manual_dismiss'
+}
+
+function renewalDismissMetadata(
+  target: RenewalTarget,
+): Record<string, string | number | boolean> {
+  const base =
+    Object.keys(target.sendMetadata).length > 0
+      ? target.sendMetadata
+      : { days_left: target.daysLeft }
+
+  return {
+    ...base,
+    dismiss_tier_key: target.dedupKey,
+    campaign_dismissed: true,
+    skipped_reason: 'manual_dismiss',
+  }
+}
+
+async function findRenewalMessageLogForDismiss(
+  target: RenewalTarget,
+): Promise<{
+  id: string
+  metadata: Record<string, unknown> | null
+  status: string
+} | null> {
+  const centerId = await getCurrentCenterId()
+  const templateKey = target.sendTemplateKey ?? 'renewal'
+
+  const base = () =>
+    supabase
+      .from('message_logs')
+      .select('id, metadata, status')
+      .eq('center_id', centerId)
+      .eq('member_id', target.member.id)
+      .in('status', ['sent', 'skipped'])
+
+  if (
+    target.sendTemplateKey === 'pt_remaining_3' ||
+    target.sendTemplateKey === 'pt_remaining_1'
+  ) {
+    const membershipKey = String(
+      target.sendMetadata.membership_key ?? target.dedupKey,
+    )
+    const { data, error } = await base()
+      .eq('template_key', templateKey)
+      .eq('metadata->>membership_key', membershipKey)
+      .limit(1)
+      .maybeSingle()
+    if (error) throw error
+    return data
+  }
+
+  if (target.sendMetadata.expire_date) {
+    const { data, error } = await base()
+      .eq('template_key', templateKey)
+      .eq('metadata->>expire_date', String(target.sendMetadata.expire_date))
+      .limit(1)
+      .maybeSingle()
+    if (error) throw error
+    return data
+  }
+
+  if (target.dedupKey.endsWith(':pending')) {
+    const { data: byTier, error: tierError } = await base()
+      .eq('metadata->>dismiss_tier_key', target.dedupKey)
+      .limit(1)
+      .maybeSingle()
+    if (tierError) throw tierError
+    if (byTier) return byTier
+  }
+
+  const { data, error } = await base()
+    .eq('template_key', templateKey)
+    .eq('metadata->>days_left', String(target.daysLeft))
+    .limit(1)
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
 async function insertSkippedMessageLogs(
   rows: Array<{
     member: Member
@@ -434,16 +553,54 @@ export async function dismissPaymentTargets(
 export async function dismissRenewalTargets(
   targets: RenewalTarget[],
 ): Promise<void> {
-  await insertSkippedMessageLogs(
-    targets.map((target) => ({
-      member: target.member,
-      templateKey: target.sendTemplateKey ?? ('renewal' as const),
-      metadata:
-        Object.keys(target.sendMetadata).length > 0
-          ? target.sendMetadata
-          : { days_left: target.daysLeft },
-    })),
-  )
+  if (targets.length === 0) return
+
+  const centerId = await getCurrentCenterId()
+
+  for (const target of targets) {
+    const templateKey = target.sendTemplateKey ?? ('renewal' as const)
+    const metadata = renewalDismissMetadata(target)
+    const existing = await findRenewalMessageLogForDismiss(target)
+
+    if (existing) {
+      const previous = (existing.metadata ?? {}) as Record<
+        string,
+        string | number | boolean
+      >
+      const { error } = await supabase
+        .from('message_logs')
+        .update({
+          metadata: {
+            ...previous,
+            ...metadata,
+          },
+          ...(existing.status === 'sent'
+            ? {}
+            : {
+                channel: 'skipped',
+                status: 'skipped',
+                error_message: '관리자가 목록에서 제외',
+              }),
+        })
+        .eq('id', existing.id)
+
+      if (error) throw error
+      continue
+    }
+
+    const { error } = await supabase.from('message_logs').insert({
+      center_id: centerId,
+      member_id: target.member.id,
+      phone: target.member.phone,
+      template_key: templateKey,
+      channel: 'skipped' as const,
+      status: 'skipped' as const,
+      metadata,
+      error_message: '관리자가 목록에서 제외',
+    })
+
+    if (error) throw error
+  }
 }
 
 export function resolveRenewalSendPlan(
