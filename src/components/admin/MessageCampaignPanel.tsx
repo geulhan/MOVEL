@@ -87,7 +87,7 @@ function resultLabel(result: SendNotificationResult): string {
   const detail = result.error?.trim()
   if (detail) {
     if (detail.includes('Invalid templateKey')) {
-      return '발송 API 템플릿 오류 (서버 재배포 필요)'
+      return '허용되지 않은 템플릿 키 — send-notification 재배포 필요'
     }
     if (detail.includes('크레딧') || detail.includes('credit')) {
       return '메시지 크레딧이 부족합니다'
