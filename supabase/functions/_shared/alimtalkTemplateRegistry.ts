@@ -128,12 +128,11 @@ export const APPROVED_ALIMTALK_TEMPLATE_KEYS = [
   'membership_expire_7',
   'membership_expire_today',
   'center_welcome',
+  'weekly_report',
 ] as const
 
 /** 검수 미승인 — 코드 유지, Secret 미설정 시 발송 비활성화 */
-export const DISABLED_ALIMTALK_TEMPLATE_KEYS = [
-  'weekly_report',
-] as const
+export const DISABLED_ALIMTALK_TEMPLATE_KEYS = [] as const
 
 export function getTemplateSendDisabledReason(
   key: AlimtalkTemplateKey,

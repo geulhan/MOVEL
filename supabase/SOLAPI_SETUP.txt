@@ -108,9 +108,12 @@ DB: migration_064_center_messaging_config.sql 실행 필수
    supabase secrets set SOLAPI_TEMPLATE_MEMBERSHIP_EXPIRE_7=KA01TP260622083800666jQ34XDz1ny5
    supabase secrets set SOLAPI_TEMPLATE_MEMBERSHIP_EXPIRE_TODAY=KA01TP260622083835049JtFlDT4GkxK
    supabase secrets set SOLAPI_TEMPLATE_CENTER_WELCOME=KA01TP260622084110354Q1dyVL4Imd6
+   supabase secrets set SOLAPI_TEMPLATE_PT_REMAINING_3=KA01TP260622083548237Vm9cxAvASoY
+   supabase secrets set SOLAPI_TEMPLATE_PT_REMAINING_1=KA01TP260622083643287dTHTX5hHYLm
+   supabase secrets set SOLAPI_TEMPLATE_WEEKLY_REPORT=KA01TP260622084201758V4bJSS7UfGh
 
    [검수 미승인 — Secret 설정해도 코드에서 발송 비활성화]
-   pt_remaining_3, pt_remaining_1, weekly_report
+   step_verification_result
 
    supabase secrets set SITE_URL=https://motionhub.kr
    supabase secrets set SOLAPI_DISABLE_SMS_FALLBACK=false
@@ -135,7 +138,7 @@ DB: migration_064_center_messaging_config.sql 실행 필수
      - PT 잔여 3회·1회 (미발송 건만)
      - 수업 24시간 이내 리마인더 (미발송 건 보완 포함)
    [회원권 만료] renewal-reminders — 0 0 * * * (UTC 00:00 = KST 09:00, 별도)
-   [주간 리포트] weekly-center-report — 검수 승인 전 Cron 등록 보류
+   [주간 리포트] weekly-center-report — 검수 승인 완료 (Cron 등록 가능)
 
    supabase functions deploy notification-cron
    supabase functions deploy schedule-reminders

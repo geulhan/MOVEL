@@ -11,7 +11,8 @@ import {
   fetchWelcomeTargets,
   formatPaymentSummary,
   formatPtReminderSummary,
-  formatRenewalSummary,
+  formatPtRenewalDetail,
+  formatFacilityRenewalDetail,
   sendPaymentMessage,
   sendPtReminderMessage,
   sendRenewalMessage,
@@ -59,7 +60,7 @@ const PANEL_COPY: Record<
   renewal: {
     title: '재등록',
     description:
-      '잔여 PT 5회 이하 또는 만료 7일 이내 회원 전체입니다. 발송 여부를 확인하고 수동 발송할 수 있습니다.',
+      'PT(잔여 5회 이하)와 시설이용권·회원권 만료(D-14/7/당일) 대상을 구분해 표시합니다. 발송 여부를 확인하고 수동 발송할 수 있습니다.',
     empty: '재등록 안내 대상 회원이 없습니다.',
     dismissConfirm: '이 회원을 재등록 안내 목록에서 제외할까요?',
   },
@@ -245,6 +246,50 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
     )
     return ptReminderRows.filter((row) => ids.has(row.member.id))
   }, [ptReminderRows, search])
+
+  const filteredPtRenewal = useMemo(
+    () => filteredRenewal.filter((row) => row.category === 'pt'),
+    [filteredRenewal],
+  )
+
+  const filteredFacilityRenewal = useMemo(
+    () => filteredRenewal.filter((row) => row.category === 'facility'),
+    [filteredRenewal],
+  )
+
+  function renderRenewalRow({
+    member,
+    daysLeft,
+    sendLabel,
+    sendTemplateKey,
+    alreadySent,
+    category,
+  }: RenewalTarget) {
+    const detail =
+      category === 'pt'
+        ? `${formatPtRenewalDetail(member)} · 발송 구간 ${sendLabel}`
+        : `${formatFacilityRenewalDetail(member, daysLeft)} · 발송 구간 ${sendLabel}`
+
+    return (
+      <CampaignRow
+        key={member.id}
+        memberId={member.id}
+        name={member.name}
+        phone={member.phone}
+        detail={detail}
+        badge={alreadySent ? '발송 완료' : sendLabel}
+        badgeTone={alreadySent ? 'muted' : 'alert'}
+        selected={selected.has(member.id)}
+        onToggle={() => toggleOne(member.id)}
+        rowStatus={rowStatus[member.id]}
+        sending={sendingId === member.id}
+        dismissing={dismissingId === member.id}
+        onSend={() => void handleSendOne(member.id)}
+        onDismiss={() => void handleDismissOne(member.id)}
+        sendDisabled={alreadySent || !sendTemplateKey}
+      />
+    )
+  }
 
   const visibleIds = useMemo(() => {
     if (kind === 'welcome') return filteredWelcome.map((row) => row.member.id)
@@ -511,7 +556,16 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
             {bulkSending ? '발송 중…' : `선택 발송 (${selected.size})`}
           </button>
         </div>
-        <p className="mt-2 text-xs text-muted">대상 {count}명</p>
+        <p className="mt-2 text-xs text-muted">
+          대상 {count}명
+          {kind === 'renewal' && count > 0 && (
+            <>
+              {' '}
+              · PT {filteredPtRenewal.length}명 · 시설이용권{' '}
+              {filteredFacilityRenewal.length}명
+            </>
+          )}
+        </p>
       </div>
 
       {error && (
@@ -588,25 +642,35 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
                 />
               ))
             ) : kind === 'renewal' ? (
-              filteredRenewal.map(({ member, daysLeft, sendLabel, sendTemplateKey, alreadySent }) => (
-                <CampaignRow
-                  key={member.id}
-                  memberId={member.id}
-                  name={member.name}
-                  phone={member.phone}
-                  detail={`${formatRenewalSummary(member, daysLeft)} · 발송 구간 ${sendLabel}`}
-                  badge={alreadySent ? '발송 완료' : sendLabel}
-                  badgeTone={alreadySent ? 'muted' : 'alert'}
-                  selected={selected.has(member.id)}
-                  onToggle={() => toggleOne(member.id)}
-                  rowStatus={rowStatus[member.id]}
-                  sending={sendingId === member.id}
-                  dismissing={dismissingId === member.id}
-                  onSend={() => void handleSendOne(member.id)}
-                  onDismiss={() => void handleDismissOne(member.id)}
-                  sendDisabled={alreadySent || !sendTemplateKey}
-                />
-              ))
+              <>
+                {filteredPtRenewal.length > 0 && (
+                  <>
+                    <tr className="border-b border-gold/20 bg-cream/40">
+                      <td
+                        colSpan={6}
+                        className="px-4 py-2 text-xs font-semibold text-charcoal"
+                      >
+                        PT · 잔여 5회 이하 ({filteredPtRenewal.length}명)
+                      </td>
+                    </tr>
+                    {filteredPtRenewal.map((row) => renderRenewalRow(row))}
+                  </>
+                )}
+                {filteredFacilityRenewal.length > 0 && (
+                  <>
+                    <tr className="border-b border-gold/20 bg-cream/40">
+                      <td
+                        colSpan={6}
+                        className="px-4 py-2 text-xs font-semibold text-charcoal"
+                      >
+                        시설이용권 · 회원권 만료 ({filteredFacilityRenewal.length}
+                        명)
+                      </td>
+                    </tr>
+                    {filteredFacilityRenewal.map((row) => renderRenewalRow(row))}
+                  </>
+                )}
+              </>
             ) : kind === 'pt_reminder' ? (
               filteredPtReminder.map((row) => (
                 <CampaignRow

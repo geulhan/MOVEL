@@ -33,7 +33,10 @@ export type RenewalTarget = {
   sendLabel: string
   sendMetadata: Record<string, string | number>
   dedupKey: string
+  category: RenewalTargetCategory
 }
+
+export type RenewalTargetCategory = 'pt' | 'facility'
 
 export type PtReminderTarget = {
   member: Member
@@ -222,8 +225,8 @@ async function buildRenewalTargets(): Promise<RenewalTarget[]> {
     .filter(
       (member) =>
         member.status !== 'terminated' &&
-        member.total_sessions > 0 &&
-        (isRenewalTarget(member) || isExpiringSoon(member.expires_at, member.status)),
+        (isRenewalTarget(member) ||
+          isExpiringSoon(member.expires_at, member.status)),
     )
     .map((member) => {
       const expiresAt = member.expires_at?.split('T')[0]
@@ -237,6 +240,7 @@ async function buildRenewalTargets(): Promise<RenewalTarget[]> {
         sendLabel: plan.sendLabel,
         sendMetadata: plan.metadata,
         dedupKey: plan.dedupKey,
+        category: renewalTargetCategory(member, plan.templateKey),
       }
     })
     .filter((row) => !dismissedKeys.has(row.dedupKey))
@@ -515,6 +519,41 @@ export function formatPtReminderSummary(target: PtReminderTarget): string {
 
 export function formatPaymentSummary(payment: PaymentHistory): string {
   return `${formatDate(payment.paid_at)} · ${payment.sessions}회 · ${payment.amount.toLocaleString('ko-KR')}원`
+}
+
+export function renewalTargetCategory(
+  member: Member,
+  sendTemplateKey: MessageTemplateKey | null,
+): RenewalTargetCategory {
+  if (
+    sendTemplateKey === 'pt_remaining_3' ||
+    sendTemplateKey === 'pt_remaining_1'
+  ) {
+    return 'pt'
+  }
+  if (
+    sendTemplateKey === 'membership_expire_14' ||
+    sendTemplateKey === 'membership_expire_7' ||
+    sendTemplateKey === 'membership_expire_today'
+  ) {
+    return 'facility'
+  }
+  if (member.total_sessions > 0 && member.remaining_sessions <= 5) {
+    return 'pt'
+  }
+  return 'facility'
+}
+
+export function formatPtRenewalDetail(member: Member): string {
+  return `잔여 ${member.remaining_sessions}회 · 등록 ${member.total_sessions}회`
+}
+
+export function formatFacilityRenewalDetail(
+  member: Member,
+  daysLeft: number,
+): string {
+  const expiresLabel = member.expires_at ? formatDate(member.expires_at) : '-'
+  return `만료 ${expiresLabel} (D-${daysLeft})`
 }
 
 export function formatRenewalSummary(member: Member, daysLeft: number): string {

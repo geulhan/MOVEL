@@ -21,7 +21,7 @@ import {
 const SEND_TABS: Array<{ id: MessageCampaignKind; label: string }> = [
   { id: 'welcome', label: '회원가입 안내' },
   { id: 'payment_done', label: '결제 완료' },
-  { id: 'renewal', label: '회원권 만료' },
+  { id: 'renewal', label: '재등록' },
   { id: 'pt_reminder', label: '수업 리마인더' },
 ]
 
