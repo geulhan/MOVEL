@@ -123,6 +123,15 @@ export function buildTemplateVariables(
         '#{amount}': formatCurrency(extra.amount ?? 0),
         '#{productName}': productName,
         '#{sessions}': String(extra.sessions ?? 0),
+        '#{remainingCount}': remainingCount,
+        '#{remainingSessions}': remainingCount,
+        '#{expireDate}': expireDate,
+        '#{expiresAt}': expireDate,
+        // MOVEL 레거시 솔라피 템플릿(한글 변수명) 호환
+        상품명: productName,
+        결제금액: formatCurrency(extra.amount ?? 0),
+        잔여횟수: remainingCount,
+        만료일: expireDate,
       }
     case 'schedule_reminder':
     case 'pt_reminder':

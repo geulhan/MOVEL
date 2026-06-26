@@ -434,6 +434,16 @@ export async function sendMemberNotification(
       sessions = Number(payment.sessions)
       productName = String(payment.note ?? '').trim() || `PT ${sessions}회`
     }
+
+    const { data: freshMember } = await supabase
+      .from('members')
+      .select('remaining_sessions, expires_at')
+      .eq('id', input.memberId)
+      .maybeSingle()
+    if (freshMember) {
+      member.remaining_sessions = freshMember.remaining_sessions
+      member.expires_at = freshMember.expires_at
+    }
   }
 
   if (

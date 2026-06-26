@@ -57,7 +57,8 @@ ${MOTIONHUB_MEMBER_SIGNUP_PORTAL_URL}
   payment_completed: `[모션허브]
 #{centerName} 회원님, #{amount} 결제가 완료되었습니다. (#{productName})
 
-회원 포털: #{portalUrl}`,
+잔여 #{remainingCount}회 · 만료 #{expireDate}
+#{portalUrl}`,
 
   schedule_reminder: `[모션허브]
 #{centerName} 회원님, #{className} 수업이 예정되어 있습니다.
