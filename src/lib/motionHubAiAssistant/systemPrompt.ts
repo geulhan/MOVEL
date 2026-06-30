@@ -16,6 +16,7 @@ When data is insufficient, say what additional data is needed.`
 export const SUGGESTED_QUESTIONS = [
   '왜 순이익이 마이너스야?',
   '재등록을 늘리려면?',
+  '마케팅 방향은 어떻게 잡을까?',
   '이번 달 가장 위험한 회원은?',
   '누가 가장 성과가 좋은 트레이너야?',
 ] as const

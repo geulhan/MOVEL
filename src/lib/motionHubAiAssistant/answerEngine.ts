@@ -10,15 +10,19 @@ export type AssistantIntent =
   | 'renewal_increase'
   | 'at_risk_members'
   | 'trainer_performance'
+  | 'marketing_direction'
   | 'unknown'
 
 export function detectAssistantIntent(question: string): AssistantIntent {
   const q = question.trim().toLowerCase()
 
   if (/순이익|적자|마이너스|손실|왜.*부족/.test(q)) return 'net_profit'
-  if (/재등록|리뉴얼|연장/.test(q)) return 'renewal_increase'
+  if (/재등록|리뉴얼|연장/.test(q) && !/마케팅|홍보|유입/.test(q)) return 'renewal_increase'
   if (/위험|이탈|환불.*가능|빠질|끊을/.test(q)) return 'at_risk_members'
   if (/트레이너|강사|성과|누가.*잘|매출.*높/.test(q)) return 'trainer_performance'
+  if (/마케팅|홍보|유입|광고|프로모션|체험|소개|방향.*잡|신규.*늘리/.test(q)) {
+    return 'marketing_direction'
+  }
 
   return 'unknown'
 }
@@ -270,6 +274,142 @@ function answerTrainerPerformance(ctx: MotionHubAssistantContext): MotionHubAssi
   }
 }
 
+function answerMarketingDirection(ctx: MotionHubAssistantContext): MotionHubAssistantAnswer {
+  const s = ctx.snapshot
+  const op = s.operational
+  const prior = s.priorOperational
+  const renewalShare =
+    s.cashRevenue > 0 ? Math.round((s.cashRevenueRenewal / s.cashRevenue) * 100) : 0
+  const newShare = s.cashRevenue > 0 ? 100 - renewalShare : 0
+  const renewalTargets = ctx.members.filter((m) => m.isRenewalTarget).length
+  const dormant = ctx.members.filter((m) => m.status === 'dormant').length
+  const leadConversion =
+    op.newLeadCount > 0
+      ? Math.round((op.convertedLeadCount / op.newLeadCount) * 100)
+      : null
+
+  const diagnosis: string[] = [
+    `${ctx.periodLabel} 현금매출 ${formatCurrency(s.cashRevenue)} (신규 ${newShare}% · 재등록 ${renewalShare}%)`,
+    `신규 등록 ${op.newMemberCount}명${prior ? ` · 전월 ${prior.newMemberCount}명` : ''}`,
+    `상담 ${op.newLeadCount}건 · 전환 ${op.convertedLeadCount}건${leadConversion != null ? ` (${leadConversion}%)` : ''}`,
+    `재등록 대상 ${renewalTargets}명 · 휴면 ${dormant}명 · 순이익 ${formatCurrency(s.netProfit)}`,
+  ]
+
+  type Priority = { rank: number; title: string; why: string; action: string }
+  const priorities: Priority[] = []
+
+  if (s.netProfit < 0) {
+    priorities.push({
+      rank: 1,
+      title: '신규 광고보다 재등록·이탈 방지 우선',
+      why: `순이익 ${formatCurrency(s.netProfit)}으로 현금흐름이 압박됩니다. 신규 유치 비용 대비 기존 회원 매출 방어가 먼저입니다.`,
+      action: `재등록 대상 ${renewalTargets}명 상담 · 만료 예정 ${op.expiringMemberCount}명 알림톡 · 메시지 발송 탭 활용`,
+    })
+  }
+
+  if (renewalShare < 40 && s.cashRevenue > 0) {
+    priorities.push({
+      rank: priorities.length + 1,
+      title: '재등록 마케팅 강화',
+      why: `매출의 ${renewalShare}%만 재등록입니다. 신규 ${formatCurrency(s.cashRevenueNew)} vs 재등록 ${formatCurrency(s.cashRevenueRenewal)}.`,
+      action: '잔여 5회 이하 회원 패키지 제안 · 재등록 혜택(1회 추가 등) 메시지',
+    })
+  }
+
+  if (op.newMemberCount < 3 || (prior && op.newMemberCount < prior.newMemberCount)) {
+    priorities.push({
+      rank: priorities.length + 1,
+      title: '신규 유입 채널 보강',
+      why: `이번 달 신규 등록 ${op.newMemberCount}명${prior && op.newMemberCount < prior.newMemberCount ? ` (전월 ${prior.newMemberCount}명 대비 감소)` : ''}. 유입이 부족합니다.`,
+      action: '체험 PT · 지인 소개 · 상담·리드 메뉴에 문의 등록 · 만족 회원 후기 요청',
+    })
+  }
+
+  if (op.newLeadCount >= 3 && leadConversion != null && leadConversion < 40) {
+    priorities.push({
+      rank: priorities.length + 1,
+      title: '상담 전환율 개선 (광고 확대 X)',
+      why: `상담 ${op.newLeadCount}건 중 전환 ${op.convertedLeadCount}건(${leadConversion}%). 문의는 있으나 등록 전환이 낮습니다.`,
+      action: '상담 후 24시간 내 follow-up · 체험 일정 즉시 제안 · 상담·리드에서 미전환 건 재연락',
+    })
+  } else if (op.newLeadCount < 3) {
+    priorities.push({
+      rank: priorities.length + 1,
+      title: '상담·리드 유입 늘리기',
+      why: `이번 달 신규 상담 ${op.newLeadCount}건으로 유입 퍼널 상단이 좁습니다.`,
+      action: '네이버·인스타 예약 링크 · 체험 이벤트 · 기존 회원 소개 혜택',
+    })
+  }
+
+  if (dormant >= 2) {
+    priorities.push({
+      rank: priorities.length + 1,
+      title: '휴면 회원 복귀 캠페인',
+      why: `휴면 회원 ${dormant}명. 신규 광고보다 복귀 비용이 낮을 수 있습니다.`,
+      action: '휴면 회원 대상 복귀 알림톡 · 체험 1회 무료 제안',
+    })
+  }
+
+  if (op.attendanceRate < 75 && op.scheduledSessions > 0) {
+    priorities.push({
+      rank: priorities.length + 1,
+      title: '출석·참여도 마케팅',
+      why: `PT 출석률 ${op.attendanceRate}%로 낮습니다. 참여도가 낮으면 재등록·소개 모두 어렵습니다.`,
+      action: '미출석 회원 일정 재조율 · 출석 리마인더 · 챌린지·마일리지 연동',
+    })
+  }
+
+  if (priorities.length === 0) {
+    priorities.push({
+      rank: 1,
+      title: '유지 + 소개 확대',
+      why: `순이익 ${formatCurrency(s.netProfit)} · 신규 ${op.newMemberCount}명 · 재등록 비중 ${renewalShare}%로 안정적입니다.`,
+      action: '만족 회원 3명 후기·지인 소개 요청 · 재등록 대상 선제 상담',
+    })
+  }
+
+  const sorted = priorities
+    .sort((a, b) => a.rank - b.rank)
+    .slice(0, 3)
+    .map((p, i) => ({ ...p, rank: i + 1 }))
+
+  return {
+    intent: 'marketing_direction',
+    headline: '데이터 기반 마케팅 방향',
+    sections: [
+      {
+        title: '현재 상태 (근거)',
+        lines: diagnosis,
+      },
+      {
+        title: '우선순위 마케팅 방향',
+        lines: sorted.map(
+          (p) =>
+            `${p.rank}. ${p.title} — ${p.why} → 실행: ${p.action}`,
+        ),
+      },
+      {
+        title: '하지 말아야 할 것',
+        lines:
+          s.netProfit < 0
+            ? [
+                '순이익 마이너스 상태에서 대규모 신규 광고 집행 (현금흐름 악화)',
+                '재등록·이탈 관리 없이 신규만 늘리기',
+              ]
+            : [
+                '데이터 없이 채널만 늘리기 — 상담·전환율 먼저 확인',
+                '재등록 대상 방치 후 신규 광고만 확대',
+              ],
+      },
+    ],
+    evidenceNote: `${ctx.periodLabel} 매출·회원·상담·출석·순이익 데이터 기반. 외부 시장·경쟁사 데이터는 없습니다.`,
+    insufficientData:
+      op.newLeadCount === 0 && prior == null
+        ? ['상담·리드·전월 비교 데이터가 부족하면 방향 신뢰도가 낮습니다.']
+        : undefined,
+  }
+}
+
 function answerUnknown(ctx: MotionHubAssistantContext): MotionHubAssistantAnswer {
   return {
     intent: 'unknown',
@@ -280,6 +420,7 @@ function answerUnknown(ctx: MotionHubAssistantContext): MotionHubAssistantAnswer
         lines: [
           '왜 순이익이 마이너스야?',
           '재등록을 늘리려면?',
+          '마케팅 방향은 어떻게 잡을까?',
           '이번 달 가장 위험한 회원은?',
           '누가 가장 성과가 좋은 트레이너야?',
         ],
@@ -311,6 +452,8 @@ export function answerMotionHubQuestion(
       return answerAtRiskMembers(context)
     case 'trainer_performance':
       return answerTrainerPerformance(context)
+    case 'marketing_direction':
+      return answerMarketingDirection(context)
     default:
       return answerUnknown(context)
   }
