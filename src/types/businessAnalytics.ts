@@ -1,3 +1,5 @@
+import type { MonthlyOperationalSignals } from './aiMonthlyReport'
+
 export type FixedCosts = {
   rent: number
   maintenance: number
@@ -82,4 +84,6 @@ export type BusinessAnalyticsSnapshot = {
   healthGrade: CenterHealthGrade
   healthScore: number
   monthlyReport: MonthlyReportPoint[]
+  operational: MonthlyOperationalSignals
+  priorOperational: MonthlyOperationalSignals | null
 }

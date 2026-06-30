@@ -102,7 +102,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   {
     to: '/admin/analytics',
     end: false,
-    label: '경영분석',
+    label: '경영관리',
     icon: '◉',
     roles: ['admin'],
   },

@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { fetchBusinessAnalytics } from '../../api/businessAnalytics'
 import {
   fetchBusinessAnalyticsSettings,
   saveBusinessAnalyticsSettings,
   sumFixedCosts,
 } from '../../api/businessAnalyticsSettings'
-import { formatCurrency, formatDate } from '../../api/members'
+import { formatCurrency } from '../../api/members'
 import { fetchTrainers } from '../../api/trainers'
+import { BusinessMonthlyReportPanel } from '../../components/admin/BusinessMonthlyReportPanel'
 import { PageHeader } from '../../components/admin/PageHeader'
 import { formatSupabaseError } from '../../lib/errors'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/theme'
@@ -16,6 +18,18 @@ import {
   type BusinessAnalyticsSettings,
 } from '../../types/businessAnalytics'
 import type { Trainer } from '../../types/database'
+
+type BusinessAnalyticsTab = 'dashboard' | 'report'
+
+const TAB_LABELS: Record<BusinessAnalyticsTab, string> = {
+  dashboard: '경영 대시보드',
+  report: 'AI 월간 보고서',
+}
+
+function parseAnalyticsTab(value: string | null): BusinessAnalyticsTab {
+  if (value === 'dashboard') return 'dashboard'
+  return 'report'
+}
 
 function KpiCard({
   label,
@@ -51,35 +65,6 @@ function KpiCard({
           {sub}
         </p>
       )}
-    </div>
-  )
-}
-
-function BarChart({
-  points,
-  valueKey,
-  color = 'bg-charcoal',
-}: {
-  points: BusinessAnalyticsSnapshot['monthlyReport']
-  valueKey: 'recognizedRevenue' | 'netProfit'
-  color?: string
-}) {
-  const max = Math.max(...points.map((p) => p[valueKey]), 1)
-  return (
-    <div className="flex h-40 items-end gap-2">
-      {points.map((point) => {
-        const height = Math.max(8, Math.round((point[valueKey] / max) * 100))
-        return (
-          <div key={`${point.year}-${point.month}`} className="flex min-w-0 flex-1 flex-col items-center gap-1">
-            <div
-              className={`w-full rounded-t-md ${color}`}
-              style={{ height: `${height}%` }}
-              title={`${point.label}: ${formatCurrency(point[valueKey])}`}
-            />
-            <span className="truncate text-[10px] text-muted">{point.month}월</span>
-          </div>
-        )
-      })}
     </div>
   )
 }
@@ -289,6 +274,10 @@ function SettingsPanel({
 }
 
 export default function BusinessAnalyticsPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [tab, setTab] = useState<BusinessAnalyticsTab>(() =>
+    parseAnalyticsTab(searchParams.get('tab')),
+  )
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -300,6 +289,15 @@ export default function BusinessAnalyticsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showSettings, setShowSettings] = useState(false)
+
+  useEffect(() => {
+    setTab(parseAnalyticsTab(searchParams.get('tab')))
+  }, [searchParams])
+
+  function selectTab(next: BusinessAnalyticsTab) {
+    setTab(next)
+    setSearchParams({ tab: next }, { replace: true })
+  }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -344,9 +342,22 @@ export default function BusinessAnalyticsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="경영분석"
-        description="입금액이 아닌 인식매출 기준으로 이번 달 실제 순이익을 확인합니다."
+        title="경영관리"
+        description="AI 월간 경영 리포트로 이번 달 성과를 요약하고, 다음 달 실행할 액션을 제안합니다."
       />
+
+      <nav className="chip-scroll -mx-1 px-1">
+        {(Object.keys(TAB_LABELS) as BusinessAnalyticsTab[]).map((id) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => selectTab(id)}
+            className={`chip ${tab === id ? 'chip-active' : 'chip-inactive'}`}
+          >
+            {TAB_LABELS[id]}
+          </button>
+        ))}
+      </nav>
 
       <div className="flex flex-wrap items-center gap-3">
         <select
@@ -395,7 +406,11 @@ export default function BusinessAnalyticsPage() {
         <section className={`${cardClass} p-6 text-sm text-muted`}>경영 데이터 불러오는 중…</section>
       )}
 
-      {!loading && data && (
+      {!loading && data && tab === 'report' && (
+        <BusinessMonthlyReportPanel data={data} />
+      )}
+
+      {!loading && data && tab === 'dashboard' && (
         <>
           <section className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
             <KpiCard
@@ -548,53 +563,6 @@ export default function BusinessAnalyticsPage() {
                 </div>
               </dl>
             </div>
-          </section>
-
-          <section className={`${cardClass} space-y-4 p-5`}>
-            <h3 className="text-sm font-semibold text-charcoal">12. 경영 리포트 (최근 6개월)</h3>
-            <div className="grid gap-6 lg:grid-cols-2">
-              <div>
-                <p className="mb-2 text-xs text-muted">인식매출</p>
-                <BarChart points={data.monthlyReport} valueKey="recognizedRevenue" />
-              </div>
-              <div>
-                <p className="mb-2 text-xs text-muted">순이익</p>
-                <BarChart points={data.monthlyReport} valueKey="netProfit" color="bg-gold" />
-              </div>
-            </div>
-            <div className="table-scroll">
-              <table className="w-full min-w-[640px] text-left text-sm">
-                <thead className="table-head">
-                  <tr>
-                    <th className="px-3 py-2">월</th>
-                    <th className="px-3 py-2">결제액</th>
-                    <th className="px-3 py-2">신규</th>
-                    <th className="px-3 py-2">재등록</th>
-                    <th className="px-3 py-2">인식매출</th>
-                    <th className="px-3 py-2">순이익</th>
-                    <th className="px-3 py-2">재등록률</th>
-                    <th className="px-3 py-2">환불노출</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gold/15">
-                  {data.monthlyReport.map((row) => (
-                    <tr key={`${row.year}-${row.month}`}>
-                      <td className="px-3 py-2">{row.label}</td>
-                      <td className="px-3 py-2 tabular-nums">{formatCurrency(row.cashRevenue)}</td>
-                      <td className="px-3 py-2 tabular-nums">{formatCurrency(row.cashRevenueNew)}</td>
-                      <td className="px-3 py-2 tabular-nums">{formatCurrency(row.cashRevenueRenewal)}</td>
-                      <td className="px-3 py-2 tabular-nums">{formatCurrency(row.recognizedRevenue)}</td>
-                      <td className="px-3 py-2 tabular-nums">{formatCurrency(row.netProfit)}</td>
-                      <td className="px-3 py-2 tabular-nums">{row.renewalRate}%</td>
-                      <td className="px-3 py-2 tabular-nums">{row.refundExposureRate}%</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <p className="text-xs text-muted">
-              기준일 {formatDate(new Date().toISOString())} · 인식매출은 회원권 기간배분 + PT 회차소진(FIFO) 기준입니다. 환불 리스크는 PT {data.ptRefundDaysPerSession}일/회 기준 환불 기한 내 잔여분만 포함합니다.
-            </p>
           </section>
         </>
       )}

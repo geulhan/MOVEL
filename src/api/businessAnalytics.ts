@@ -29,6 +29,7 @@ import { isRenewalTarget } from '../utils/renewal'
 import { normalizeMember } from '../lib/memberNormalize'
 import type { Member, Trainer } from '../types/database'
 import { resolveTrainerSettlementRate } from '../lib/trainerSettlement'
+import { fetchMonthlyOperationalSignals } from './monthlyReportSignals'
 
 type CenterPassAnalyticsRow = {
   id: string
@@ -430,7 +431,7 @@ function buildSnapshotForMonth(
   contractSettings: Awaited<ReturnType<typeof fetchContractSettings>>,
   year: number,
   month: number,
-): Omit<BusinessAnalyticsSnapshot, 'monthlyReport'> {
+): Omit<BusinessAnalyticsSnapshot, 'monthlyReport' | 'operational' | 'priorOperational'> {
   const cashBreakdown = cashRevenueBreakdownForMonth(inputs.payments, year, month)
   const cashRevenue = cashBreakdown.total
   const cashRevenueNew = cashBreakdown.newMember
@@ -695,5 +696,21 @@ export async function fetchBusinessAnalytics(
     })
   }
 
-  return { ...snapshot, monthlyReport }
+  const prior = shiftMonth(targetYear, targetMonth, -1)
+  const [operational, priorOperational] = await Promise.all([
+    fetchMonthlyOperationalSignals(
+      targetYear,
+      targetMonth,
+      inputs.members,
+      centerId,
+    ),
+    fetchMonthlyOperationalSignals(
+      prior.year,
+      prior.month,
+      inputs.members,
+      centerId,
+    ),
+  ])
+
+  return { ...snapshot, monthlyReport, operational, priorOperational }
 }
