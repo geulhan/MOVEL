@@ -9,6 +9,7 @@ import {
 import { formatCurrency } from '../../api/members'
 import { fetchTrainers } from '../../api/trainers'
 import { BusinessMonthlyReportPanel } from '../../components/admin/BusinessMonthlyReportPanel'
+import { MotionHubAiAssistantPanel } from '../../components/admin/MotionHubAiAssistantPanel'
 import { PageHeader } from '../../components/admin/PageHeader'
 import { PAGE_HELP } from '../../lib/pageHelpTips'
 import { formatSupabaseError } from '../../lib/errors'
@@ -22,15 +23,17 @@ import {
 } from '../../types/businessAnalytics'
 import type { Trainer } from '../../types/database'
 
-type BusinessAnalyticsTab = 'dashboard' | 'report'
+type BusinessAnalyticsTab = 'dashboard' | 'report' | 'assistant'
 
 const TAB_LABELS: Record<BusinessAnalyticsTab, string> = {
   dashboard: '경영 대시보드',
   report: 'AI 월간 보고서',
+  assistant: 'AI 어시스턴트',
 }
 
 function parseAnalyticsTab(value: string | null): BusinessAnalyticsTab {
   if (value === 'dashboard') return 'dashboard'
+  if (value === 'assistant') return 'assistant'
   return 'report'
 }
 
@@ -415,6 +418,10 @@ export default function BusinessAnalyticsPage() {
 
       {loading && (
         <section className={`${cardClass} p-6 text-sm text-muted`}>경영 데이터 불러오는 중…</section>
+      )}
+
+      {!loading && data && tab === 'assistant' && (
+        <MotionHubAiAssistantPanel year={year} month={month} />
       )}
 
       {!loading && data && tab === 'report' && (
