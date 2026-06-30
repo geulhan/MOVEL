@@ -1,6 +1,7 @@
 import { SalesDashboard } from '../../components/admin/SalesDashboard'
 import { OperationalKpiSidebar } from '../../components/admin/OperationalKpiSidebar'
 import { ClassDashboardKpi } from '../../components/admin/ClassDashboardKpi'
+import { CenterOnboardingPanel } from '../../components/admin/CenterOnboardingPanel'
 import { PageHeader } from '../../components/admin/PageHeader'
 import { RenewalDashboard } from '../../components/RenewalDashboard'
 import { fetchMembers } from '../../api/members'
@@ -41,6 +42,8 @@ export default function DashboardPage() {
           {error}
         </div>
       )}
+
+      <CenterOnboardingPanel />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_15.5rem]">
         <div className="min-w-0 space-y-6">

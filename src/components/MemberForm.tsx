@@ -13,6 +13,7 @@ import {
   type Trainer,
 } from '../types/database'
 import { PaymentRequestModal } from './member-detail/PaymentRequestModal'
+import { MemberRegistrationSuccessPanel } from './admin/MemberRegistrationSuccessPanel'
 import {
   PhoneInput,
   phoneBodyToFull,
@@ -23,19 +24,30 @@ type Props = {
   trainers: Trainer[]
   members?: Member[]
   onCreated: () => void
+  onboardingMode?: boolean
+  centerSlug?: string
+  centerName?: string
 }
 
-export function MemberForm({ trainers, members = [], onCreated }: Props) {
+export function MemberForm({
+  trainers,
+  members = [],
+  onCreated,
+  onboardingMode = false,
+  centerSlug = '',
+  centerName = '',
+}: Props) {
   const [name, setName] = useState('')
   const [phoneBody, setPhoneBody] = useState('')
   const [registeredAt, setRegisteredAt] = useState(todayDateString())
   const [trainerId, setTrainerId] = useState('')
   const [referrerId, setReferrerId] = useState('')
   const [status, setStatus] = useState<MemberStatus>('active')
-  const [sendPaymentRequest, setSendPaymentRequest] = useState(true)
+  const [sendPaymentRequest, setSendPaymentRequest] = useState(!onboardingMode)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [registeredMember, setRegisteredMember] = useState<Member | null>(null)
   const [paymentModalMember, setPaymentModalMember] = useState<{
     id: string
     name: string
@@ -85,10 +97,14 @@ export function MemberForm({ trainers, members = [], onCreated }: Props) {
       setStatus('active')
       onCreated()
 
-      if (sendPaymentRequest) {
+      if (sendPaymentRequest && !onboardingMode) {
         setPaymentModalMember({ id: member.id, name: member.name })
+      } else if (onboardingMode && centerSlug) {
+        setRegisteredMember(member)
       } else {
-        setMessage('회원이 등록되었습니다. PT·결제는 결제 요청으로 진행해 주세요.')
+        setMessage(
+          '회원이 등록되었습니다. 가입 안내 알림톡이 발송되었습니다.',
+        )
       }
     } catch (err) {
       const msg = getErrorMessage(err)
@@ -113,12 +129,23 @@ export function MemberForm({ trainers, members = [], onCreated }: Props) {
   return (
     <>
       <section className={`${cardClass} p-6`}>
-        <h2 className="text-lg font-semibold text-charcoal">회원 등록</h2>
+        <h2 className="text-lg font-semibold text-charcoal">
+          {onboardingMode ? '첫 회원 등록' : '회원 등록'}
+        </h2>
         <p className="mt-1 text-sm leading-relaxed text-muted">
-          연락처·기본 정보만 등록합니다. PT 횟수와 결제 금액은{' '}
-          <strong className="font-medium text-charcoal">결제 요청</strong>으로
-          보내 계약서·결제를 진행하세요. (등록 시 세션·금액을 넣으면 계약서와
-          맞지 않을 수 있습니다.)
+          {onboardingMode ? (
+            <>
+              <strong className="font-medium text-charcoal">이름·휴대폰만</strong>{' '}
+              입력하세요. 등록과 동시에 회원에게 가입 안내 알림톡이 발송됩니다.
+            </>
+          ) : (
+            <>
+              연락처·기본 정보만 등록합니다. PT 횟수와 결제 금액은{' '}
+              <strong className="font-medium text-charcoal">결제 요청</strong>으로
+              보내 계약서·결제를 진행하세요. (등록 시 세션·금액을 넣으면 계약서와
+              맞지 않을 수 있습니다.)
+            </>
+          )}
         </p>
 
         <form
@@ -178,6 +205,7 @@ export function MemberForm({ trainers, members = [], onCreated }: Props) {
             )}
           </label>
 
+          {!onboardingMode && (
           <label className="block">
             <span className="mb-1.5 block text-sm font-medium text-charcoal">
               소개 회원 (선택)
@@ -198,6 +226,7 @@ export function MemberForm({ trainers, members = [], onCreated }: Props) {
               결제 요청 완료 시 소개 MILE이 지급됩니다.
             </span>
           </label>
+          )}
 
           <label className="block">
             <span className="mb-1.5 block text-sm font-medium text-charcoal">
@@ -230,6 +259,7 @@ export function MemberForm({ trainers, members = [], onCreated }: Props) {
             </select>
           </label>
 
+          {!onboardingMode && (
           <label className="flex items-start gap-2 sm:col-span-2 lg:col-span-3">
             <input
               type="checkbox"
@@ -245,10 +275,15 @@ export function MemberForm({ trainers, members = [], onCreated }: Props) {
               </span>
             </span>
           </label>
+          )}
 
           <div className="flex flex-wrap items-end gap-3 sm:col-span-2 lg:col-span-3">
             <button type="submit" disabled={loading} className={btnPrimary}>
-              {loading ? '등록 중…' : '회원 등록'}
+              {loading
+                ? '등록 중…'
+                : onboardingMode
+                  ? '등록하고 알림톡 보내기'
+                  : '회원 등록'}
             </button>
             {message && (
               <p className="text-sm font-medium text-gold-dark">{message}</p>
@@ -259,6 +294,15 @@ export function MemberForm({ trainers, members = [], onCreated }: Props) {
           </div>
         </form>
       </section>
+
+      {registeredMember && centerSlug && (
+        <MemberRegistrationSuccessPanel
+          member={registeredMember}
+          centerSlug={centerSlug}
+          centerName={centerName || centerSlug}
+          onContinue={() => setRegisteredMember(null)}
+        />
+      )}
 
       {paymentModalMember && (
         <PaymentRequestModal

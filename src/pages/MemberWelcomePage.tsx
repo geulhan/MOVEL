@@ -11,9 +11,10 @@ const softCardClass =
   'rounded-2xl border border-charcoal/12 bg-[#e8ecf1] shadow-sm shadow-charcoal/8'
 
 const QUICK_STEPS = [
-  '예약 확인',
-  '출석 확인',
-  '운동기록 작성',
+  '다음 예약 확인',
+  '운동일지 미리보기',
+  '잔여횟수 확인',
+  '첫 운동 기록',
 ] as const
 
 function buildMemberPortalHref(centerSlug: string, mode: 'signup' | 'login'): string {

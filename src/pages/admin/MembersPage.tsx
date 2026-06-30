@@ -8,6 +8,7 @@ import {
 } from '../../api/members'
 import { fetchTrainers } from '../../api/trainers'
 import { PageHeader } from '../../components/admin/PageHeader'
+import { CenterOnboardingPanel } from '../../components/admin/CenterOnboardingPanel'
 import { isTrainerStaff } from '../../lib/adminPermissions'
 import { getAdminSession } from '../../lib/adminSession'
 import { MemberFilterBar } from '../../components/MemberFilterBar'
@@ -143,10 +144,18 @@ export default function MembersPage() {
     }
   }, [searchParams])
 
+  const onboardingParam = searchParams.get('onboarding')
+
   const scopedMembers = useMemo(() => {
     if (!isTrainer || !session?.trainerId) return allMembers
     return allMembers.filter((member) => member.trainer_id === session.trainerId)
   }, [allMembers, isTrainer, session?.trainerId])
+
+  const isOnboardingRegister =
+    onboardingParam === 'register' ||
+    (!isTrainer && !loading && scopedMembers.length === 0)
+  const showOnboardingGuide =
+    !isTrainer && (onboardingParam === 'register' || onboardingParam === 'portal')
 
   useEffect(() => {
     const term = searchInput.trim()
@@ -355,6 +364,28 @@ export default function MembersPage() {
         </div>
       )}
 
+      {showOnboardingGuide && <CenterOnboardingPanel compact />}
+
+      {isOnboardingRegister && !isTrainer && (
+        <div className="rounded-xl border border-gold/40 bg-cream/50 px-4 py-3 text-sm text-charcoal">
+          <p className="font-semibold">지금 할 일: 첫 회원 1명 등록</p>
+          <p className="mt-1 text-muted">
+            이름과 휴대폰만 입력하세요. 등록 즉시 회원에게 가입 안내 알림톡이 발송됩니다.
+          </p>
+        </div>
+      )}
+
+      {!isTrainer && (
+        <MemberForm
+          trainers={trainers}
+          members={allMembers}
+          onCreated={() => void loadMembers()}
+          onboardingMode={isOnboardingRegister}
+          centerSlug={session?.centerSlug}
+          centerName={session?.centerName}
+        />
+      )}
+
       <section className="space-y-3">
         <MemberFilterBar
           active={renewalFilter}
@@ -407,14 +438,6 @@ export default function MembersPage() {
         updatingTrainerId={updatingTrainerId}
         readOnly={isTrainer}
       />
-
-      {!isTrainer && (
-        <MemberForm
-          trainers={trainers}
-          members={allMembers}
-          onCreated={() => void loadMembers()}
-        />
-      )}
     </div>
   )
 }

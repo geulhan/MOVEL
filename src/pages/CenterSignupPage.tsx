@@ -96,11 +96,14 @@ export default function CenterSignupPage() {
             체험 기간 종료 전 연장·전환 안내는 모션허브 카카오채널로 안내드립니다.
           </p>
           <div className="flex flex-wrap gap-3">
-            <Link to="/login" className={btnPrimary}>
-              로그인하기
+            <Link
+              to="/login?next=%2Fadmin%2Fmembers%3Fonboarding%3Dregister"
+              className={btnPrimary}
+            >
+              시작하기 — 로그인
             </Link>
-            <Link to="/" className={btnOutline}>
-              홈으로
+            <Link to="/guide" className={btnOutline}>
+              5분 가이드 보기
             </Link>
           </div>
         </section>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { saveCenterBranding, uploadCenterLogo } from '../../api/centerBranding'
 import { getAdminSession } from '../../lib/adminSession'
+import { markCenterSettingsVisited } from '../../lib/centerOnboardingStorage'
 import { useCenterBranding } from '../../hooks/useCenterBranding'
 import { CenterBrandMark } from '../../components/brand/CenterBrandMark'
 import { PageHeader } from '../../components/admin/PageHeader'
@@ -129,6 +130,11 @@ export default function CenterSettingsPage() {
   const pendingLogoFile = useRef<File | null>(null)
   const logoPreviewBlob = useRef<string | null>(null)
   const logoInputRef = useRef<HTMLInputElement | null>(null)
+
+  useEffect(() => {
+    const session = getAdminSession()
+    if (session?.centerId) markCenterSettingsVisited(session.centerId)
+  }, [])
 
   useEffect(() => {
     setTheme(branding.theme)

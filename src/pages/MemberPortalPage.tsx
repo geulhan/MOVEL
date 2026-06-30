@@ -50,8 +50,13 @@ import { MemberScheduleSection } from '../components/MemberScheduleSection'
 import { MemberClassBookingSection } from '../components/member/MemberClassBookingSection'
 import { MemberJournalPortalSection } from '../components/member/MemberJournalPortalSection'
 import { MemberInbodySection } from '../components/member/MemberInbodySection'
+import { MemberOnboardingGuide } from '../components/member/MemberOnboardingGuide'
 import { MemberPortalNav } from '../components/member/MemberPortalNav'
 import { isVillageTestMember } from '../lib/villageTestAccess'
+import {
+  isMemberOnboardingSeen,
+  markMemberOnboardingSeen,
+} from '../lib/centerOnboardingStorage'
 import { SessionCount } from '../components/SessionCount'
 
 type Tab =
@@ -104,8 +109,27 @@ export default function MemberPortalPage() {
   const [checkInConfirmOpen, setCheckInConfirmOpen] = useState(false)
   const [portalError, setPortalError] = useState<string | null>(null)
   const [refreshToken, setRefreshToken] = useState(0)
+  const [showMemberGuide, setShowMemberGuide] = useState(false)
+
+  useEffect(() => {
+    if (member && !isMemberOnboardingSeen(member.id)) {
+      setShowMemberGuide(true)
+    }
+  }, [member?.id])
 
   const showGrowthHub = member != null && isVillageTestMember(member)
+
+  function dismissMemberGuide() {
+    if (member) markMemberOnboardingSeen(member.id)
+    setShowMemberGuide(false)
+  }
+
+  function handleGuideTab(tabId: 'schedule' | 'journal' | 'home') {
+    if (tabId === 'home') setTab('home')
+    else setTab(tabId)
+    if (member) markMemberOnboardingSeen(member.id)
+    setShowMemberGuide(false)
+  }
 
   useEffect(() => {
     if (!showGrowthHub && tab === 'growth') {
@@ -362,9 +386,14 @@ export default function MemberPortalPage() {
 
           {authMode === 'login' ? (
             <>
-              <p className="mt-4 text-sm text-muted">
-                이용 중인 센터를 선택한 뒤 로그인하세요. 아이디는 휴대전화번호(숫자만)이며,
-                관리자 등록 회원의 최초 비밀번호는 번호 뒤 4자리입니다.
+              <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+                <p className="font-semibold">로그인 방법</p>
+                <p className="mt-1">
+                  아이디: 휴대폰 번호 · 비밀번호: <strong>번호 뒤 4자리</strong>
+                </p>
+              </div>
+              <p className="mt-3 text-sm text-muted">
+                이용 중인 센터를 선택한 뒤 로그인하세요.
               </p>
               <form onSubmit={(e) => void handleLogin(e)} className="mt-5 space-y-4">
                 <CenterSearchPicker
@@ -536,6 +565,13 @@ export default function MemberPortalPage() {
         </section>
 
         <p className="text-center text-xs text-muted">
+          <Link
+            to={`/member/welcome${resolvedCenterSlug ? `?center=${encodeURIComponent(resolvedCenterSlug)}` : ''}`}
+            className="font-semibold text-motionhub hover:underline"
+          >
+            처음이신가요? 시작 가이드
+          </Link>
+          <span className="mx-2">·</span>
           센터 관리자이신가요?{' '}
           <Link to="/login" className="font-semibold text-motionhub hover:underline">
             관리자 로그인
@@ -572,6 +608,13 @@ export default function MemberPortalPage() {
 
         {tab === 'home' && member && (
         <>
+        {showMemberGuide && (
+          <MemberOnboardingGuide
+            phoneTail={member.phone.replace(/\D/g, '').slice(-4)}
+            onSelectTab={handleGuideTab}
+            onDismiss={dismissMemberGuide}
+          />
+        )}
         <section className={`${cardClass} space-y-4 p-6`}>
           {member.total_sessions === 0 && (
             <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">

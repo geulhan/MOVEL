@@ -26,6 +26,17 @@ type LoginLocationState = {
   from?: { pathname: string }
 }
 
+function resolveAdminRedirect(
+  role: 'admin' | 'trainer',
+  fromState?: string,
+  next?: string | null,
+): string {
+  if (role === 'trainer') return '/admin/members'
+  if (next && next.startsWith('/admin')) return next
+  if (fromState && fromState.startsWith('/admin')) return fromState
+  return '/admin'
+}
+
 export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -39,6 +50,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
 
   const urlCenter = searchParams.get('center')?.trim().toLowerCase() || null
+  const nextPath = searchParams.get('next')?.trim() || null
   const session = getAdminSession()
 
   useEffect(() => {
@@ -72,7 +84,7 @@ export default function LoginPage() {
       }
       return (
         <Navigate
-          to={from && from.startsWith('/admin') ? from : '/admin'}
+          to={resolveAdminRedirect(active?.role ?? 'admin', from, nextPath)}
           replace
         />
       )
@@ -105,13 +117,10 @@ export default function LoginPage() {
         clearRememberedAdminLogin()
       }
       const fromState = (location.state as LoginLocationState | null)?.from?.pathname
-      const target =
-        info.role === 'trainer'
-          ? '/admin/members'
-          : fromState && fromState.startsWith('/admin')
-            ? fromState
-            : '/admin'
-      navigate(target, { replace: true })
+      navigate(
+        resolveAdminRedirect(info.role, fromState, nextPath),
+        { replace: true },
+      )
     } catch (err) {
       const message = getErrorMessage(err)
       if (message.includes('여러 센터')) {
