@@ -13,9 +13,29 @@ export type ReportInsightItem = {
   detail?: string
 }
 
+export type ReportStrengthItem = {
+  title: string
+  evidence: string
+  whyGood: string
+}
+
+export type ReportImprovementItem = {
+  title: string
+  problem: string
+  evidence: string
+  cause: string
+  impact: string
+  priority: 'high' | 'medium' | 'low'
+}
+
 export type ReportActionItem = {
   priority: number
   title: string
+  method: string
+  expectedEffect: string
+  duration: string
+  roi: string
+  /** @deprecated method + expectedEffect 조합 */
   detail?: string
 }
 
@@ -32,10 +52,14 @@ export type AiMonthlyBusinessReport = {
   generatedAt: string
   summaryNarrative: string
   summaryMetrics: ReportMetricCard[]
-  strengths: ReportInsightItem[]
-  improvements: ReportInsightItem[]
+  strengths: ReportStrengthItem[]
+  improvements: ReportImprovementItem[]
   actionPlan: ReportActionItem[]
   predictions: ReportPredictionItem[]
+  predictedRisk: string
+  overallConfidence: 'high' | 'medium' | 'low'
+  ceoMessage: string
+  dataGaps: string[]
 }
 
 export type MonthlyOperationalSignals = {

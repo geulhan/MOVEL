@@ -6,16 +6,17 @@ import type {
   MonthlyOperationalSignals,
 } from '../../types/aiMonthlyReport'
 import { buildAiMonthlyReportContext } from './buildContext'
+import { OpenAiMonthlyReportProvider } from './openaiProvider'
 import { RuleBasedAiMonthlyReportProvider } from './ruleBasedProvider'
 
 const ruleBasedProvider = new RuleBasedAiMonthlyReportProvider()
+const openaiProvider = new OpenAiMonthlyReportProvider()
 
 export function createAiMonthlyReportProvider(
   id: AiReportProviderId = 'rule-based',
 ): AiMonthlyReportProvider {
   if (id === 'openai') {
-    // 향후 OpenAI API 연동 시 이 분기에서 provider 교체
-    return ruleBasedProvider
+    return openaiProvider
   }
   return ruleBasedProvider
 }
@@ -54,4 +55,7 @@ export function generateAiMonthlyBusinessReportSync(
 }
 
 export { buildAiMonthlyReportContext } from './buildContext'
+export { buildMotionHubAiPayload, detectDataGaps } from './buildPayload'
+export { MOTIONHUB_AI_SYSTEM_PROMPT } from './motionHubAiPrompt'
+export { OpenAiMonthlyReportProvider } from './openaiProvider'
 export { RuleBasedAiMonthlyReportProvider } from './ruleBasedProvider'
