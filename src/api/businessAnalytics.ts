@@ -294,15 +294,57 @@ function computeAverageSessionPrice(
   }
 }
 
-function cashRevenueForMonth(
-  payments: Array<{ amount: number; paid_at: string }>,
+function buildFirstPaymentIdSet(
+  payments: Array<{ id: string; member_id: string; paid_at: string }>,
+): Set<string> {
+  const byMember = new Map<string, Array<{ id: string; paid_at: string }>>()
+
+  for (const payment of payments) {
+    const list = byMember.get(payment.member_id) ?? []
+    list.push({ id: payment.id, paid_at: payment.paid_at })
+    byMember.set(payment.member_id, list)
+  }
+
+  const firstIds = new Set<string>()
+  for (const list of byMember.values()) {
+    list.sort((a, b) => {
+      const dateOrder = a.paid_at.localeCompare(b.paid_at)
+      return dateOrder !== 0 ? dateOrder : a.id.localeCompare(b.id)
+    })
+    if (list[0]) firstIds.add(list[0].id)
+  }
+
+  return firstIds
+}
+
+function cashRevenueBreakdownForMonth(
+  payments: Array<{
+    id: string
+    member_id: string
+    amount: number
+    paid_at: string
+  }>,
   year: number,
   month: number,
-): number {
+): { total: number; newMember: number; renewal: number } {
+  const firstPaymentIds = buildFirstPaymentIdSet(payments)
   const { prefix } = monthBounds(year, month)
-  return payments
-    .filter((p) => String(p.paid_at).startsWith(prefix))
-    .reduce((sum, p) => sum + Number(p.amount), 0)
+
+  let newMember = 0
+  let renewal = 0
+
+  for (const payment of payments) {
+    if (!String(payment.paid_at).startsWith(prefix)) continue
+    const amount = Number(payment.amount)
+    if (firstPaymentIds.has(payment.id)) newMember += amount
+    else renewal += amount
+  }
+
+  return {
+    total: newMember + renewal,
+    newMember,
+    renewal,
+  }
 }
 
 function computeHealthScore(input: {
@@ -389,7 +431,10 @@ function buildSnapshotForMonth(
   year: number,
   month: number,
 ): Omit<BusinessAnalyticsSnapshot, 'monthlyReport'> {
-  const cashRevenue = cashRevenueForMonth(inputs.payments, year, month)
+  const cashBreakdown = cashRevenueBreakdownForMonth(inputs.payments, year, month)
+  const cashRevenue = cashBreakdown.total
+  const cashRevenueNew = cashBreakdown.newMember
+  const cashRevenueRenewal = cashBreakdown.renewal
   const centerPassRecognized = recognizeCenterPassRevenue(
     inputs.periodPasses,
     year,
@@ -547,6 +592,8 @@ function buildSnapshotForMonth(
   return {
     period: { year, month, label: periodLabel(year, month) },
     cashRevenue,
+    cashRevenueNew,
+    cashRevenueRenewal,
     centerPassRecognized,
     ptRecognized,
     totalRecognized,
@@ -638,6 +685,8 @@ export async function fetchBusinessAnalytics(
       month: m,
       label: periodLabel(y, m),
       cashRevenue: monthSnapshot.cashRevenue,
+      cashRevenueNew: monthSnapshot.cashRevenueNew,
+      cashRevenueRenewal: monthSnapshot.cashRevenueRenewal,
       recognizedRevenue: monthSnapshot.totalRecognized,
       netProfit: monthSnapshot.netProfit,
       renewalRate,

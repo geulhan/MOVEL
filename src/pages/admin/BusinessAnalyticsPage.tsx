@@ -420,7 +420,11 @@ export default function BusinessAnalyticsPage() {
           <section className="space-y-3">
             <h3 className="text-sm font-semibold text-charcoal">1. 실매출 (인식매출)</h3>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <KpiCard label="이번 달 입금액" value={formatCurrency(data.cashRevenue)} sub="통장 기준 (참고)" />
+              <KpiCard
+                label="이번 달 결제액"
+                value={formatCurrency(data.cashRevenue)}
+                sub={`신규 ${formatCurrency(data.cashRevenueNew)} · 재등록 ${formatCurrency(data.cashRevenueRenewal)}`}
+              />
               <KpiCard
                 label="회원권 인식매출"
                 value={formatCurrency(data.centerPassRecognized)}
@@ -563,7 +567,9 @@ export default function BusinessAnalyticsPage() {
                 <thead className="table-head">
                   <tr>
                     <th className="px-3 py-2">월</th>
-                    <th className="px-3 py-2">입금</th>
+                    <th className="px-3 py-2">결제액</th>
+                    <th className="px-3 py-2">신규</th>
+                    <th className="px-3 py-2">재등록</th>
                     <th className="px-3 py-2">인식매출</th>
                     <th className="px-3 py-2">순이익</th>
                     <th className="px-3 py-2">재등록률</th>
@@ -575,6 +581,8 @@ export default function BusinessAnalyticsPage() {
                     <tr key={`${row.year}-${row.month}`}>
                       <td className="px-3 py-2">{row.label}</td>
                       <td className="px-3 py-2 tabular-nums">{formatCurrency(row.cashRevenue)}</td>
+                      <td className="px-3 py-2 tabular-nums">{formatCurrency(row.cashRevenueNew)}</td>
+                      <td className="px-3 py-2 tabular-nums">{formatCurrency(row.cashRevenueRenewal)}</td>
                       <td className="px-3 py-2 tabular-nums">{formatCurrency(row.recognizedRevenue)}</td>
                       <td className="px-3 py-2 tabular-nums">{formatCurrency(row.netProfit)}</td>
                       <td className="px-3 py-2 tabular-nums">{row.renewalRate}%</td>

@@ -35,6 +35,8 @@ export type MonthlyReportPoint = {
   month: number
   label: string
   cashRevenue: number
+  cashRevenueNew: number
+  cashRevenueRenewal: number
   recognizedRevenue: number
   netProfit: number
   renewalRate: number
@@ -47,6 +49,8 @@ export type CenterHealthGrade = 'A+' | 'A' | 'B+' | 'B' | 'C' | 'D'
 export type BusinessAnalyticsSnapshot = {
   period: { year: number; month: number; label: string }
   cashRevenue: number
+  cashRevenueNew: number
+  cashRevenueRenewal: number
   centerPassRecognized: number
   ptRecognized: number
   totalRecognized: number

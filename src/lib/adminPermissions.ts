@@ -86,8 +86,8 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   {
     to: '/admin/motionhub',
     end: false,
-    label: '성장 허브',
-    icon: '🌳',
+    label: '마일리지',
+    icon: 'M',
     roles: ['admin'],
     featureKeys: ['mileage'],
   },

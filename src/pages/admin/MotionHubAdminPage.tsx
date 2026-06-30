@@ -13,7 +13,11 @@ const TAB_LABELS: Record<MotionHubTab, string> = {
   season: '시즌 패스',
 }
 
+/** 회원 앱 마을·게임 공개 전까지 관리자는 마일리지 설정만 노출 */
+const MOTIONHUB_GAME_ADMIN_ENABLED = false
+
 function parseTab(value: string | null): MotionHubTab {
+  if (!MOTIONHUB_GAME_ADMIN_ENABLED) return 'mileage'
   if (value === 'challenges' || value === 'season' || value === 'mileage') {
     return value
   }
@@ -36,26 +40,28 @@ export default function MotionHubAdminPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="성장 허브 운영"
-        description="마일리지, 센터 챌린지, 시즌 패스를 한곳에서 관리합니다. 회원 앱의 성장 허브와 연동됩니다."
+        title="마일리지"
+        description="MOVE MILE 적립·사용 규칙과 재등록 결제 연동을 관리합니다. 챌린지·시즌 패스는 게임 오픈 후 제공됩니다."
       />
 
-      <nav className="chip-scroll -mx-1 px-1">
-        {(Object.keys(TAB_LABELS) as MotionHubTab[]).map((id) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => selectTab(id)}
-            className={`chip ${tab === id ? 'chip-active' : 'chip-inactive'}`}
-          >
-            {TAB_LABELS[id]}
-          </button>
-        ))}
-      </nav>
+      {MOTIONHUB_GAME_ADMIN_ENABLED && (
+        <nav className="chip-scroll -mx-1 px-1">
+          {(Object.keys(TAB_LABELS) as MotionHubTab[]).map((id) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => selectTab(id)}
+              className={`chip ${tab === id ? 'chip-active' : 'chip-inactive'}`}
+            >
+              {TAB_LABELS[id]}
+            </button>
+          ))}
+        </nav>
+      )}
 
       {tab === 'mileage' && <RewardsPage embedded />}
-      {tab === 'challenges' && <ChallengesAdminPanel />}
-      {tab === 'season' && <SeasonPassAdminPanel />}
+      {MOTIONHUB_GAME_ADMIN_ENABLED && tab === 'challenges' && <ChallengesAdminPanel />}
+      {MOTIONHUB_GAME_ADMIN_ENABLED && tab === 'season' && <SeasonPassAdminPanel />}
     </div>
   )
 }
