@@ -11,6 +11,7 @@ type Props = {
   activeTab: TabId | null
   onSelect: (tab: TabId) => void
   showGrowthHub?: boolean
+  highlightTab?: TabId | null
 }
 
 const NAV_ITEMS: { id: TabId; label: string }[] = [
@@ -27,6 +28,7 @@ export function MemberPortalNav({
   activeTab,
   onSelect,
   showGrowthHub = false,
+  highlightTab = null,
 }: Props) {
   const items = NAV_ITEMS.filter(
     (item) => item.id !== 'growth' || showGrowthHub,
@@ -39,15 +41,19 @@ export function MemberPortalNav({
     >
       {items.map((item) => {
         const isActive = activeTab === item.id
+        const isHighlighted = highlightTab === item.id && !isActive
 
         return (
           <button
             key={item.id}
             type="button"
             onClick={() => onSelect(item.id)}
-            className={`member-portal-nav-item ${isActive ? 'is-active' : ''}`}
+            className={`member-portal-nav-item ${isActive ? 'is-active' : ''} ${isHighlighted ? 'ring-2 ring-sky-400/80 ring-offset-1' : ''}`}
           >
             {item.label}
+            {isHighlighted && (
+              <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-sky-500" />
+            )}
           </button>
         )
       })}

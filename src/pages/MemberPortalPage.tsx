@@ -50,13 +50,16 @@ import { MemberScheduleSection } from '../components/MemberScheduleSection'
 import { MemberClassBookingSection } from '../components/member/MemberClassBookingSection'
 import { MemberJournalPortalSection } from '../components/member/MemberJournalPortalSection'
 import { MemberInbodySection } from '../components/member/MemberInbodySection'
-import { MemberOnboardingGuide } from '../components/member/MemberOnboardingGuide'
+import { MemberOnboardingCoach, MemberOnboardingCompleteBanner } from '../components/member/MemberOnboardingCoach'
 import { MemberPortalNav } from '../components/member/MemberPortalNav'
 import { isVillageTestMember } from '../lib/villageTestAccess'
+import { getMemberFlowStep } from '../lib/memberOnboardingFlow'
 import {
-  isMemberOnboardingSeen,
-  markMemberOnboardingSeen,
-} from '../lib/centerOnboardingStorage'
+  dismissMemberFlow,
+  ensureMemberFlowStarted,
+  getMemberFlowState,
+  isMemberFlowActive,
+} from '../lib/memberOnboardingStorage'
 import { SessionCount } from '../components/SessionCount'
 
 type Tab =
@@ -109,27 +112,38 @@ export default function MemberPortalPage() {
   const [checkInConfirmOpen, setCheckInConfirmOpen] = useState(false)
   const [portalError, setPortalError] = useState<string | null>(null)
   const [refreshToken, setRefreshToken] = useState(0)
-  const [showMemberGuide, setShowMemberGuide] = useState(false)
+  const [flowRevision, setFlowRevision] = useState(0)
 
-  useEffect(() => {
-    if (member && !isMemberOnboardingSeen(member.id)) {
-      setShowMemberGuide(true)
-    }
-  }, [member?.id])
+  const onboardingFlow = searchParams.get('onboarding') === '1'
 
   const showGrowthHub = member != null && isVillageTestMember(member)
 
-  function dismissMemberGuide() {
-    if (member) markMemberOnboardingSeen(member.id)
-    setShowMemberGuide(false)
+  const memberFlowState = member
+    ? getMemberFlowState(member.id)
+    : null
+  const flowHighlightTab =
+    member && isMemberFlowActive(member.id)
+      ? (() => {
+          const tab = getMemberFlowStep(memberFlowState?.stepIndex ?? 0)?.tab
+          return tab && tab !== 'home' ? tab : null
+        })()
+      : null
+
+  function bumpFlowRevision() {
+    setFlowRevision((value) => value + 1)
   }
 
-  function handleGuideTab(tabId: 'schedule' | 'journal' | 'home') {
-    if (tabId === 'home') setTab('home')
-    else setTab(tabId)
-    if (member) markMemberOnboardingSeen(member.id)
-    setShowMemberGuide(false)
+  function handleFlowNavigate(nextTab: Tab) {
+    setTab(nextTab)
   }
+
+  useEffect(() => {
+    if (!onboardingFlow || authMode !== 'login') return
+    const digits = loginPhone.replace(/\D/g, '')
+    if (digits.length === 11) {
+      setLoginPassword(digits.slice(-4))
+    }
+  }, [loginPhone, onboardingFlow, authMode])
 
   useEffect(() => {
     if (!showGrowthHub && tab === 'growth') {
@@ -194,6 +208,7 @@ export default function MemberPortalPage() {
     void loadMemberData(id)
       .then(() => {
         logMemberSessionVisit(id)
+        ensureMemberFlowStarted(id)
       })
       .catch((err) => {
         clearMemberSession()
@@ -247,6 +262,9 @@ export default function MemberPortalPage() {
       saveRememberedMemberCenterSlug(slug)
       const registeredMember = await fetchMemberById(memberId)
       setMember(registeredMember)
+      ensureMemberFlowStarted(memberId)
+      setTab('home')
+      bumpFlowRevision()
       setSignupPassword('')
       setSignupPasswordConfirm('')
       if (rememberLogin) {
@@ -280,6 +298,9 @@ export default function MemberPortalPage() {
       saveRememberedMemberCenterSlug(slugForLogin)
       const loggedInMember = await fetchMemberById(memberId)
       setMember(loggedInMember)
+      ensureMemberFlowStarted(memberId)
+      setTab('home')
+      bumpFlowRevision()
       if (rememberLogin) {
         saveRememberedMemberLogin(loginPhone, loginPassword)
       } else {
@@ -386,6 +407,15 @@ export default function MemberPortalPage() {
 
           {authMode === 'login' ? (
             <>
+              {onboardingFlow && (
+                <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                  <p className="font-semibold">센터에서 등록하셨나요?</p>
+                  <p className="mt-1">
+                    휴대폰 번호 입력 시 비밀번호 <strong>뒤 4자리</strong>가 자동으로
+                    채워집니다. 로그인 후 안내에 따라 예약·운동일지·리워드를 확인하세요.
+                  </p>
+                </div>
+              )}
               <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
                 <p className="font-semibold">로그인 방법</p>
                 <p className="mt-1">
@@ -597,6 +627,7 @@ export default function MemberPortalPage() {
         activeTab={activeNavTab}
         onSelect={(id) => setTab(id)}
         showGrowthHub={showGrowthHub}
+        highlightTab={flowHighlightTab}
       />
 
       <PullToRefresh onRefresh={handlePortalRefresh}>
@@ -606,15 +637,32 @@ export default function MemberPortalPage() {
           </div>
         )}
 
+        {member && memberFlowState?.complete && !memberFlowState.dismissed && (
+          <div className="mb-4">
+            <MemberOnboardingCompleteBanner
+              memberName={member.name}
+              onDismiss={() => {
+                dismissMemberFlow(member.id)
+                bumpFlowRevision()
+              }}
+            />
+          </div>
+        )}
+
+        {member && isMemberFlowActive(member.id) && (
+          <div className="mb-4" key={flowRevision}>
+            <MemberOnboardingCoach
+              memberId={member.id}
+              memberName={member.name}
+              activeTab={tab}
+              onNavigate={handleFlowNavigate}
+              onFlowChange={bumpFlowRevision}
+            />
+          </div>
+        )}
+
         {tab === 'home' && member && (
         <>
-        {showMemberGuide && (
-          <MemberOnboardingGuide
-            phoneTail={member.phone.replace(/\D/g, '').slice(-4)}
-            onSelectTab={handleGuideTab}
-            onDismiss={dismissMemberGuide}
-          />
-        )}
         <section className={`${cardClass} space-y-4 p-6`}>
           {member.total_sessions === 0 && (
             <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">

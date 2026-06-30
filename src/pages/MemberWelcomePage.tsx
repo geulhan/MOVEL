@@ -4,23 +4,22 @@ import { fetchCenterPublicInfo } from '../api/centerPublic'
 import { getMemberSession } from '../api/memberPortal'
 import { MemberAppMockPreview } from '../components/member/MemberAppMockPreview'
 import { MemberLayout } from '../components/layouts/MemberLayout'
+import { MEMBER_WELCOME_JOURNEY } from '../lib/memberOnboardingFlow'
 import { resolveMemberCenterSlugFromUrl } from '../lib/centerSlug'
 import { btnGold, btnOutline } from '../styles/theme'
 
 const softCardClass =
   'rounded-2xl border border-charcoal/12 bg-[#e8ecf1] shadow-sm shadow-charcoal/8'
 
-const QUICK_STEPS = [
-  '다음 예약 확인',
-  '운동일지 미리보기',
-  '잔여횟수 확인',
-  '첫 운동 기록',
-] as const
-
-function buildMemberPortalHref(centerSlug: string, mode: 'signup' | 'login'): string {
+function buildMemberPortalHref(
+  centerSlug: string,
+  mode: 'signup' | 'login',
+  onboarding = true,
+): string {
   const params = new URLSearchParams()
   if (centerSlug) params.set('center', centerSlug)
   params.set('mode', mode)
+  if (onboarding) params.set('onboarding', '1')
   return `/member?${params.toString()}`
 }
 
@@ -29,18 +28,21 @@ export default function MemberWelcomePage() {
   const centerSlug = resolveMemberCenterSlugFromUrl(searchParams.get('center'))
   const [centerName, setCenterName] = useState<string | null>(null)
 
-  const signupHref = useMemo(
-    () => buildMemberPortalHref(centerSlug, 'signup'),
-    [centerSlug],
-  )
   const loginHref = useMemo(
     () => buildMemberPortalHref(centerSlug, 'login'),
+    [centerSlug],
+  )
+  const signupHref = useMemo(
+    () => buildMemberPortalHref(centerSlug, 'signup'),
     [centerSlug],
   )
 
   const loggedInMemberId = getMemberSession()
   const loggedInRedirect = loggedInMemberId
-    ? `/member${centerSlug ? `?center=${encodeURIComponent(centerSlug)}` : ''}`
+    ? `/member?${new URLSearchParams({
+        ...(centerSlug ? { center: centerSlug } : {}),
+        onboarding: '1',
+      }).toString()}`
     : null
 
   useEffect(() => {
@@ -71,7 +73,10 @@ export default function MemberWelcomePage() {
     <MemberLayout appearance="soft">
       <div className="mx-auto max-w-lg space-y-5 pb-8">
         <section className="px-1 pt-2 text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-charcoal/95">
+          <p className="text-xs font-semibold uppercase tracking-wide text-charcoal/45">
+            회원 안내
+          </p>
+          <h1 className="mt-2 text-2xl font-bold tracking-tight text-charcoal/95">
             모션허브 시작하기
           </h1>
           <p className="mt-3 text-sm leading-relaxed text-charcoal/75">
@@ -79,45 +84,54 @@ export default function MemberWelcomePage() {
             완료되었습니다.
           </p>
           <p className="mt-2 text-sm leading-relaxed text-charcoal/60">
-            예약 · 출석 · 운동기록 · 수강권 확인을 한 곳에서 관리할 수 있습니다.
+            아래 순서대로 진행하면 별도 설명 없이 바로 이용할 수 있습니다.
           </p>
         </section>
 
         <section className={`${softCardClass} px-4 py-4`}>
           <p className="text-center text-xs font-bold uppercase tracking-wide text-charcoal/50">
-            30초 사용법
+            이용 순서
           </p>
           <ol className="mt-3 space-y-2">
-            {QUICK_STEPS.map((step, index) => (
+            {MEMBER_WELCOME_JOURNEY.map((step, index) => (
               <li
-                key={step}
-                className="flex items-center gap-3 rounded-lg border border-charcoal/8 bg-[#dfe5ec] px-3 py-2 text-sm text-charcoal/85"
+                key={step.label}
+                className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-sm ${
+                  step.doneOnWelcome
+                    ? 'border-emerald-200 bg-emerald-50/80 text-emerald-900'
+                    : 'border-charcoal/8 bg-[#dfe5ec] text-charcoal/85'
+                }`}
               >
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-charcoal/80 text-xs font-bold text-motionhub">
-                  {index + 1}
+                <span
+                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                    step.doneOnWelcome
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-charcoal/80 text-motionhub'
+                  }`}
+                >
+                  {step.doneOnWelcome ? '✓' : index + 1}
                 </span>
-                {step}
+                {step.label}
               </li>
             ))}
           </ol>
-          <p className="mt-3 text-center text-xs font-semibold text-charcoal/55">끝</p>
         </section>
 
         <MemberAppMockPreview />
 
         <section className="space-y-3 px-1">
-          <Link to={signupHref} className={`block w-full text-center ${btnGold}`}>
-            회원가입
-          </Link>
-          <Link
-            to={loginHref}
-            className={`block w-full text-center ${btnOutline} !border-charcoal/20 !bg-[#e8ecf1] hover:!bg-[#eef2f6]`}
-          >
-            로그인
+          <Link to={loginHref} className={`block w-full text-center ${btnGold}`}>
+            로그인하고 시작하기
           </Link>
           <p className="text-center text-xs text-charcoal/55">
-            관리자 등록 회원의 초기 비밀번호는 휴대폰 뒤 4자리입니다.
+            아이디: 휴대폰 번호 · 비밀번호: <strong>뒤 4자리</strong>
           </p>
+          <Link
+            to={signupHref}
+            className={`block w-full text-center ${btnOutline} !border-charcoal/20 !bg-[#e8ecf1] hover:!bg-[#eef2f6]`}
+          >
+            직접 회원가입
+          </Link>
         </section>
       </div>
     </MemberLayout>
