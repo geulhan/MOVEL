@@ -214,6 +214,7 @@ export default function CenterSettingsPage() {
         logoInputRef.current.value = ''
       }
       setMessage('센터 설정이 저장되었습니다.')
+      markCenterSettingsVisited(session.centerId)
     } catch (err) {
       setError(err instanceof Error ? err.message : '저장에 실패했습니다.')
     } finally {

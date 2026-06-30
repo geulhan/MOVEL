@@ -5,19 +5,16 @@ import {
   type CenterOnboardingProgress,
 } from '../../api/centerOnboarding'
 import {
-  buildCenterOnboardingSteps,
-  isOnboardingComplete,
-  nextOnboardingStep,
-  onboardingCompletionPercent,
-  type CenterOnboardingStep,
+  buildGettingStartedSteps,
+  gettingStartedPercent,
+  isGettingStartedComplete,
+  nextGettingStartedStep,
+  type GettingStartedStep,
 } from '../../lib/centerOnboardingSteps'
 import {
   dismissCenterOnboarding,
   isCenterOnboardingDismissed,
-  markMemberPortalShared,
 } from '../../lib/centerOnboardingStorage'
-import { getMemberPortalUrl } from '../../constants/motionhubGuide'
-import { copyText } from '../../lib/siteUrl'
 import { btnGold, btnOutline, cardClass } from '../../styles/theme'
 
 type Props = {
@@ -25,17 +22,13 @@ type Props = {
   onProgressChange?: (progress: CenterOnboardingProgress | null) => void
 }
 
-function StepRow({
+function ChecklistRow({
   step,
   isNext,
-  onCopyPortal,
 }: {
-  step: CenterOnboardingStep
+  step: GettingStartedStep
   isNext: boolean
-  onCopyPortal?: () => void
 }) {
-  const isPortalCopy = step.id === 'member_portal' && !step.done
-
   return (
     <li
       className={`rounded-xl border px-4 py-3 ${
@@ -48,40 +41,54 @@ function StepRow({
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <span
-              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md border text-sm font-bold ${
                 step.done
-                  ? 'bg-emerald-600 text-white'
-                  : isNext
-                    ? 'bg-gold text-charcoal'
-                    : 'bg-charcoal/10 text-charcoal/60'
+                  ? 'border-emerald-500 bg-emerald-500 text-white'
+                  : 'border-charcoal/25 bg-white text-charcoal/35'
               }`}
+              aria-hidden
             >
-              {step.done ? '✓' : '·'}
+              {step.done ? '✓' : '□'}
             </span>
-            <p className="font-semibold text-charcoal">{step.title}</p>
+            <p
+              className={`font-semibold ${step.done ? 'text-charcoal/70 line-through decoration-charcoal/30' : 'text-charcoal'}`}
+            >
+              {step.title}
+            </p>
           </div>
-          <p className="mt-1 pl-8 text-sm leading-relaxed text-muted">{step.description}</p>
+          <p className="mt-1 pl-10 text-sm leading-relaxed text-muted">
+            {step.description}
+          </p>
         </div>
         {!step.done && (
-          <div className="shrink-0">
-            {isPortalCopy && onCopyPortal ? (
-              <button type="button" onClick={onCopyPortal} className={btnGold}>
-                {step.actionLabel}
-              </button>
-            ) : (
-              <Link
-                to={step.actionTo}
-                className={isNext ? btnGold : btnOutline}
-              >
-                {step.actionLabel}
-              </Link>
-            )}
-          </div>
+          <Link
+            to={step.actionTo}
+            className={`shrink-0 ${isNext ? btnGold : btnOutline}`}
+          >
+            {step.actionLabel}
+          </Link>
         )}
       </div>
     </li>
+  )
+}
+
+function CompletionCelebration() {
+  return (
+    <div className="rounded-2xl border border-emerald-300/80 bg-gradient-to-br from-emerald-50 to-white px-6 py-8 text-center">
+      <p className="text-3xl" aria-hidden>
+        🎉
+      </p>
+      <h3 className="mt-3 text-xl font-bold text-charcoal">축하합니다.</h3>
+      <p className="mt-2 text-base leading-relaxed text-charcoal/80">
+        MotionHub 기본 설정이 완료되었습니다.
+      </p>
+      <p className="mt-2 text-sm text-muted">
+        회원 관리 · 예약 · 출석 · 운동일지 · AI 리포트까지 준비되었습니다.
+      </p>
+    </div>
   )
 }
 
@@ -89,7 +96,6 @@ export function CenterOnboardingPanel({ compact = false, onProgressChange }: Pro
   const [progress, setProgress] = useState<CenterOnboardingProgress | null>(null)
   const [loading, setLoading] = useState(true)
   const [dismissed, setDismissed] = useState(false)
-  const [copyMessage, setCopyMessage] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -111,26 +117,12 @@ export function CenterOnboardingPanel({ compact = false, onProgressChange }: Pro
   }, [load])
 
   const steps = useMemo(
-    () => (progress ? buildCenterOnboardingSteps(progress) : []),
+    () => (progress ? buildGettingStartedSteps(progress) : []),
     [progress],
   )
-  const percent = onboardingCompletionPercent(steps)
-  const nextStep = nextOnboardingStep(steps)
-  const complete = isOnboardingComplete(steps)
-
-  async function handleCopyPortalLink() {
-    if (!progress) return
-    const url = getMemberPortalUrl(progress.centerSlug)
-    const ok = await copyText(url)
-    if (ok) {
-      markMemberPortalShared(progress.centerId)
-      setCopyMessage('회원 앱 링크를 복사했습니다. 회원에게 카톡으로 보내 주세요.')
-      void load()
-    } else {
-      setCopyMessage('복사에 실패했습니다. 링크를 직접 선택해 복사해 주세요.')
-    }
-    window.setTimeout(() => setCopyMessage(null), 4000)
-  }
+  const percent = gettingStartedPercent(steps)
+  const nextStep = nextGettingStartedStep(steps)
+  const complete = isGettingStartedComplete(steps)
 
   function handleDismiss() {
     if (!progress) return
@@ -141,12 +133,12 @@ export function CenterOnboardingPanel({ compact = false, onProgressChange }: Pro
   if (loading) {
     return (
       <section className={`${cardClass} p-5 text-sm text-muted`}>
-        시작 가이드를 불러오는 중…
+        처음 시작하기 체크리스트를 불러오는 중…
       </section>
     )
   }
 
-  if (!progress || (dismissed && complete)) return null
+  if (!progress || dismissed) return null
   if (compact && complete) return null
 
   return (
@@ -156,79 +148,66 @@ export function CenterOnboardingPanel({ compact = false, onProgressChange }: Pro
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-gold-dark">
-            5분 시작 가이드
+            처음 시작하기
           </p>
           <h2 className="mt-1 text-lg font-bold text-charcoal">
-            {complete
-              ? '첫 설정이 완료되었습니다'
-              : '다음 단계만 따라가면 바로 사용할 수 있습니다'}
+            {complete ? '모든 항목을 완료했습니다' : '센터 운영을 위한 7가지 단계'}
           </h2>
-          <p className="mt-1 text-sm text-muted">
-            {complete
-              ? '회원 앱·예약·운동기록까지 연결되었습니다. 이제 MotionHub를 운영해 보세요.'
-              : '가입부터 첫 회원 체험까지 — 길을 잃지 않도록 단계별로 안내합니다.'}
-          </p>
+          {!complete && (
+            <p className="mt-1 text-sm text-muted">
+              하나씩 체크해 나가면 5분 안에 MotionHub를 시작할 수 있습니다.
+            </p>
+          )}
         </div>
         <div className="text-right">
-          <p className="text-2xl font-bold tabular-nums text-charcoal">{percent}%</p>
-          <p className="text-xs text-muted">진행률</p>
+          <p className="text-3xl font-bold tabular-nums text-charcoal">{percent}%</p>
+          <p className="text-xs text-muted">완료율</p>
         </div>
       </div>
 
-      <div className="h-2 overflow-hidden rounded-full bg-charcoal/8">
+      <div className="h-2.5 overflow-hidden rounded-full bg-charcoal/8">
         <div
-          className="h-full rounded-full bg-gold transition-all"
+          className={`h-full rounded-full transition-all ${complete ? 'bg-emerald-500' : 'bg-gold'}`}
           style={{ width: `${percent}%` }}
         />
       </div>
 
-      {nextStep && !complete && (
-        <div className="rounded-xl border border-gold/40 bg-gold/10 px-4 py-3">
-          <p className="text-xs font-semibold text-gold-dark">지금 할 일</p>
-          <p className="mt-1 text-sm font-semibold text-charcoal">{nextStep.title}</p>
-          <p className="mt-0.5 text-sm text-charcoal/75">{nextStep.description}</p>
-          <div className="mt-3">
-            {nextStep.id === 'member_portal' ? (
-              <button type="button" onClick={() => void handleCopyPortalLink()} className={btnGold}>
-                {nextStep.actionLabel}
-              </button>
-            ) : (
+      {complete ? (
+        <CompletionCelebration />
+      ) : (
+        nextStep && (
+          <div className="rounded-xl border border-gold/40 bg-gold/10 px-4 py-3">
+            <p className="text-xs font-semibold text-gold-dark">다음에 할 일</p>
+            <p className="mt-1 text-sm font-semibold text-charcoal">{nextStep.title}</p>
+            <p className="mt-0.5 text-sm text-charcoal/75">{nextStep.description}</p>
+            <div className="mt-3">
               <Link to={nextStep.actionTo} className={btnGold}>
                 {nextStep.actionLabel}
               </Link>
-            )}
+            </div>
           </div>
-        </div>
+        )
       )}
 
       {!compact && (
-        <ol className="space-y-2">
+        <ol className="space-y-2" aria-label="처음 시작하기 체크리스트">
           {steps.map((step) => (
-            <StepRow
+            <ChecklistRow
               key={step.id}
               step={step}
-              isNext={nextStep?.id === step.id}
-              onCopyPortal={() => void handleCopyPortalLink()}
+              isNext={!complete && nextStep?.id === step.id}
             />
           ))}
         </ol>
       )}
 
-      {copyMessage && (
-        <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900">
-          {copyMessage}
-        </p>
-      )}
-
       <div className="flex flex-wrap gap-2 border-t border-charcoal/8 pt-3">
-        {!complete && (
-          <button type="button" onClick={() => void load()} className={btnOutline}>
-            진행 상황 새로고침
-          </button>
-        )}
+        <button type="button" onClick={() => void load()} className={btnOutline}>
+          진행 상황 새로고침
+        </button>
         {complete && (
           <button type="button" onClick={handleDismiss} className={btnOutline}>
-            가이드 닫기
+            체크리스트 닫기
           </button>
         )}
       </div>

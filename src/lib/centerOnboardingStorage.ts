@@ -47,6 +47,7 @@ export function isMemberOnboardingSeen(memberId: string): boolean {
 }
 
 const SETTINGS_VISITED_PREFIX = 'mh_center_settings_visited:'
+const AI_REPORT_VIEWED_PREFIX = 'mh_ai_report_viewed:'
 
 export function markCenterSettingsVisited(centerId: string): void {
   try {
@@ -59,6 +60,22 @@ export function markCenterSettingsVisited(centerId: string): void {
 export function isCenterSettingsVisited(centerId: string): boolean {
   try {
     return localStorage.getItem(storageKey(SETTINGS_VISITED_PREFIX, centerId)) === '1'
+  } catch {
+    return false
+  }
+}
+
+export function markAiReportViewed(centerId: string): void {
+  try {
+    localStorage.setItem(storageKey(AI_REPORT_VIEWED_PREFIX, centerId), '1')
+  } catch {
+    /* ignore */
+  }
+}
+
+export function isAiReportViewed(centerId: string): boolean {
+  try {
+    return localStorage.getItem(storageKey(AI_REPORT_VIEWED_PREFIX, centerId)) === '1'
   } catch {
     return false
   }
