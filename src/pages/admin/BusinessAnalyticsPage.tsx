@@ -438,7 +438,7 @@ export default function BusinessAnalyticsPage() {
               <KpiCard
                 label="이번 달 결제액"
                 value={formatCurrency(data.cashRevenue)}
-                sub={`신규 ${formatCurrency(data.cashRevenueNew)} · 재등록 ${formatCurrency(data.cashRevenueRenewal)}`}
+                sub={`신규 ${data.cashRevenueNewMemberCount}명 ${formatCurrency(data.cashRevenueNew)} · 재등록 ${data.cashRevenueRenewalMemberCount}명 ${formatCurrency(data.cashRevenueRenewal)}`}
               />
               <KpiCard
                 label="회원권 인식매출"

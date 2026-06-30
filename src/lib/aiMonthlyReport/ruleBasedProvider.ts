@@ -50,7 +50,7 @@ function buildSummaryNarrative(ctx: AiMonthlyReportContext): string {
 
   if (renewalShare < 40 || ctx.renewalRate < 70) {
     sentences.push(
-      '재등록 매출·재등록률이 낮아 다음 달 매출 감소 가능성이 있습니다',
+      `재등록 결제 ${ctx.cashRevenueRenewalMemberCount}명(매출 비중 ${renewalShare}%)으로 다음 달 매출 감소 가능성이 있습니다`,
     )
   } else if (renewalShare >= 55 && ctx.renewalRate >= 80) {
     sentences.push('재등록 흐름이 안정적이라 매출 기반이 유지되고 있습니다')
@@ -390,15 +390,26 @@ export class RuleBasedAiMonthlyReportProvider implements AiMonthlyReportProvider
         {
           label: '신규 회원',
           value: `${context.operational.newMemberCount}명`,
-          hint:
+          hint: [
+            `첫 결제 ${context.cashRevenueNewMemberCount}명 · ${formatCurrency(context.cashRevenueNew)}`,
             context.comparisons.newMemberDelta != null
-              ? `전월 대비 ${context.comparisons.newMemberDelta >= 0 ? '+' : ''}${context.comparisons.newMemberDelta}명`
-              : undefined,
+              ? `등록 전월 대비 ${context.comparisons.newMemberDelta >= 0 ? '+' : ''}${context.comparisons.newMemberDelta}명`
+              : null,
+          ]
+            .filter(Boolean)
+            .join(' · '),
         },
         {
           label: '재등록',
-          value: formatCurrency(context.cashRevenueRenewal),
-          hint: `재등록률 ${context.renewalRate}%`,
+          value: `${context.cashRevenueRenewalMemberCount}명`,
+          hint: [
+            `${formatCurrency(context.cashRevenueRenewal)} · 재등록률 ${context.renewalRate}%`,
+            context.comparisons.renewalMemberDelta != null
+              ? `전월 대비 ${context.comparisons.renewalMemberDelta >= 0 ? '+' : ''}${context.comparisons.renewalMemberDelta}명`
+              : null,
+          ]
+            .filter(Boolean)
+            .join(' · '),
         },
         {
           label: '환불 리스크',

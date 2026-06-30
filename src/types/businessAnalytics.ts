@@ -39,6 +39,9 @@ export type MonthlyReportPoint = {
   cashRevenue: number
   cashRevenueNew: number
   cashRevenueRenewal: number
+  cashRevenueNewMemberCount: number
+  cashRevenueRenewalMemberCount: number
+  newMemberCount: number
   recognizedRevenue: number
   netProfit: number
   renewalRate: number
@@ -53,6 +56,8 @@ export type BusinessAnalyticsSnapshot = {
   cashRevenue: number
   cashRevenueNew: number
   cashRevenueRenewal: number
+  cashRevenueNewMemberCount: number
+  cashRevenueRenewalMemberCount: number
   centerPassRecognized: number
   ptRecognized: number
   totalRecognized: number

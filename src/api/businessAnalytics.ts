@@ -327,24 +327,39 @@ function cashRevenueBreakdownForMonth(
   }>,
   year: number,
   month: number,
-): { total: number; newMember: number; renewal: number } {
+): {
+  total: number
+  newMember: number
+  renewal: number
+  newMemberPaymentCount: number
+  renewalPaymentCount: number
+} {
   const firstPaymentIds = buildFirstPaymentIdSet(payments)
   const { prefix } = monthBounds(year, month)
 
   let newMember = 0
   let renewal = 0
+  const newMemberIds = new Set<string>()
+  const renewalMemberIds = new Set<string>()
 
   for (const payment of payments) {
     if (!String(payment.paid_at).startsWith(prefix)) continue
     const amount = Number(payment.amount)
-    if (firstPaymentIds.has(payment.id)) newMember += amount
-    else renewal += amount
+    if (firstPaymentIds.has(payment.id)) {
+      newMember += amount
+      newMemberIds.add(payment.member_id)
+    } else {
+      renewal += amount
+      renewalMemberIds.add(payment.member_id)
+    }
   }
 
   return {
     total: newMember + renewal,
     newMember,
     renewal,
+    newMemberPaymentCount: newMemberIds.size,
+    renewalPaymentCount: renewalMemberIds.size,
   }
 }
 
@@ -436,6 +451,8 @@ function buildSnapshotForMonth(
   const cashRevenue = cashBreakdown.total
   const cashRevenueNew = cashBreakdown.newMember
   const cashRevenueRenewal = cashBreakdown.renewal
+  const cashRevenueNewMemberCount = cashBreakdown.newMemberPaymentCount
+  const cashRevenueRenewalMemberCount = cashBreakdown.renewalPaymentCount
   const centerPassRecognized = recognizeCenterPassRevenue(
     inputs.periodPasses,
     year,
@@ -595,6 +612,8 @@ function buildSnapshotForMonth(
     cashRevenue,
     cashRevenueNew,
     cashRevenueRenewal,
+    cashRevenueNewMemberCount,
+    cashRevenueRenewalMemberCount,
     centerPassRecognized,
     ptRecognized,
     totalRecognized,
@@ -681,6 +700,11 @@ export async function fetchBusinessAnalytics(
         ? Math.round((monthSnapshot.totalRefundRisk / totalHistoricalPayments) * 100)
         : 0
 
+    const { prefix } = monthBounds(y, m)
+    const newMemberCount = members.filter((member) =>
+      String(member.registered_at).startsWith(prefix),
+    ).length
+
     monthlyReport.push({
       year: y,
       month: m,
@@ -688,6 +712,9 @@ export async function fetchBusinessAnalytics(
       cashRevenue: monthSnapshot.cashRevenue,
       cashRevenueNew: monthSnapshot.cashRevenueNew,
       cashRevenueRenewal: monthSnapshot.cashRevenueRenewal,
+      cashRevenueNewMemberCount: monthSnapshot.cashRevenueNewMemberCount,
+      cashRevenueRenewalMemberCount: monthSnapshot.cashRevenueRenewalMemberCount,
+      newMemberCount,
       recognizedRevenue: monthSnapshot.totalRecognized,
       netProfit: monthSnapshot.netProfit,
       renewalRate,

@@ -47,6 +47,11 @@ function buildComparisons(
       priorOperational != null
         ? operational.newMemberCount - priorOperational.newMemberCount
         : null,
+    renewalMemberDelta:
+      previousRow != null && currentRow != null
+        ? currentRow.cashRevenueRenewalMemberCount -
+          previousRow.cashRevenueRenewalMemberCount
+        : null,
     attendanceDelta:
       priorOperational != null
         ? operational.attendanceRate - priorOperational.attendanceRate
@@ -71,6 +76,8 @@ export function buildAiMonthlyReportContext(
     cashRevenue: snapshot.cashRevenue,
     cashRevenueNew: snapshot.cashRevenueNew,
     cashRevenueRenewal: snapshot.cashRevenueRenewal,
+    cashRevenueNewMemberCount: snapshot.cashRevenueNewMemberCount,
+    cashRevenueRenewalMemberCount: snapshot.cashRevenueRenewalMemberCount,
     totalRecognized: snapshot.totalRecognized,
     netProfit: snapshot.netProfit,
     totalRefundRisk: snapshot.totalRefundRisk,

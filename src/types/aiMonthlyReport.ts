@@ -56,6 +56,7 @@ export type AiMonthlyReportComparisons = {
   profitDelta: number | null
   renewalRateDelta: number | null
   newMemberDelta: number | null
+  renewalMemberDelta: number | null
   attendanceDelta: number | null
   priorRenewalRate: number | null
   priorNewMemberCount: number | null
@@ -69,6 +70,8 @@ export type AiMonthlyReportContext = {
   cashRevenue: number
   cashRevenueNew: number
   cashRevenueRenewal: number
+  cashRevenueNewMemberCount: number
+  cashRevenueRenewalMemberCount: number
   totalRecognized: number
   netProfit: number
   totalRefundRisk: number
