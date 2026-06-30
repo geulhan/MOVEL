@@ -2,7 +2,7 @@ import { getCurrentCenterId } from '../lib/center'
 import { fetchMembers, formatDate, todayDateString } from './members'
 import { sendNotification, type SendNotificationResult } from './notifications'
 import { supabase } from '../lib/supabase'
-import type { Member, MessageTemplateKey, PaymentHistory } from '../types/database'
+import type { Member, MessageTemplateKey, PaymentHistory, Json } from '../types/database'
 import { MESSAGE_TEMPLATE_LABELS } from '../types/database'
 import {
   membershipExpireTemplateKey,
@@ -436,13 +436,28 @@ function renewalDismissMetadata(
   }
 }
 
+type RenewalDismissLogRow = {
+  id: string
+  metadata: Record<string, string | number | boolean> | null
+  status: string
+}
+
+function toRenewalDismissLogRow(
+  row: { id: string; metadata: Json; status: string } | null,
+): RenewalDismissLogRow | null {
+  if (!row) return null
+  const metadata =
+    row.metadata &&
+    typeof row.metadata === 'object' &&
+    !Array.isArray(row.metadata)
+      ? (row.metadata as Record<string, string | number | boolean>)
+      : null
+  return { id: row.id, metadata, status: row.status }
+}
+
 async function findRenewalMessageLogForDismiss(
   target: RenewalTarget,
-): Promise<{
-  id: string
-  metadata: Record<string, unknown> | null
-  status: string
-} | null> {
+): Promise<RenewalDismissLogRow | null> {
   const centerId = await getCurrentCenterId()
   const templateKey = target.sendTemplateKey ?? 'renewal'
 
@@ -467,7 +482,7 @@ async function findRenewalMessageLogForDismiss(
       .limit(1)
       .maybeSingle()
     if (error) throw error
-    return data
+    return toRenewalDismissLogRow(data)
   }
 
   if (target.sendMetadata.expire_date) {
@@ -477,7 +492,7 @@ async function findRenewalMessageLogForDismiss(
       .limit(1)
       .maybeSingle()
     if (error) throw error
-    return data
+    return toRenewalDismissLogRow(data)
   }
 
   if (target.dedupKey.endsWith(':pending')) {
@@ -486,7 +501,8 @@ async function findRenewalMessageLogForDismiss(
       .limit(1)
       .maybeSingle()
     if (tierError) throw tierError
-    if (byTier) return byTier
+    const mapped = toRenewalDismissLogRow(byTier)
+    if (mapped) return mapped
   }
 
   const { data, error } = await base()
@@ -495,7 +511,7 @@ async function findRenewalMessageLogForDismiss(
     .limit(1)
     .maybeSingle()
   if (error) throw error
-  return data
+  return toRenewalDismissLogRow(data)
 }
 
 async function insertSkippedMessageLogs(

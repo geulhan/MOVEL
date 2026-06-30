@@ -788,6 +788,8 @@ export type Database = {
           status?: MessageLogStatus
           provider_message_id?: string | null
           error_message?: string | null
+          metadata?: Json
+          variables?: Json
           sent_at?: string | null
         }
       >
