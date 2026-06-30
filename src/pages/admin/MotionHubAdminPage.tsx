@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { PageHeader } from '../../components/admin/PageHeader'
+import { PAGE_HELP } from '../../lib/pageHelpTips'
 import { ChallengesAdminPanel } from '../../components/admin/motionhub/ChallengesAdminPanel'
 import { SeasonPassAdminPanel } from '../../components/admin/motionhub/SeasonPassAdminPanel'
 import RewardsPage from './RewardsPage'
@@ -42,6 +43,7 @@ export default function MotionHubAdminPage() {
       <PageHeader
         title="마일리지"
         description="MOVE MILE 적립·사용 규칙과 재등록 결제 연동을 관리합니다. 챌린지·시즌 패스는 게임 오픈 후 제공됩니다."
+        helpText={PAGE_HELP.mileage}
       />
 
       {MOTIONHUB_GAME_ADMIN_ENABLED && (

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { PageHeader } from '../../components/admin/PageHeader'
+import { PAGE_HELP } from '../../lib/pageHelpTips'
 import { PtScheduleCalendar } from '../../components/admin/PtScheduleCalendar'
 import { fetchTrainers } from '../../api/trainers'
 import { getAdminSession } from '../../lib/adminSession'
@@ -34,6 +35,7 @@ export default function SchedulePage() {
       <PageHeader
         title="센터 일정"
         description="PT·그룹수업 일정을 한곳에서 확인합니다. PT 출석(완료) 처리는 관리자만 할 수 있습니다."
+        helpText={PAGE_HELP.schedule}
       />
 
       {isAdmin && (

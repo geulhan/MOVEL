@@ -18,6 +18,7 @@ export type CenterOnboardingProgress = {
   completedScheduleCount: number
   journalCount: number
   alimtalkSentCount: number
+  memberLoginCount: number
   aiReportViewed: boolean
 }
 
@@ -40,6 +41,7 @@ export async function fetchCenterOnboardingProgress(): Promise<CenterOnboardingP
     completedSchedulesResult,
     journalsResult,
     alimtalkResult,
+    memberLoginResult,
   ] = await Promise.all([
     supabase
       .from('centers')
@@ -75,6 +77,10 @@ export async function fetchCenterOnboardingProgress(): Promise<CenterOnboardingP
       .eq('center_id', centerId)
       .eq('template_key', 'member_signup_guide')
       .eq('status', 'sent'),
+    supabase
+      .from('member_login_logs')
+      .select('id', { count: 'exact', head: true })
+      .eq('center_id', centerId),
   ])
 
   if (centerResult.error) throw centerResult.error
@@ -84,6 +90,7 @@ export async function fetchCenterOnboardingProgress(): Promise<CenterOnboardingP
   if (completedSchedulesResult.error) throw completedSchedulesResult.error
   if (journalsResult.error) throw journalsResult.error
   if (alimtalkResult.error) throw alimtalkResult.error
+  if (memberLoginResult.error) throw memberLoginResult.error
 
   const center = centerResult.data
   const centerInfoComplete =
@@ -107,6 +114,7 @@ export async function fetchCenterOnboardingProgress(): Promise<CenterOnboardingP
     completedScheduleCount: completedSchedulesResult.count ?? 0,
     journalCount: journalsResult.count ?? 0,
     alimtalkSentCount: alimtalkResult.count ?? 0,
+    memberLoginCount: memberLoginResult.count ?? 0,
     aiReportViewed: isAiReportViewed(centerId),
   }
 }

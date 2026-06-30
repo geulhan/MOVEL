@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { BetaStartProvider, useBetaStart } from '../../contexts/BetaStartContext'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { navItemsForSession } from '../../lib/adminPermissions'
 import { clearAdminAuth, getAdminSession } from '../../lib/adminSession'
@@ -49,7 +50,27 @@ function AdminLayoutInner() {
   const themeVars = useCenterThemeVars(branding.theme)
   useApplyCenterTheme(branding.theme, branding.centerName)
   const { features } = useCenterFeatures()
-  const navItems = navItemsForSession(session, features)
+  const { complete: betaStartComplete, loading: betaStartLoading } = useBetaStart()
+  const navItems = useMemo(() => {
+    const items = navItemsForSession(session, features)
+    if (
+      session?.role === 'admin' &&
+      !betaStartLoading &&
+      !betaStartComplete
+    ) {
+      return [
+        {
+          to: '/admin/beta-start',
+          end: false,
+          label: '베타 시작하기',
+          icon: '✦',
+          roles: ['admin'] as const,
+        },
+        ...items,
+      ]
+    }
+    return items
+  }, [session, features, betaStartLoading, betaStartComplete])
   const roleLabel = session?.role === 'trainer' ? '트레이너' : '관리자'
 
   function handleLogout() {
@@ -248,7 +269,9 @@ function AdminLayoutInner() {
 export function AdminLayout() {
   return (
     <CenterBrandingProvider>
-      <AdminLayoutInner />
+      <BetaStartProvider>
+        <AdminLayoutInner />
+      </BetaStartProvider>
     </CenterBrandingProvider>
   )
 }

@@ -16,6 +16,7 @@ import { fetchMembers, formatDate, formatPhone, todayDateString } from '../../ap
 import { getErrorMessage } from '../../lib/errors'
 import { filterBySearch } from '../../utils/renewal'
 import { PageHeader } from '../../components/admin/PageHeader'
+import { PAGE_HELP } from '../../lib/pageHelpTips'
 import { AdminToast, useAdminToast } from '../../components/admin/AdminToast'
 import { MemberSearchCombobox } from '../../components/admin/MemberSearchCombobox'
 import { useCenterFeatures } from '../../hooks/useCenterFeatures'
@@ -158,6 +159,7 @@ export default function FacilityOpsPage() {
       <PageHeader
         title="시설 운영"
         description="이름·전화번호로 회원을 찾아 한 번에 입장 처리하세요."
+        helpText={PAGE_HELP.facility}
       />
 
       <AdminToast message={toast} onClear={clearToast} />

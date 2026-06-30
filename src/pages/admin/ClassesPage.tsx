@@ -57,6 +57,7 @@ import {
 } from '../../constants/classContentFields'
 import { FixedDayTimeFields } from '../../components/admin/FixedDayTimeFields'
 import { PageHeader } from '../../components/admin/PageHeader'
+import { PAGE_HELP } from '../../lib/pageHelpTips'
 import { AdminToast, useAdminToast } from '../../components/admin/AdminToast'
 import { MemberSearchCombobox } from '../../components/admin/MemberSearchCombobox'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/theme'
@@ -645,6 +646,7 @@ export default function ClassesPage() {
       <PageHeader
         title="클래스"
         description="이번 주 시간표에서 수업을 선택하고, 출석·예약을 바로 처리하세요."
+        helpText={PAGE_HELP.classes}
       />
 
       <AdminToast message={toast} onClear={clearToast} />

@@ -10,6 +10,7 @@ import {
 } from '../../api/rewards'
 import { fetchMembers } from '../../api/members'
 import { PageHeader } from '../../components/admin/PageHeader'
+import { PAGE_HELP } from '../../lib/pageHelpTips'
 import { CenterPhotoSubmissionsPanel } from '../../components/admin/CenterPhotoSubmissionsPanel'
 import { RewardRulesEditor } from '../../components/admin/RewardRulesEditor'
 import { StepVerificationsPanel } from '../../components/admin/StepVerificationsPanel'
@@ -153,6 +154,7 @@ export default function RewardsPage({ embedded = false }: Props) {
         <PageHeader
           title="마일리지 관리"
           description="회원별 마일리지 조회·수동 조정, 적립 규칙, 걸음·센터 인증 검수"
+          helpText={PAGE_HELP.mileage}
         />
       )}
 

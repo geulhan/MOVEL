@@ -24,6 +24,7 @@ import { CompletePaymentModal } from '../../components/admin/CompletePaymentModa
 import { ContractManagementPanel } from '../../components/admin/ContractManagementPanel'
 import { PaymentCategoryPricingPanel } from '../../components/admin/PaymentCategoryPricingPanel'
 import { PageHeader } from '../../components/admin/PageHeader'
+import { PAGE_HELP } from '../../lib/pageHelpTips'
 import {
   PAYMENT_CATEGORIES,
   PAYMENT_CATEGORY_LABELS,
@@ -168,6 +169,7 @@ export default function PaymentsPage() {
       <PageHeader
         title="결제 관리"
         description="상품·가격 설정과 회원별 결제 요청, 계약서·오프라인 완료 처리 및 MILE 사용을 관리합니다."
+        helpText={PAGE_HELP.payments}
       />
 
       <nav className="chip-scroll -mx-1 px-1">

@@ -5,6 +5,7 @@ import { markCenterSettingsVisited } from '../../lib/centerOnboardingStorage'
 import { useCenterBranding } from '../../hooks/useCenterBranding'
 import { CenterBrandMark } from '../../components/brand/CenterBrandMark'
 import { PageHeader } from '../../components/admin/PageHeader'
+import { PAGE_HELP } from '../../lib/pageHelpTips'
 import { SiteUrlCopy } from '../../components/SiteUrlCopy'
 import { CenterFeatureManagementPanel } from '../../components/admin/CenterFeatureManagementPanel'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/theme'
@@ -236,6 +237,7 @@ export default function CenterSettingsPage() {
       <PageHeader
         title="센터 설정"
         description="센터 로고와 관리자 화면 테마를 설정합니다. 회원·트레이너 화면에도 센터명이 반영됩니다."
+        helpText={PAGE_HELP.settings}
       />
 
       {message && (

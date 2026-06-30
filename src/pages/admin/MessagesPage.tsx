@@ -9,6 +9,7 @@ import {
 import { MessageCampaignPanel } from '../../components/admin/MessageCampaignPanel'
 import { MessagingCreditPanel } from '../../components/admin/MessagingCreditPanel'
 import { PageHeader } from '../../components/admin/PageHeader'
+import { PAGE_HELP } from '../../lib/pageHelpTips'
 import { MotionHubSupportLink } from '../../components/admin/MotionHubSupportLink'
 import type { MessageCampaignKind } from '../../api/messageCampaigns'
 import {
@@ -170,6 +171,7 @@ export default function MessagesPage() {
       <PageHeader
         title="메시지 발송"
         description="회원 유형별로 알림톡을 확인하고 수동 발송할 수 있습니다. 발송 이력에서 성공·실패·대기·생략 상태를 조회할 수 있습니다."
+        helpText={PAGE_HELP.messages}
       />
 
       <MessagingCreditPanel onUpdated={() => void loadLogs()} />

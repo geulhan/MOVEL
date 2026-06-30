@@ -10,6 +10,7 @@ import { formatCurrency } from '../../api/members'
 import { fetchTrainers } from '../../api/trainers'
 import { BusinessMonthlyReportPanel } from '../../components/admin/BusinessMonthlyReportPanel'
 import { PageHeader } from '../../components/admin/PageHeader'
+import { PAGE_HELP } from '../../lib/pageHelpTips'
 import { formatSupabaseError } from '../../lib/errors'
 import { getAdminSession } from '../../lib/adminSession'
 import { markAiReportViewed } from '../../lib/centerOnboardingStorage'
@@ -353,6 +354,7 @@ export default function BusinessAnalyticsPage() {
       <PageHeader
         title="경영관리"
         description="AI 월간 경영 리포트로 이번 달 성과를 요약하고, 다음 달 실행할 액션을 제안합니다."
+        helpText={PAGE_HELP.analytics}
       />
 
       <nav className="chip-scroll -mx-1 px-1">

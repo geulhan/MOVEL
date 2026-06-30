@@ -1,9 +1,9 @@
 import { SalesDashboard } from '../../components/admin/SalesDashboard'
 import { OperationalKpiSidebar } from '../../components/admin/OperationalKpiSidebar'
 import { ClassDashboardKpi } from '../../components/admin/ClassDashboardKpi'
-import { CenterOnboardingPanel } from '../../components/admin/CenterOnboardingPanel'
 import { PageHeader } from '../../components/admin/PageHeader'
 import { RenewalDashboard } from '../../components/RenewalDashboard'
+import { PAGE_HELP } from '../../lib/pageHelpTips'
 import { fetchMembers } from '../../api/members'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { computeRenewalStats, type RenewalFilter } from '../../utils/renewal'
@@ -35,6 +35,7 @@ export default function DashboardPage() {
       <PageHeader
         title="대시보드"
         description="매출·재등록 현황을 한눈에 확인합니다."
+        helpText={PAGE_HELP.dashboard}
       />
 
       {error && (
@@ -42,8 +43,6 @@ export default function DashboardPage() {
           {error}
         </div>
       )}
-
-      <CenterOnboardingPanel />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_15.5rem]">
         <div className="min-w-0 space-y-6">

@@ -34,6 +34,8 @@ import {
 } from '../../lib/attendancePayroll'
 import { DEFAULT_BUSINESS_ANALYTICS_SETTINGS } from '../../types/businessAnalytics'
 import { SearchBar } from '../SearchBar'
+import { PageHelpButton } from './PageHelpButton'
+import { PAGE_HELP } from '../../lib/pageHelpTips'
 import { TrainerAttendancePayrollPanel } from './TrainerAttendancePayrollPanel'
 import type { Member } from '../../types/database'
 import { btnGold, btnOutline, cardClass } from '../../styles/theme'
@@ -366,7 +368,10 @@ export function CenterAttendanceBoard() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="page-title">출석부</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="page-title">출석부</h2>
+          <PageHelpButton text={PAGE_HELP.attendance} />
+        </div>
         <p className="page-desc">
           {isTrainer
             ? '담당 회원의 출석·예정 수업과 이번 달 수업료를 확인합니다.'

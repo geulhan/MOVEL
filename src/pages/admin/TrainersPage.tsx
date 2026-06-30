@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fetchTrainers } from '../../api/trainers'
 import { PageHeader } from '../../components/admin/PageHeader'
+import { PAGE_HELP } from '../../lib/pageHelpTips'
 import { TrainerAccountManager } from '../../components/admin/TrainerAccountManager'
 import { TrainerSettlementPanel } from '../../components/admin/TrainerSettlementPanel'
 import { TrainerManage } from '../../components/TrainerManage'
@@ -30,6 +31,7 @@ export default function TrainersPage() {
       <PageHeader
         title="강사 관리"
         description="강사 등록, 수업료 설정(비율·고정금액), 로그인 계정 관리"
+        helpText={PAGE_HELP.trainers}
       />
 
       {error && (

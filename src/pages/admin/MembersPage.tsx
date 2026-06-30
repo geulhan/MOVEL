@@ -8,8 +8,8 @@ import {
 } from '../../api/members'
 import { fetchTrainers } from '../../api/trainers'
 import { PageHeader } from '../../components/admin/PageHeader'
-import { CenterOnboardingPanel } from '../../components/admin/CenterOnboardingPanel'
 import { isTrainerStaff } from '../../lib/adminPermissions'
+import { PAGE_HELP } from '../../lib/pageHelpTips'
 import { getAdminSession } from '../../lib/adminSession'
 import { MemberFilterBar } from '../../components/MemberFilterBar'
 import { MemberForm } from '../../components/MemberForm'
@@ -154,8 +154,6 @@ export default function MembersPage() {
   const isOnboardingRegister =
     onboardingParam === 'register' ||
     (!isTrainer && !loading && scopedMembers.length === 0)
-  const showOnboardingGuide =
-    !isTrainer && (onboardingParam === 'register' || onboardingParam === 'portal')
 
   useEffect(() => {
     const term = searchInput.trim()
@@ -328,6 +326,7 @@ export default function MembersPage() {
               ? '담당 회원 조회 및 상세 관리'
               : '등록·검색·PT 차감 및 상세 관리'
           }
+          helpText={PAGE_HELP.members}
         />
         <div className="flex shrink-0 flex-wrap gap-2">
           {!isTrainer && (
@@ -363,8 +362,6 @@ export default function MembersPage() {
           {error}
         </div>
       )}
-
-      {showOnboardingGuide && <CenterOnboardingPanel compact />}
 
       {isOnboardingRegister && !isTrainer && (
         <div className="rounded-xl border border-gold/40 bg-cream/50 px-4 py-3 text-sm text-charcoal">

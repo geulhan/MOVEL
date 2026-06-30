@@ -4,6 +4,7 @@ import { fetchTrainers } from '../../api/trainers'
 import { LeadDetailPanel } from '../../components/admin/LeadDetailPanel'
 import { LeadQuickForm } from '../../components/admin/LeadQuickForm'
 import { PageHeader } from '../../components/admin/PageHeader'
+import { PAGE_HELP } from '../../lib/pageHelpTips'
 import { formatSupabaseError } from '../../lib/errors'
 import { cardClass } from '../../styles/theme'
 import type { ConsultationLead, LeadStatus } from '../../types/leads'
@@ -74,6 +75,7 @@ export default function LeadsPage() {
       <PageHeader
         title="상담·리드"
         description="회원 등록 전 상담 문의를 관리합니다. 무기명 60일 · 연락처 6개월 보관."
+        helpText={PAGE_HELP.leads}
       />
 
       {dueTodayCount > 0 ? (

@@ -97,7 +97,7 @@ export default function CenterSignupPage() {
           </p>
           <div className="flex flex-wrap gap-3">
             <Link
-              to="/login?next=%2Fadmin%2Fmembers%3Fonboarding%3Dregister"
+              to="/login?next=%2Fadmin%2Fbeta-start"
               className={btnPrimary}
             >
               시작하기 — 로그인
