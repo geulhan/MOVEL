@@ -1,7 +1,7 @@
-# MotionHub (mobel-performance-admin) 구현 현황 요약
+# MotionHub 구현 현황 요약
 
 > 작성일: 2026-06-05  
-> 프로젝트 경로: `C:\Users\kjh56\Projects\mobel-performance-admin`  
+> 프로젝트 경로: `C:\Users\kjh56\Projects\motionhub`  
 > 저장소: `geulhan/MOVEL.git` · 프로덕션: [motionhub.kr](https://motionhub.kr) (Vercel 자동 배포)
 
 ---

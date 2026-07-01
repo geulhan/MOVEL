@@ -1,7 +1,7 @@
 # 모션허브 알림톡 운영 연결 보고서
 
 작성일: 2026-06-05  
-프로젝트: `mobel-performance-admin` (motionhub.kr)  
+프로젝트: `motionhub` (motionhub.kr)  
 Supabase: `dcoitajktdaqejnhrnij`
 
 ---
@@ -89,7 +89,7 @@ supabase secrets set MESSAGING_ENABLED=true
 배포:
 
 ```bash
-cd mobel-performance-admin
+cd motionhub
 supabase functions deploy send-notification
 supabase functions deploy schedule-reminders
 supabase functions deploy renewal-reminders

@@ -15,7 +15,7 @@ React + Supabase로 만든 PT 회원 관리자 페이지입니다.
 ## 프로젝트 위치
 
 ```
-C:\Users\kjh56\Projects\mobel-performance-admin
+C:\Users\kjh56\Projects\motionhub
 ```
 
 Cursor에서 **File → Open Folder** 로 위 폴더를 열면 됩니다.
@@ -72,7 +72,7 @@ npm -v
 터미널에서 프로젝트 폴더로 이동한 뒤:
 
 ```powershell
-cd C:\Users\kjh56\Projects\mobel-performance-admin
+cd C:\Users\kjh56\Projects\motionhub
 npm install
 ```
 
@@ -158,7 +158,7 @@ Supabase **Table Editor** → `members` 에 데이터가 있는지 확인하세�
 ## 폴더 구조
 
 ```
-mobel-performance-admin/
+motionhub/
 ├── src/
 │   ├── api/members.ts      # Supabase CRUD
 │   ├── components/         # UI 컴포넌트
