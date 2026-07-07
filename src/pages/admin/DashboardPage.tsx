@@ -33,9 +33,9 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="대시보드"
-        description="매출·재등록 현황을 한눈에 확인합니다."
-        helpText={PAGE_HELP.dashboard}
+        title="경영 인사이트"
+        description="매출·재등록·운영 지표를 한눈에 확인합니다."
+        helpText={PAGE_HELP.insights}
       />
 
       {error && (

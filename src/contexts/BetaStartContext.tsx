@@ -27,6 +27,7 @@ type BetaStartContextValue = {
   complete: boolean
   nextStep: BetaStartStep | null
   loading: boolean
+  error: string | null
   refresh: () => Promise<void>
 }
 
@@ -37,19 +38,27 @@ export function BetaStartProvider({ children }: { children: ReactNode }) {
   const isAdmin = session?.role === 'admin'
   const [progress, setProgress] = useState<CenterOnboardingProgress | null>(null)
   const [loading, setLoading] = useState(isAdmin)
+  const [error, setError] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
     if (!isAdmin) {
       setProgress(null)
       setLoading(false)
+      setError(null)
       return
     }
     setLoading(true)
+    setError(null)
     try {
       const data = await fetchCenterOnboardingProgress()
       setProgress(data)
-    } catch {
+    } catch (err) {
       setProgress(null)
+      setError(
+        err instanceof Error
+          ? err.message
+          : '베타 시작하기 진행 상황을 불러오지 못했습니다.',
+      )
     } finally {
       setLoading(false)
     }
@@ -83,9 +92,10 @@ export function BetaStartProvider({ children }: { children: ReactNode }) {
       complete,
       nextStep,
       loading,
+      error,
       refresh,
     }),
-    [progress, steps, percent, complete, nextStep, loading, refresh],
+    [progress, steps, percent, complete, nextStep, loading, error, refresh],
   )
 
   return (

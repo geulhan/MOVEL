@@ -1,6 +1,7 @@
 import type { CenterOnboardingProgress } from '../api/centerOnboarding'
 
 export type BetaStartStepId =
+  | 'operational_features'
   | 'first_member'
   | 'first_schedule'
   | 'first_attendance'
@@ -26,6 +27,17 @@ export function buildBetaStartSteps(
 
   return [
     {
+      id: 'operational_features',
+      title: '운영 기능 활성화',
+      description:
+        'PT·클래스·출석 등 센터에 맞는 기능을 켜 두면 메뉴가 자동으로 표시됩니다.',
+      done: progress.operationalFeaturesConfigured,
+      actionLabel: progress.operationalFeaturesConfigured
+        ? '기능 설정 보기'
+        : '기능 설정하기',
+      actionTo: '/admin/settings',
+    },
+    {
       id: 'first_member',
       title: '회원 등록',
       description: '이름과 휴대폰만 입력하면 회원가입 안내 알림톡이 발송됩니다.',
@@ -38,8 +50,8 @@ export function buildBetaStartSteps(
       title: '예약 생성',
       description: 'PT 일정을 등록하면 회원 앱에 예약이 표시됩니다.',
       done: progress.scheduleCount >= 1,
-      actionLabel: progress.scheduleCount >= 1 ? '일정 보기' : '예약 등록하기',
-      actionTo: '/admin/schedule',
+      actionLabel: progress.scheduleCount >= 1 ? '예약 보기' : '예약 등록하기',
+      actionTo: '/admin/reservations',
     },
     {
       id: 'first_attendance',
@@ -70,11 +82,11 @@ export function buildBetaStartSteps(
     },
     {
       id: 'ai_report',
-      title: 'AI 리포트 보기',
+      title: 'AI 리포트 생성',
       description: '이번 달 경영 상태와 다음 달 할 일을 확인합니다.',
-      done: progress.aiReportViewed,
-      actionLabel: progress.aiReportViewed ? '리포트 다시 보기' : 'AI 리포트 보기',
-      actionTo: '/admin/analytics',
+      done: progress.aiReportGenerated,
+      actionLabel: progress.aiReportGenerated ? '리포트 다시 보기' : 'AI 리포트 생성',
+      actionTo: '/admin/analytics?tab=report',
     },
   ]
 }

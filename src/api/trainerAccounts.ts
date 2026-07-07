@@ -1,4 +1,5 @@
 import { getCurrentCenterId } from '../lib/center'
+import { getAdminSession } from '../lib/adminSession'
 import { supabase } from '../lib/supabase'
 import type { Json } from '../types/database'
 
@@ -45,8 +46,12 @@ function parseRpcResult(data: Json): RpcResult & Partial<TrainerAdminAccount> {
 }
 
 export async function fetchTrainerAdminAccounts(): Promise<TrainerAdminAccount[]> {
+  const sessionToken = getAdminSession()?.token
+  if (!sessionToken) return []
+
   const centerId = await getCurrentCenterId()
   const { data, error } = await supabase.rpc('list_trainer_admin_accounts', {
+    p_session_token: sessionToken,
     p_center_id: centerId,
   })
   if (error) throw error
@@ -58,7 +63,11 @@ export async function upsertTrainerAdminAccount(input: {
   username: string
   password: string
 }): Promise<void> {
+  const sessionToken = getAdminSession()?.token
+  if (!sessionToken) throw new Error('로그인이 필요합니다.')
+
   const { data, error } = await supabase.rpc('upsert_trainer_admin_account', {
+    p_session_token: sessionToken,
     p_trainer_id: input.trainerId,
     p_username: input.username.trim(),
     p_password: input.password,
@@ -72,7 +81,11 @@ export async function upsertTrainerAdminAccount(input: {
 }
 
 export async function deleteTrainerAdminAccount(trainerId: string): Promise<void> {
+  const sessionToken = getAdminSession()?.token
+  if (!sessionToken) throw new Error('로그인이 필요합니다.')
+
   const { data, error } = await supabase.rpc('delete_trainer_admin_account', {
+    p_session_token: sessionToken,
     p_trainer_id: trainerId,
   })
   if (error) throw error

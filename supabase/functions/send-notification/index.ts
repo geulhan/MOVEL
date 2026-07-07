@@ -7,6 +7,7 @@ import {
   SEND_NOTIFICATION_MEMBER_KEYS,
 } from '../_shared/alimtalkTemplateRegistry.ts'
 import { isNotificationAuthorized } from '../_shared/notificationAuth.ts'
+import { getSupabaseAdmin } from '../_shared/supabaseAdmin.ts'
 import {
   sendCenterNotification,
   sendMemberNotification,
@@ -28,7 +29,14 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'Method not allowed' }, 405)
   }
 
-  if (!isNotificationAuthorized(req)) {
+  let supabaseAdmin
+  try {
+    supabaseAdmin = getSupabaseAdmin()
+  } catch {
+    supabaseAdmin = undefined
+  }
+
+  if (!(await isNotificationAuthorized(req, supabaseAdmin))) {
     return jsonResponse({ error: 'Unauthorized' }, 401)
   }
 

@@ -4,7 +4,7 @@ interface ImportMetaEnv {
   readonly VITE_SUPABASE_URL: string
   readonly VITE_SUPABASE_ANON_KEY: string
   readonly VITE_SITE_URL?: string
-  readonly VITE_NOTIFICATION_TRIGGER_KEY?: string
+  readonly VITE_SENTRY_DSN?: string
 }
 
 interface ImportMeta {

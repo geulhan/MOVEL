@@ -60,6 +60,7 @@ function parsePricingCategory(value: string | null): PaymentCategory {
 
 export default function PaymentsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const highlightRequestId = searchParams.get('requestId')
   const pricingCategory = parsePricingCategory(searchParams.get('category'))
   const [adminTab, setAdminTab] = useState<AdminTab>('pricing')
   const [statusFilter, setStatusFilter] = useState<'all' | PaymentRequestStatus>(
@@ -89,6 +90,13 @@ export default function PaymentsPage() {
   useEffect(() => {
     void fetchPaymentCategoryFlags().then(setCategoryFlags).catch(() => {})
   }, [])
+
+  useEffect(() => {
+    if (highlightRequestId) {
+      setAdminTab('requests')
+      setStatusFilter('all')
+    }
+  }, [highlightRequestId])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -297,7 +305,14 @@ export default function PaymentsPage() {
                     const busy = actionId === request.id
                     const contract = contracts.get(request.id)
                     return (
-                      <tr key={request.id} className="border-b border-gold/10">
+                      <tr
+                        key={request.id}
+                        className={`border-b border-gold/10 ${
+                          highlightRequestId === request.id
+                            ? 'bg-amber-50 ring-2 ring-amber-300 ring-inset'
+                            : ''
+                        }`}
+                      >
                         <td className="px-4 py-3 whitespace-nowrap text-xs">
                           {formatWhen(request.created_at)}
                         </td>

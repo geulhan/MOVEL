@@ -11,10 +11,13 @@ export type AssistantIntent =
   | 'at_risk_members'
   | 'trainer_performance'
   | 'marketing_direction'
+  | 'today_actions'
   | 'unknown'
 
 export function detectAssistantIntent(question: string): AssistantIntent {
   const q = question.trim().toLowerCase()
+
+  if (/오늘.*(해야|할 일|뭐|운영|처리)|지금.*뭐.*해/.test(q)) return 'today_actions'
 
   if (/순이익|적자|마이너스|손실|왜.*부족/.test(q)) return 'net_profit'
   if (/재등록|리뉴얼|연장/.test(q) && !/마케팅|홍보|유입/.test(q)) return 'renewal_increase'
@@ -410,6 +413,47 @@ function answerMarketingDirection(ctx: MotionHubAssistantContext): MotionHubAssi
   }
 }
 
+function answerTodayActions(ctx: MotionHubAssistantContext): MotionHubAssistantAnswer {
+  const actions = ctx.todayActions ?? []
+
+  const lines =
+    actions.length === 0
+      ? ['오늘 처리할 Action이 없습니다.']
+      : actions.slice(0, 8).map((action, index) => {
+          const meta = action.meta ? ` · ${action.meta}` : ''
+          return `${index + 1}. [${action.priority}] ${action.title} — ${action.reason}${meta}`
+        })
+
+  return {
+    intent: 'today_actions',
+    headline: '오늘 해야 할 일',
+    sections: [
+      {
+        title: 'Today Feed (우선순위)',
+        lines,
+      },
+      {
+        title: '처리 방법',
+        lines: [
+          'Today Feed에서 위에서 아래로 한 건씩 처리하세요.',
+          '재등록·휴면은 알림톡 버튼으로 바로 발송할 수 있습니다.',
+        ],
+      },
+    ],
+    actions: actions.slice(0, 6).map((action) => ({
+      label: `${action.title} · ${action.nextAction}`,
+      href: action.href,
+      kind: 'link' as const,
+      memberId: action.memberId,
+    })),
+    evidenceNote: 'Action Engine 규칙 기반 · 오늘 운영 데이터',
+    insufficientData:
+      actions.length === 0
+        ? ['오늘 예정된 상담·출석·결제·재등록 Action이 없습니다.']
+        : undefined,
+  }
+}
+
 function answerUnknown(ctx: MotionHubAssistantContext): MotionHubAssistantAnswer {
   return {
     intent: 'unknown',
@@ -419,6 +463,7 @@ function answerUnknown(ctx: MotionHubAssistantContext): MotionHubAssistantAnswer
         title: '이렇게 물어보세요',
         lines: [
           '왜 순이익이 마이너스야?',
+          '오늘 뭐 해야 해?',
           '재등록을 늘리려면?',
           '마케팅 방향은 어떻게 잡을까?',
           '이번 달 가장 위험한 회원은?',
@@ -454,6 +499,8 @@ export function answerMotionHubQuestion(
       return answerTrainerPerformance(context)
     case 'marketing_direction':
       return answerMarketingDirection(context)
+    case 'today_actions':
+      return answerTodayActions(context)
     default:
       return answerUnknown(context)
   }

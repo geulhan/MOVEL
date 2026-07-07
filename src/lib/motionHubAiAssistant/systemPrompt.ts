@@ -14,6 +14,7 @@ Always respond in Korean.
 When data is insufficient, say what additional data is needed.`
 
 export const SUGGESTED_QUESTIONS = [
+  '오늘 뭐 해야 해?',
   '왜 순이익이 마이너스야?',
   '재등록을 늘리려면?',
   '마케팅 방향은 어떻게 잡을까?',

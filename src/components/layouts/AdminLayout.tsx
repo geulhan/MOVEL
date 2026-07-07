@@ -8,6 +8,7 @@ import { buildAdminLoginPath } from '../../lib/centerSlug'
 import { getMemberPortalUrl } from '../../lib/siteUrl'
 import { useCenterFeatures } from '../../hooks/useCenterFeatures'
 import { CenterBrandMark } from '../brand/CenterBrandMark'
+import { ErrorBoundary } from '../ErrorBoundary'
 import { SetupBanner } from '../SetupBanner'
 import { MotionHubSupportLink } from '../admin/MotionHubSupportLink'
 import { PlatformFeedbackModal } from '../platform/PlatformFeedbackModal'
@@ -249,7 +250,9 @@ function AdminLayoutInner() {
 
         <main className="mx-auto w-full max-w-7xl min-w-0 flex-1 space-y-6 px-4 py-6 sm:px-6 sm:py-8">
           <SetupBanner />
-          <Outlet />
+          <ErrorBoundary area="admin">
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
 

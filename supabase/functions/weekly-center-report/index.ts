@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'Method not allowed' }, 405)
   }
 
-  if (!isNotificationAuthorized(req)) {
+  if (!(await isNotificationAuthorized(req))) {
     return jsonResponse({ error: 'Unauthorized' }, 401)
   }
 

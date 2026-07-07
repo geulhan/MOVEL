@@ -1,4 +1,5 @@
 import { detectDeviceType } from '../lib/deviceType'
+import { getAdminSession } from '../lib/adminSession'
 import { supabase } from '../lib/supabase'
 import { formatSupabaseError, getErrorMessage } from '../lib/errors'
 import { notifyMemberSignupGuide } from './notifications'
@@ -252,7 +253,13 @@ export function getDefaultMemberPasswordHint(phone: string): string {
 export async function resetMemberPasswordToDefault(
   memberId: string,
 ): Promise<void> {
+  const sessionToken = getAdminSession()?.token
+  if (!sessionToken) {
+    throw new Error('로그인이 필요합니다.')
+  }
+
   const { data, error } = await supabase.rpc('reset_member_password_to_default', {
+    p_session_token: sessionToken,
     p_member_id: memberId,
   })
 

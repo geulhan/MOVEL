@@ -1521,12 +1521,14 @@ export type Database = {
       }
       list_trainer_admin_accounts: {
         Args: {
+          p_session_token: string
           p_center_id?: string | null
         }
         Returns: Json
       }
       upsert_trainer_admin_account: {
         Args: {
+          p_session_token: string
           p_trainer_id: string
           p_username: string
           p_password: string
@@ -1535,6 +1537,7 @@ export type Database = {
       }
       delete_trainer_admin_account: {
         Args: {
+          p_session_token: string
           p_trainer_id: string
         }
         Returns: Json
@@ -1587,6 +1590,7 @@ export type Database = {
       }
       reset_member_password_to_default: {
         Args: {
+          p_session_token: string
           p_member_id: string
         }
         Returns: Json

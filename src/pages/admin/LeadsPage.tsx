@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { createLead, fetchLeads, formatLeadRetentionLabel, isLeadContactDueToday } from '../../api/leads'
 import { fetchTrainers } from '../../api/trainers'
 import { LeadDetailPanel } from '../../components/admin/LeadDetailPanel'
@@ -31,6 +32,7 @@ const FILTER_OPTIONS: { value: FilterKey; label: string }[] = [
 ]
 
 export default function LeadsPage() {
+  const [searchParams] = useSearchParams()
   const [leads, setLeads] = useState<ConsultationLead[]>([])
   const [trainers, setTrainers] = useState<Trainer[]>([])
   const [filter, setFilter] = useState<FilterKey>('active')
@@ -60,6 +62,11 @@ export default function LeadsPage() {
     void load()
   }, [load])
 
+  useEffect(() => {
+    const leadId = searchParams.get('leadId')
+    if (leadId) setSelectedId(leadId)
+  }, [searchParams])
+
   const selectedLead = useMemo(
     () => leads.find((l) => l.id === selectedId) ?? null,
     [leads, selectedId],
@@ -73,7 +80,7 @@ export default function LeadsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="상담·리드"
+        title="상담"
         description="회원 등록 전 상담 문의를 관리합니다. 무기명 60일 · 연락처 6개월 보관."
         helpText={PAGE_HELP.leads}
       />

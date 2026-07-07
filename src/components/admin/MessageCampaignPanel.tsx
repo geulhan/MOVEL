@@ -32,6 +32,7 @@ import { filterBySearch } from '../../utils/renewal'
 type Props = {
   kind: MessageCampaignKind
   onSent: () => void
+  highlightMemberId?: string | null
 }
 
 type RowStatus = {
@@ -99,7 +100,7 @@ function resultLabel(result: SendNotificationResult): string {
       return '알림톡 발송이 꺼져 있습니다'
     }
     if (detail.includes('Unauthorized')) {
-      return '발송 인증 키 오류 (VITE_NOTIFICATION_TRIGGER_KEY 확인)'
+      return '발송 권한이 없습니다 — 다시 로그인해 주세요'
     }
     if (detail.includes('허용되지 않은 IP') || detail.includes('IP')) {
       return '솔라피 IP 화이트리스트 차단 — Supabase IP 허용 필요'
@@ -162,7 +163,11 @@ function summarizeBulkFailures(
   return messages.slice(0, 3).join(' · ')
 }
 
-export function MessageCampaignPanel({ kind, onSent }: Props) {
+export function MessageCampaignPanel({
+  kind,
+  onSent,
+  highlightMemberId,
+}: Props) {
   const copy = PANEL_COPY[kind]
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -211,6 +216,22 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
     setError(null)
     void load()
   }, [kind, load])
+
+  useEffect(() => {
+    if (!highlightMemberId) return
+    const member =
+      welcomeRows.find((row) => row.member.id === highlightMemberId)?.member ??
+      paymentRows.find((row) => row.member.id === highlightMemberId)?.member ??
+      renewalRows.find((row) => row.member.id === highlightMemberId)?.member
+    if (member) {
+      setSearch(member.name)
+    }
+  }, [
+    highlightMemberId,
+    welcomeRows,
+    paymentRows,
+    renewalRows,
+  ])
 
   const rowKeys = useMemo(() => {
     if (kind === 'welcome') return welcomeRows.map((row) => row.member.id)
@@ -319,7 +340,6 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
     visibleIds.length > 0 && visibleIds.every((id) => selected.has(id))
 
   const actionBusy = bulkSending || bulkDismissing
-  const notifyKeyMissing = !import.meta.env.VITE_NOTIFICATION_TRIGGER_KEY
 
   function toggleAllVisible() {
     setSelected((prev) => {
@@ -516,20 +536,6 @@ export function MessageCampaignPanel({ kind, onSent }: Props) {
 
   return (
     <div className="space-y-4">
-      {notifyKeyMissing && (
-        <div
-          role="alert"
-          className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
-        >
-          <p className="font-semibold">알림톡 발송 키가 설정되지 않았습니다</p>
-          <p className="mt-1">
-            Vercel 환경변수 <code className="rounded bg-white px-1">VITE_NOTIFICATION_TRIGGER_KEY</code>를
-            Supabase <code className="rounded bg-white px-1">NOTIFICATION_INTERNAL_SECRET</code>와
-            동일하게 설정한 뒤 재배포해 주세요.
-          </p>
-        </div>
-      )}
-
       <div className={`${cardClass} card-pad`}>
         <h3 className="text-base font-semibold text-charcoal">{copy.title}</h3>
         <p className="mt-1 text-sm text-muted">{copy.description}</p>

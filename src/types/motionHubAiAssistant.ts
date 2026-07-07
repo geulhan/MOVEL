@@ -1,5 +1,6 @@
 import type { BusinessAnalyticsSettings, BusinessAnalyticsSnapshot } from './businessAnalytics'
 import type { Member, Trainer } from './database'
+import type { FeedAction } from './actionEngine'
 
 export type AssistantMemberInsight = {
   memberId: string
@@ -36,6 +37,13 @@ export type AssistantTrainerInsight = {
   cashRevenueThisMonth: number
 }
 
+export type AssistantExecutableAction = {
+  label: string
+  href?: string
+  kind?: 'link' | 'send_renewal'
+  memberId?: string
+}
+
 export type MotionHubAssistantContext = {
   snapshot: BusinessAnalyticsSnapshot
   settings: BusinessAnalyticsSettings
@@ -43,6 +51,7 @@ export type MotionHubAssistantContext = {
   members: AssistantMemberInsight[]
   trainerInsights: AssistantTrainerInsight[]
   periodLabel: string
+  todayActions?: FeedAction[]
 }
 
 export type AssistantAnswerSection = {
@@ -56,4 +65,5 @@ export type MotionHubAssistantAnswer = {
   sections: AssistantAnswerSection[]
   evidenceNote?: string
   insufficientData?: string[]
+  actions?: AssistantExecutableAction[]
 }

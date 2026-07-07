@@ -7,6 +7,7 @@ import type { Member, Trainer } from '../types/database'
 import { isRenewalTarget } from '../utils/renewal'
 import { fetchBusinessAnalytics } from './businessAnalytics'
 import { fetchBusinessAnalyticsSettings } from './businessAnalyticsSettings'
+import { fetchActionFeedSnapshot } from './actionFeed'
 import { fetchTrainers } from './trainers'
 import { formatPhone } from './members'
 
@@ -277,11 +278,12 @@ export async function fetchMotionHubAssistantContext(
   month: number,
 ): Promise<MotionHubAssistantContext> {
   const centerId = await getCurrentCenterId()
-  const [snapshot, settings, trainers, raw] = await Promise.all([
+  const [snapshot, settings, trainers, raw, todayOps] = await Promise.all([
     fetchBusinessAnalytics(year, month),
     fetchBusinessAnalyticsSettings(),
     fetchTrainers(),
     loadAssistantRawData(centerId, year, month),
+    fetchActionFeedSnapshot({ includeClass: true }).catch(() => null),
   ])
 
   const memberInsights = buildMemberInsights(
@@ -306,5 +308,6 @@ export async function fetchMotionHubAssistantContext(
     members: memberInsights,
     trainerInsights,
     periodLabel: snapshot.period.label,
+    todayActions: todayOps?.actions ?? [],
   }
 }

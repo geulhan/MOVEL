@@ -72,7 +72,15 @@ function emptyContentFields(): ClassContentFields {
   )
 }
 
-export default function ClassesPage() {
+type ClassesPageProps = {
+  embedded?: boolean
+  initialMemberId?: string
+}
+
+export default function ClassesPage({
+  embedded = false,
+  initialMemberId,
+}: ClassesPageProps = {}) {
   const session = getAdminSession()
   const { toast, setToast, clearToast } = useAdminToast()
   const [weekStart, setWeekStart] = useState(() => startOfWeekMonday(todayDateString()))
@@ -146,6 +154,14 @@ export default function ClassesPage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    if (!initialMemberId || members.length === 0) return
+    const member = members.find((row) => row.id === initialMemberId)
+    if (member) {
+      setReserveQuery(member.name)
+    }
+  }, [initialMemberId, members])
 
   const schedulesByDay = useMemo(() => {
     const map = new Map<string, ClassSchedule[]>()
@@ -643,11 +659,13 @@ export default function ClassesPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        title="클래스"
-        description="이번 주 시간표에서 수업을 선택하고, 출석·예약을 바로 처리하세요."
-        helpText={PAGE_HELP.classes}
-      />
+      {!embedded && (
+        <PageHeader
+          title="클래스"
+          description="이번 주 시간표에서 수업을 선택하고, 출석·예약을 바로 처리하세요."
+          helpText={PAGE_HELP.classes}
+        />
+      )}
 
       <AdminToast message={toast} onClear={clearToast} />
 

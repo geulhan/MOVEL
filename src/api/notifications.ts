@@ -1,6 +1,7 @@
 import { getCurrentCenterId } from '../lib/center'
 import { supabase } from '../lib/supabase'
 import { logPlatformActivity } from './platformActivity'
+import { adminSessionHeaders, requireAdminSessionToken } from '../lib/notificationHeaders'
 import type { MessageLog, MessageTemplateKey } from '../types/database'
 
 export type NotificationTemplateKey = MessageTemplateKey
@@ -50,10 +51,10 @@ async function invokeNotification(
   memberId: string,
   extra?: { paymentId?: string; metadata?: Record<string, string | number> },
 ): Promise<SendNotificationResult | null> {
-  const triggerKey = import.meta.env.VITE_NOTIFICATION_TRIGGER_KEY
-  if (!triggerKey) {
+  const sessionHeaders = adminSessionHeaders()
+  if (!sessionHeaders['x-session-token']) {
     console.info(
-      `[notifications] VITE_NOTIFICATION_TRIGGER_KEY 없음 — ${templateKey} 발송 생략`,
+      `[notifications] 관리자 세션 없음 — ${templateKey} 발송 생략`,
     )
     return null
   }
@@ -66,9 +67,7 @@ async function invokeNotification(
         paymentId: extra?.paymentId,
         metadata: extra?.metadata,
       },
-      headers: {
-        'x-mobel-notification-key': triggerKey,
-      },
+      headers: sessionHeaders,
     })
 
     const result = data as SendNotificationResult | null
@@ -121,9 +120,10 @@ export async function sendNotification(
   memberId: string,
   extra?: { paymentId?: string; metadata?: Record<string, string | number> },
 ): Promise<SendNotificationResult> {
+  requireAdminSessionToken()
   const result = await invokeNotification(templateKey, memberId, extra)
   if (!result) {
-    throw new Error('VITE_NOTIFICATION_TRIGGER_KEY가 설정되지 않았습니다.')
+    throw new Error('로그인이 필요합니다. 다시 로그인한 뒤 발송해 주세요.')
   }
   return result
 }
@@ -172,12 +172,12 @@ export function notifyScheduleCancelled(
 export async function notifyCenterWelcome(
   centerId: string,
 ): Promise<SendNotificationResult | null> {
-  const triggerKey = import.meta.env.VITE_NOTIFICATION_TRIGGER_KEY
-  if (!triggerKey) return null
+  const sessionHeaders = adminSessionHeaders()
+  if (!sessionHeaders['x-session-token']) return null
 
   const { data, error } = await supabase.functions.invoke('send-notification', {
     body: { templateKey: 'center_welcome', centerId },
-    headers: { 'x-mobel-notification-key': triggerKey },
+    headers: sessionHeaders,
   })
 
   if (error) {
@@ -226,16 +226,10 @@ export async function fetchMessageLogs(
 }
 
 async function invokeReminderFunction(functionName: string): Promise<unknown> {
-  const triggerKey = import.meta.env.VITE_NOTIFICATION_TRIGGER_KEY
-  if (!triggerKey) {
-    throw new Error('VITE_NOTIFICATION_TRIGGER_KEY가 설정되지 않았습니다.')
-  }
-
+  requireAdminSessionToken()
   const { data, error } = await supabase.functions.invoke(functionName, {
     body: {},
-    headers: {
-      'x-mobel-notification-key': triggerKey,
-    },
+    headers: adminSessionHeaders(),
   })
 
   if (error) throw error

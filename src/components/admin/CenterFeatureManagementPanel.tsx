@@ -5,14 +5,20 @@ import {
 } from '../../hooks/useCenterFeatures'
 import { saveCenterOperationalFeatures } from '../../api/centerFeatures'
 import { getAdminSession } from '../../lib/adminSession'
+import { markCenterFeaturesConfigured } from '../../lib/centerOnboardingStorage'
 import {
   CENTER_FEATURE_KEYS,
   CENTER_FEATURE_LABELS,
   OPERATIONAL_FEATURE_KEYS,
+  OPERATIONAL_TYPE_LABELS,
+  OPERATIONAL_TYPE_PRESETS,
   type CenterFeatureKey,
   type CenterFeatures,
+  type CenterOperationalType,
 } from '../../types/centerFeatures'
 import { btnOutline, btnPrimary, cardClass } from '../../styles/theme'
+
+const ONBOARDING_PRESETS: CenterOperationalType[] = ['pt', 'pilates', 'hybrid']
 
 function FeatureToggle({
   featureKey,
@@ -56,6 +62,11 @@ export function CenterFeatureManagementPanel() {
     setDraft(features)
   }, [features])
 
+  function applyPreset(type: CenterOperationalType) {
+    setDraft((prev) => ({ ...prev, ...OPERATIONAL_TYPE_PRESETS[type] }))
+    setSaved(false)
+  }
+
   function handleToggle(key: CenterFeatureKey, value: boolean) {
     setDraft((prev) => ({ ...prev, [key]: value }))
     setSaved(false)
@@ -67,7 +78,10 @@ export function CenterFeatureManagementPanel() {
     setSaved(false)
     try {
       const next = await saveCenterOperationalFeatures(draft)
-      if (session?.centerId) invalidateCenterFeaturesCache(session.centerId)
+      if (session?.centerId) {
+        invalidateCenterFeaturesCache(session.centerId)
+        markCenterFeaturesConfigured(session.centerId)
+      }
       setDraft(next)
       await refresh()
       setSaved(true)
@@ -88,8 +102,28 @@ export function CenterFeatureManagementPanel() {
       <div>
         <h2 className="text-lg font-semibold text-charcoal">기능 관리</h2>
         <p className="mt-1 text-sm text-muted">
-          센터에 필요한 기능만 켜 두면 메뉴와 페이지가 자동으로 숨겨집니다. PT 시스템은
-          그대로 유지됩니다.
+          센터에 필요한 기능만 켜 두면 메뉴와 페이지가 자동으로 표시됩니다. 가입 직후에는
+          운영 프리셋을 선택한 뒤 저장해 주세요.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-charcoal">운영 프리셋</h3>
+        <div className="flex flex-wrap gap-2">
+          {ONBOARDING_PRESETS.map((type) => (
+            <button
+              key={type}
+              type="button"
+              className={btnOutline}
+              disabled={loading || saving}
+              onClick={() => applyPreset(type)}
+            >
+              {OPERATIONAL_TYPE_LABELS[type]}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-muted">
+          PT 센터 · 필라테스/요가 · 복합센터 중 선택 후 세부 토글을 조정할 수 있습니다.
         </p>
       </div>
 

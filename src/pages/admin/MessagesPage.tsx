@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   fetchMessageLogs,
   triggerNotificationCron,
@@ -42,8 +43,26 @@ function formatWhen(iso: string | null): string {
   return new Date(iso).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
 }
 
+const CAMPAIGN_TABS = new Set<MessageCampaignKind>([
+  'welcome',
+  'payment_done',
+  'renewal',
+  'pt_reminder',
+])
+
+function parseCampaign(value: string | null): MessageCampaignKind {
+  if (value && CAMPAIGN_TABS.has(value as MessageCampaignKind)) {
+    return value as MessageCampaignKind
+  }
+  return 'welcome'
+}
+
 export default function MessagesPage() {
-  const [activeTab, setActiveTab] = useState<MessageCampaignKind>('welcome')
+  const [searchParams] = useSearchParams()
+  const highlightMemberId = searchParams.get('memberId')
+  const [activeTab, setActiveTab] = useState<MessageCampaignKind>(() =>
+    parseCampaign(searchParams.get('campaign')),
+  )
   const [statusFilter, setStatusFilter] = useState<MessageLogStatus | 'all'>(
     'all',
   )
@@ -55,6 +74,10 @@ export default function MessagesPage() {
   const [scheduleCronLoading, setScheduleCronLoading] = useState(false)
   const [ptCronLoading, setPtCronLoading] = useState(false)
   const [autoCronLoading, setAutoCronLoading] = useState(false)
+
+  useEffect(() => {
+    setActiveTab(parseCampaign(searchParams.get('campaign')))
+  }, [searchParams])
 
   const loadLogs = useCallback(async () => {
     setLogsLoading(true)
@@ -169,8 +192,8 @@ export default function MessagesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="메시지 발송"
-        description="회원 유형별로 알림톡을 확인하고 수동 발송할 수 있습니다. 발송 이력에서 성공·실패·대기·생략 상태를 조회할 수 있습니다."
+        title="자동화"
+        description="알림톡 자동 발송을 확인하고 필요 시 수동 발송합니다. 발송 이력에서 성공·실패·대기·생략 상태를 조회할 수 있습니다."
         helpText={PAGE_HELP.messages}
       />
 
@@ -202,7 +225,11 @@ export default function MessagesPage() {
         ))}
       </nav>
 
-      <MessageCampaignPanel kind={activeTab} onSent={() => void loadLogs()} />
+      <MessageCampaignPanel
+        kind={activeTab}
+        highlightMemberId={highlightMemberId}
+        onSent={() => void loadLogs()}
+      />
 
       <section className="space-y-4 rounded-xl border border-gold/30 bg-white p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">

@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { fetchMotionHubAssistantContext } from '../../api/motionHubAiAssistant'
 import {
   answerMotionHubQuestion,
   formatAssistantAnswer,
 } from '../../lib/motionHubAiAssistant/answerEngine'
 import { SUGGESTED_QUESTIONS } from '../../lib/motionHubAiAssistant/systemPrompt'
-import type { MotionHubAssistantAnswer } from '../../types/motionHubAiAssistant'
+import type {
+  AssistantExecutableAction,
+  MotionHubAssistantAnswer,
+} from '../../types/motionHubAiAssistant'
 import { btnGold, btnOutline, cardClass, inputClass } from '../../styles/theme'
 
 type ChatMessage = {
@@ -34,6 +38,21 @@ function AnswerBlocks({ answer }: { answer: MotionHubAssistantAnswer }) {
           </ul>
         </div>
       ))}
+      {answer.actions && answer.actions.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {answer.actions.map((action: AssistantExecutableAction) =>
+            action.href ? (
+              <Link
+                key={`${action.label}-${action.href}`}
+                to={action.href}
+                className={btnOutline}
+              >
+                {action.label}
+              </Link>
+            ) : null,
+          )}
+        </div>
+      )}
       {answer.insufficientData && answer.insufficientData.length > 0 && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
           <p className="text-xs font-semibold">추가 데이터 필요</p>

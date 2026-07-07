@@ -110,7 +110,11 @@ function matchesTodayFilter(
   }
 }
 
-export function CenterAttendanceBoard() {
+export function CenterAttendanceBoard({
+  highlightMemberId,
+}: {
+  highlightMemberId?: string
+} = {}) {
   const session = getAdminSession()
   const isTrainer = isTrainerStaff(session)
   const trainerId = session?.trainerId ?? null
@@ -148,6 +152,14 @@ export function CenterAttendanceBoard() {
     () => new Map(members.map((member) => [member.id, member])),
     [members],
   )
+
+  useEffect(() => {
+    if (!highlightMemberId) return
+    const member = memberById.get(highlightMemberId)
+    if (!member) return
+    setSearchInput(member.name)
+    setActiveSearch(member.name)
+  }, [highlightMemberId, memberById])
 
   const load = useCallback(async () => {
     setLoading(true)

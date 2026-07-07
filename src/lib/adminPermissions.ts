@@ -21,51 +21,75 @@ export type AdminNavItem = {
   requireAllFeatures?: boolean
   /** 클래스 메뉴 전용 */
   classMenu?: boolean
+  /** 예약 메뉴 (PT 또는 클래스) */
+  reservationsMenu?: boolean
   /** 시설 메뉴 전용 */
   facilityMenu?: boolean
 }
 
 export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
-  { to: '/admin', end: true, label: '대시보드', icon: '◈', roles: ['admin'] },
+  { to: '/admin', end: true, label: 'Today Feed', icon: '☀', roles: ['admin', 'trainer'] },
   {
-    to: '/admin/leads',
+    to: '/admin/insights',
     end: false,
-    label: '상담·리드',
-    icon: '◌',
-    roles: ['admin', 'trainer'],
-    featureKeys: ['membership'],
+    label: '경영 인사이트',
+    icon: '◈',
+    roles: ['admin'],
   },
   {
     to: '/admin/members',
     end: false,
-    label: '회원 관리',
+    label: '회원',
     icon: '◎',
     roles: ['admin', 'trainer'],
     featureKeys: ['membership'],
   },
   {
-    to: '/admin/schedule',
+    to: '/admin/leads',
     end: false,
-    label: '센터 일정',
-    icon: '▦',
+    label: '상담',
+    icon: '◌',
     roles: ['admin', 'trainer'],
-    featureKeys: ['pt'],
+    featureKeys: ['membership'],
   },
   {
-    to: '/admin/classes',
+    to: '/admin/reservations',
     end: false,
-    label: '클래스',
-    icon: '◇',
+    label: '예약',
+    icon: '▦',
     roles: ['admin', 'trainer'],
-    classMenu: true,
+    reservationsMenu: true,
   },
   {
     to: '/admin/attendance',
     end: false,
-    label: '출석부',
+    label: '출석',
     icon: '✓',
     roles: ['admin', 'trainer'],
     featureKeys: ['attendance'],
+  },
+  {
+    to: '/admin/payments',
+    end: false,
+    label: '결제',
+    icon: '₩',
+    roles: ['admin'],
+    featureKeys: ['membership'],
+  },
+  {
+    to: '/admin/messages',
+    end: false,
+    label: '자동화',
+    icon: '✉',
+    roles: ['admin'],
+    featureKeys: ['notifications'],
+  },
+  {
+    to: '/admin/analytics',
+    end: false,
+    label: 'AI',
+    icon: '◉',
+    roles: ['admin'],
   },
   {
     to: '/admin/trainers',
@@ -91,36 +115,15 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     roles: ['admin'],
     featureKeys: ['mileage'],
   },
-  {
-    to: '/admin/payments',
-    end: false,
-    label: '결제 관리',
-    icon: '₩',
-    roles: ['admin'],
-    featureKeys: ['membership'],
-  },
-  {
-    to: '/admin/analytics',
-    end: false,
-    label: '경영관리',
-    icon: '◉',
-    roles: ['admin'],
-  },
-  {
-    to: '/admin/messages',
-    end: false,
-    label: '메시지 발송',
-    icon: '✉',
-    roles: ['admin'],
-    featureKeys: ['notifications'],
-  },
-  { to: '/admin/settings', end: false, label: '센터 설정', icon: '⚙', roles: ['admin'] },
+  { to: '/admin/settings', end: false, label: '설정', icon: '⚙', roles: ['admin'] },
 ]
 
 const TRAINER_ALLOWED_PREFIXES = [
+  '/admin',
   '/admin/leads',
   '/admin/members',
   '/admin/member/',
+  '/admin/reservations',
   '/admin/schedule',
   '/admin/attendance',
   '/admin/classes',
@@ -131,6 +134,7 @@ const PATH_FEATURE_RULES: Array<{
   check: (features: CenterFeatures) => boolean
 }> = [
   { prefix: '/admin/schedule', check: (f) => f.pt },
+  { prefix: '/admin/reservations', check: (f) => f.pt || isClassFeatureEnabled(f) },
   { prefix: '/admin/classes', check: isClassFeatureEnabled },
   { prefix: '/admin/attendance', check: (f) => f.attendance },
   { prefix: '/admin/trainers', check: (f) => f.pt || isClassFeatureEnabled(f) },
@@ -154,12 +158,16 @@ export function isTrainerStaff(session: AdminSession | null = getAdminSession())
   return session?.role === 'trainer'
 }
 
-export function getDefaultAdminPath(session: AdminSession | null = getAdminSession()): string {
-  if (session?.role === 'trainer') return '/admin/members'
+export function getDefaultAdminPath(
+  _session: AdminSession | null = getAdminSession(),
+): string {
   return '/admin'
 }
 
 function navItemVisible(item: AdminNavItem, features: CenterFeatures): boolean {
+  if (item.reservationsMenu) {
+    return features.pt || isClassFeatureEnabled(features)
+  }
   if (item.classMenu) return isClassFeatureEnabled(features)
   if (item.facilityMenu) return isFacilityFeatureEnabled(features)
   if (!item.featureKeys?.length) return true
@@ -195,7 +203,7 @@ export function canAccessAdminPath(
     return true
   }
 
-  if (pathname === '/admin' || pathname === '/admin/') return false
+  if (pathname === '/admin' || pathname === '/admin/') return true
 
   if (!TRAINER_ALLOWED_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(prefix),

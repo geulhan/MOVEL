@@ -1,5 +1,7 @@
 import { NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { formatPhone } from '../../api/members'
+import { MemberActionBar } from '../admin/MemberActionBar'
+import { MemberWorkflowBar } from '../admin/MemberWorkflowBar'
 import { getMemberDetailTabs } from '../../lib/adminPermissions'
 import { getAdminSession } from '../../lib/adminSession'
 import { useCenterFeatures } from '../../hooks/useCenterFeatures'
@@ -103,6 +105,13 @@ function MemberDetailShellInner() {
             인바디
           </NavLink>
         </nav>
+      )}
+
+      {!isSubPage && (
+        <>
+          <MemberWorkflowBar />
+          <MemberActionBar />
+        </>
       )}
 
       <Outlet />

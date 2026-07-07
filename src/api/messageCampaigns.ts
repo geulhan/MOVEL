@@ -394,6 +394,21 @@ export async function sendRenewalMessage(
   })
 }
 
+export async function sendRenewalMessageForMember(
+  memberId: string,
+): Promise<SendNotificationResult> {
+  const targets = await buildRenewalTargets()
+  const target = targets.find((row) => row.member.id === memberId)
+  if (!target) {
+    return {
+      ok: false,
+      status: 'failed',
+      error: '현재 재등록 알림을 보낼 수 있는 구간이 아닙니다.',
+    }
+  }
+  return sendRenewalMessage(target)
+}
+
 export async function sendPtReminderMessage(
   target: Pick<PtReminderTarget, 'member' | 'scheduleId' | 'scheduledAt' | 'trainerName'>,
 ): Promise<SendNotificationResult> {

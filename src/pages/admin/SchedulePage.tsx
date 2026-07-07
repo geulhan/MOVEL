@@ -7,7 +7,15 @@ import { getAdminSession } from '../../lib/adminSession'
 import { inputClass } from '../../styles/theme'
 import type { Trainer } from '../../types/database'
 
-export default function SchedulePage() {
+type SchedulePageProps = {
+  embedded?: boolean
+  highlightMemberId?: string
+}
+
+export default function SchedulePage({
+  embedded = false,
+  highlightMemberId,
+}: SchedulePageProps = {}) {
   const session = getAdminSession()
   const isAdmin = session?.role === 'admin'
   const lockedTrainerId =
@@ -32,11 +40,19 @@ export default function SchedulePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="센터 일정"
-        description="PT·그룹수업 일정을 한곳에서 확인합니다. PT 출석(완료) 처리는 관리자만 할 수 있습니다."
-        helpText={PAGE_HELP.schedule}
-      />
+      {!embedded && (
+        <PageHeader
+          title="센터 일정"
+          description="PT·그룹수업 일정을 한곳에서 확인합니다. PT 출석(완료) 처리는 관리자만 할 수 있습니다."
+          helpText={PAGE_HELP.schedule}
+        />
+      )}
+
+      {highlightMemberId && (
+        <p className="rounded-lg border border-teal-200 bg-teal-50 px-4 py-2 text-sm text-teal-900">
+          회원 예약 필터가 적용되었습니다. 캘린더에서 해당 회원 일정을 확인하세요.
+        </p>
+      )}
 
       {isAdmin && (
         <div className="flex flex-wrap items-end gap-3">

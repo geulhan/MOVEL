@@ -133,11 +133,6 @@ export default function CenterSettingsPage() {
   const logoInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
-    const session = getAdminSession()
-    if (session?.centerId) markCenterSettingsVisited(session.centerId)
-  }, [])
-
-  useEffect(() => {
     setTheme(branding.theme)
     setLogoPreview(branding.logoUrl)
     setClearLogo(false)
@@ -250,6 +245,8 @@ export default function CenterSettingsPage() {
           {error}
         </div>
       )}
+
+      <CenterFeatureManagementPanel />
 
       <section className={`${cardClass} card-pad space-y-4`}>
         <div>
@@ -392,8 +389,6 @@ export default function CenterSettingsPage() {
           </button>
         </div>
       </section>
-
-      <CenterFeatureManagementPanel />
     </div>
   )
 }

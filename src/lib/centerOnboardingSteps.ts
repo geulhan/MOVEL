@@ -81,8 +81,8 @@ export function buildGettingStartedSteps(
       id: 'ai_report',
       title: 'AI 리포트 확인',
       description: '이번 달 경영 상태와 다음 달 할 일을 확인합니다.',
-      done: progress.aiReportViewed,
-      actionLabel: progress.aiReportViewed ? '리포트 다시 보기' : 'AI 리포트 보기',
+      done: progress.aiReportGenerated,
+      actionLabel: progress.aiReportGenerated ? '리포트 다시 보기' : 'AI 리포트 보기',
       actionTo: '/admin/analytics',
     },
   ]

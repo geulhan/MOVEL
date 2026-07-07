@@ -1,4 +1,5 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { ErrorBoundary } from '../ErrorBoundary'
 import { clearPlatformAuth, getPlatformSession } from '../../lib/platformSession'
 
 const NAV_ITEMS = [
@@ -71,7 +72,9 @@ export function PlatformLayout() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
-        <Outlet />
+        <ErrorBoundary area="platform">
+          <Outlet />
+        </ErrorBoundary>
       </main>
     </div>
   )

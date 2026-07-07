@@ -13,8 +13,6 @@ import { MotionHubAiAssistantPanel } from '../../components/admin/MotionHubAiAss
 import { PageHeader } from '../../components/admin/PageHeader'
 import { PAGE_HELP } from '../../lib/pageHelpTips'
 import { formatSupabaseError } from '../../lib/errors'
-import { getAdminSession } from '../../lib/adminSession'
-import { markAiReportViewed } from '../../lib/centerOnboardingStorage'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/theme'
 import type { BusinessAnalyticsSnapshot } from '../../types/businessAnalytics'
 import {
@@ -328,13 +326,6 @@ export default function BusinessAnalyticsPage() {
   useEffect(() => {
     void load()
   }, [load])
-
-  useEffect(() => {
-    const session = getAdminSession()
-    if (session?.centerId && tab === 'report' && data?.operational) {
-      markAiReportViewed(session.centerId)
-    }
-  }, [tab, data])
 
   const monthOptions = useMemo(() => {
     const items: Array<{ year: number; month: number; label: string }> = []

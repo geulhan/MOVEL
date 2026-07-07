@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AdminLayout } from './components/layouts/AdminLayout'
 import AdminHomePage from './pages/admin/AdminHomePage'
@@ -27,6 +28,8 @@ import BusinessAnalyticsPage from './pages/admin/BusinessAnalyticsPage'
 import ClassesPage from './pages/admin/ClassesPage'
 import FacilityOpsPage from './pages/admin/FacilityOpsPage'
 import LeadsPage from './pages/admin/LeadsPage'
+import DashboardPage from './pages/admin/DashboardPage'
+import ReservationsPage from './pages/admin/ReservationsPage'
 import MemberPortalPage from './pages/MemberPortalPage'
 import MemberWelcomePage from './pages/MemberWelcomePage'
 import { RootPage } from './pages/RootPage'
@@ -74,6 +77,7 @@ export default function App() {
         <Route path="/admin" element={<ProtectedRoute />}>
           <Route element={<AdminLayout />}>
             <Route index element={<AdminHomePage />} />
+            <Route path="insights" element={<DashboardPage />} />
             <Route path="beta-start" element={<BetaStartPage />} />
             <Route path="members" element={<MembersPage />} />
             <Route path="leads" element={<LeadsPage />} />
@@ -89,6 +93,7 @@ export default function App() {
               path="members/:memberId"
               element={<MemberDetailLegacyRedirect />}
             />
+            <Route path="reservations" element={<ReservationsPage />} />
             <Route path="schedule" element={<SchedulePage />} />
             <Route path="classes" element={<ClassesPage />} />
             <Route path="attendance" element={<AttendancePage />} />
@@ -106,7 +111,14 @@ export default function App() {
         </Route>
         <Route path="/member/:memberId" element={<MemberAdminDetailRedirect />} />
         <Route path="/member/welcome" element={<MemberWelcomePage />} />
-        <Route path="/member" element={<MemberPortalPage />} />
+        <Route
+          path="/member"
+          element={
+            <ErrorBoundary area="member">
+              <MemberPortalPage />
+            </ErrorBoundary>
+          }
+        />
         <Route path="/trainer" element={<Navigate to="/admin" replace />} />
         <Route path="/user" element={<Navigate to="/member" replace />} />
         <Route path="*" element={<NotFoundPage />} />

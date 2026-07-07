@@ -1,6 +1,8 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { formatDate } from '../../api/members'
 import { generateAiMonthlyBusinessReportSync } from '../../lib/aiMonthlyReport'
+import { getAdminSession } from '../../lib/adminSession'
+import { markAiReportGenerated } from '../../lib/centerOnboardingStorage'
 import { cardClass } from '../../styles/theme'
 import type { BusinessAnalyticsSnapshot } from '../../types/businessAnalytics'
 import type {
@@ -108,6 +110,14 @@ export function BusinessMonthlyReportPanel({ data }: Props) {
       data.priorOperational,
     )
   }, [data])
+
+  useEffect(() => {
+    if (!report) return
+    const session = getAdminSession()
+    if (session?.centerId) {
+      markAiReportGenerated(session.centerId)
+    }
+  }, [report])
 
   if (!report) {
     return (

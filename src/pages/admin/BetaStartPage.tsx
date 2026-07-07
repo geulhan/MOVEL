@@ -65,7 +65,8 @@ function StepRow({
 }
 
 export default function BetaStartPage() {
-  const { steps, percent, complete, nextStep, loading, refresh, progress } = useBetaStart()
+  const { steps, percent, complete, nextStep, loading, error, refresh, progress } =
+    useBetaStart()
   const memberPortalUrl = getMemberPortalUrl(progress?.centerSlug)
 
   if (loading) {
@@ -80,9 +81,26 @@ export default function BetaStartPage() {
     <div className="space-y-6">
       <PageHeader
         title="베타 시작하기"
-        description="가입 후 아래 6가지를 한 번씩 사용해 보세요."
+        description="가입 후 아래 7가지를 한 번씩 사용해 보세요."
         helpText={PAGE_HELP.betaStart}
       />
+
+      {error && (
+        <div
+          role="alert"
+          className="rounded-xl border border-red-300/60 bg-red-50 px-4 py-3 text-sm text-red-800"
+        >
+          <p className="font-semibold">진행 상황을 불러오지 못했습니다</p>
+          <p className="mt-1">{error}</p>
+          <button
+            type="button"
+            className={`${btnOutline} mt-3`}
+            onClick={() => void refresh()}
+          >
+            다시 시도
+          </button>
+        </div>
+      )}
 
       <section
         className={`${cardClass} space-y-5 border-gold/35 bg-gradient-to-br from-cream/80 to-white p-6`}

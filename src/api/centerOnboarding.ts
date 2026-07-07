@@ -1,6 +1,7 @@
 import { getCurrentCenterId } from '../lib/center'
 import {
-  isAiReportViewed,
+  isAiReportGenerated,
+  isCenterFeaturesConfigured,
   isCenterSettingsVisited,
 } from '../lib/centerOnboardingStorage'
 import { supabase } from '../lib/supabase'
@@ -11,6 +12,7 @@ export type CenterOnboardingProgress = {
   centerName: string
   centerSlug: string
   centerInfoComplete: boolean
+  operationalFeaturesConfigured: boolean
   memberCount: number
   firstMemberId: string | null
   scheduleCount: number
@@ -19,7 +21,7 @@ export type CenterOnboardingProgress = {
   journalCount: number
   alimtalkSentCount: number
   memberLoginCount: number
-  aiReportViewed: boolean
+  aiReportGenerated: boolean
 }
 
 function hasSavedCenterSettings(settings: Json | null | undefined): boolean {
@@ -107,6 +109,7 @@ export async function fetchCenterOnboardingProgress(): Promise<CenterOnboardingP
     centerName: center?.name ?? '',
     centerSlug: center?.slug ?? '',
     centerInfoComplete,
+    operationalFeaturesConfigured: isCenterFeaturesConfigured(centerId),
     memberCount,
     firstMemberId,
     scheduleCount: schedulesResult.count ?? 0,
@@ -115,6 +118,6 @@ export async function fetchCenterOnboardingProgress(): Promise<CenterOnboardingP
     journalCount: journalsResult.count ?? 0,
     alimtalkSentCount: alimtalkResult.count ?? 0,
     memberLoginCount: memberLoginResult.count ?? 0,
-    aiReportViewed: isAiReportViewed(centerId),
+    aiReportGenerated: isAiReportGenerated(centerId),
   }
 }
