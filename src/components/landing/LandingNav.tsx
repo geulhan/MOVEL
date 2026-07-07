@@ -4,9 +4,10 @@ import { MotionHubLogo } from '../brand/MotionHubLogo'
 import { MOTIONHUB_CENTER_GUIDE_PATH } from '../../constants/motionhubGuide'
 
 export const LANDING_SECTION_LINKS = [
-  { id: 'problems', label: '문제' },
-  { id: 'features', label: '기능' },
-  { id: 'contact', label: '문의' },
+  { id: 'why', label: '왜 필요한가' },
+  { id: 'automation', label: '자동화' },
+  { id: 'ai', label: 'AI 비서' },
+  { id: 'faq', label: 'FAQ' },
 ] as const
 
 type LandingNavProps = {
@@ -67,33 +68,17 @@ export function LandingNav({ activePage = 'landing', onScrollTo }: LandingNavPro
 
         <div className="hidden items-center gap-2 md:flex">
           <Link
-            to="/signup"
-            className="rounded-lg px-3.5 py-2 text-xs font-semibold text-cream/80 transition hover:bg-white/5"
-          >
-            센터 등록
-          </Link>
-          <Link
             to="/login"
             className="rounded-lg border border-white/10 px-3.5 py-2 text-xs font-semibold text-cream transition hover:border-white/20 hover:bg-white/5"
           >
             로그인
           </Link>
-          {activePage === 'landing' ? (
-            <button
-              type="button"
-              onClick={() => scroll('beta')}
-              className="rounded-lg bg-motionhub px-4 py-2 text-sm font-bold text-charcoal transition hover:bg-motionhub-dark"
-            >
-              베타 신청
-            </button>
-          ) : (
-            <Link
-              to="/#beta"
-              className="rounded-lg bg-motionhub px-4 py-2 text-sm font-bold text-charcoal transition hover:bg-motionhub-dark"
-            >
-              베타 신청
-            </Link>
-          )}
+          <Link
+            to="/signup"
+            className="rounded-lg bg-motionhub px-4 py-2 text-sm font-bold text-charcoal transition hover:bg-motionhub-dark"
+          >
+            무료 세팅 시작하기
+          </Link>
         </div>
 
         <button
@@ -141,18 +126,18 @@ export function LandingNav({ activePage = 'landing', onScrollTo }: LandingNavPro
               이용가이드
             </Link>
             <Link
-              to="/signup"
-              onClick={() => setOpen(false)}
-              className="rounded-lg px-3 py-2.5 text-sm text-cream/85"
-            >
-              센터 등록
-            </Link>
-            <Link
               to="/login"
               onClick={() => setOpen(false)}
               className="rounded-lg px-3 py-2.5 text-sm text-cream/85"
             >
               로그인
+            </Link>
+            <Link
+              to="/signup"
+              onClick={() => setOpen(false)}
+              className="mt-2 rounded-lg bg-motionhub px-3 py-2.5 text-center text-sm font-bold text-charcoal"
+            >
+              무료 세팅 시작하기
             </Link>
           </nav>
         </div>

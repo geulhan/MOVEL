@@ -12,10 +12,10 @@ export const MOTIONHUB_BRAND_EN = 'MotionHub'
 export const MOTIONHUB_BRAND_DISPLAY = `${MOTIONHUB_BRAND_KO} (${MOTIONHUB_BRAND_EN})`
 
 export const MOTIONHUB_MAIN_MESSAGE =
-  '회원이 운동을 지속하게 만드는 운동센터 운영 플랫폼'
+  '운동센터를 운영하는 방식이 바뀝니다.'
 
 export const MOTIONHUB_HERO_SUBLINE =
-  '회원관리 · 재등록 · 출석 · 알림톡 · 운동일지를 하나의 플랫폼에서 운영하세요.'
+  '회원관리 · 예약 · 출석 · 결제 · 알림톡 · AI 운영비서까지 하나의 플랫폼으로.'
 
 export const MOTIONHUB_TRUST_LINE =
   '모션허브는 현장 PT 센터 운영 경험을 바탕으로 만들어졌습니다.'
@@ -30,12 +30,12 @@ export const MOTIONHUB_SUB_MESSAGE_LINES = [
 ] as const
 
 export const MOTIONHUB_SEO = {
-  title: '모션허브 | 운동센터 운영 플랫폼',
+  title: '모션허브 | 운동센터 AI 운영 플랫폼',
   description:
-    '모션허브(MotionHub)는 회원이 운동을 지속하게 만드는 운동센터 운영 플랫폼입니다. PT샵·필라테스 센터의 회원관리, 재등록 관리, 운동일지, 출석관리, 마일리지, 알림톡을 하나로 연결합니다.',
-  ogTitle: '모션허브 | 운동센터 운영 플랫폼',
+    '모션허브(MotionHub)는 회원관리·예약·출석·결제·알림톡·AI 운영비서를 하나로 연결하는 운동센터 AI Operating System입니다. 무료 세팅 후 14일 체험.',
+  ogTitle: '모션허브 | 운동센터 AI 운영 플랫폼',
   ogDescription:
-    '모션허브(MotionHub) — 회원이 운동을 지속하게 만드는 운동센터 운영 플랫폼. 회원관리부터 재등록 관리까지 한 번에.',
+    '운영은 MotionHub에게 맡기고 회원에게 집중하세요. Today Feed로 오늘 할 일을 바로 처리합니다.',
   siteName: MOTIONHUB_BRAND_KO,
   applicationName: MOTIONHUB_BRAND_KO,
   ogType: 'website',

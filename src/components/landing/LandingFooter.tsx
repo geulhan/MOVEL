@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { MotionHubLogo } from '../brand/MotionHubLogo'
-import { MOTIONHUB_MAIN_MESSAGE } from '../../constants/motionhubSeo'
+import { MOTIONHUB_HERO_SUBLINE, MOTIONHUB_MAIN_MESSAGE } from '../../constants/motionhubSeo'
 import { MOTIONHUB_CENTER_GUIDE_PATH } from '../../constants/motionhubGuide'
 
 export function LandingFooter() {
@@ -14,6 +14,8 @@ export function LandingFooter() {
             </Link>
             <p className="landing-footer-tagline mt-4 text-sm leading-relaxed text-cream/50">
               {MOTIONHUB_MAIN_MESSAGE}
+              <br />
+              {MOTIONHUB_HERO_SUBLINE}
             </p>
           </div>
           <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
@@ -35,7 +37,7 @@ export function LandingFooter() {
                     to="/signup"
                     className="text-cream/70 transition hover:text-motionhub"
                   >
-                    센터 등록
+                    무료 세팅 시작하기
                   </Link>
                 </li>
                 <li>

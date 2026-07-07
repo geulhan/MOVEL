@@ -283,6 +283,50 @@ body {
   .landing-guide-step-active {
     @apply border-motionhub/30 bg-gradient-to-br from-white to-motionhub-light/30 shadow-md shadow-motionhub/5;
   }
+
+  .landing-shot-frame {
+    @apply overflow-hidden rounded-2xl border border-charcoal/10 bg-white shadow-2xl shadow-charcoal/10;
+  }
+
+  .landing-shot-img {
+    @apply block w-full;
+  }
+
+  .landing-pain-step {
+    @apply flex flex-col items-center py-2 text-center;
+  }
+
+  .landing-pain-arrow {
+    @apply my-1 text-lg text-charcoal/25;
+  }
+
+  .landing-flow-card {
+    @apply flex flex-col items-center rounded-2xl border border-charcoal/8 bg-white p-6 text-center shadow-sm;
+  }
+
+  .landing-compare-col {
+    @apply rounded-2xl border p-6 sm:p-8;
+  }
+
+  .landing-compare-col--legacy {
+    @apply border-charcoal/10 bg-cream/30;
+  }
+
+  .landing-compare-col--motionhub {
+    @apply border-motionhub/25 bg-motionhub-light/30;
+  }
+
+  .landing-ai-card {
+    @apply rounded-2xl border border-charcoal/10 bg-white p-6 shadow-lg shadow-charcoal/5 sm:p-8;
+  }
+
+  .landing-faq {
+    @apply rounded-2xl border border-charcoal/8 bg-white px-5 py-4 shadow-sm;
+  }
+
+  .landing-faq[open] {
+    @apply border-motionhub/25 shadow-md;
+  }
 }
 
 @media print {
