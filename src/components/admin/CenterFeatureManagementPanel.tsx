@@ -6,6 +6,7 @@ import {
 import { saveCenterOperationalFeatures } from '../../api/centerFeatures'
 import { getAdminSession } from '../../lib/adminSession'
 import { markCenterFeaturesConfigured } from '../../lib/centerOnboardingStorage'
+import { useBetaStart } from '../../contexts/BetaStartContext'
 import {
   CENTER_FEATURE_KEYS,
   CENTER_FEATURE_LABELS,
@@ -51,7 +52,7 @@ function FeatureToggle({
 }
 
 export function CenterFeatureManagementPanel() {
-  const session = getAdminSession()
+  const { refresh: refreshBetaStart } = useBetaStart()
   const { features, loading, refresh } = useCenterFeatures()
   const [draft, setDraft] = useState<CenterFeatures>(features)
   const [saving, setSaving] = useState(false)
@@ -78,12 +79,14 @@ export function CenterFeatureManagementPanel() {
     setSaved(false)
     try {
       const next = await saveCenterOperationalFeatures(draft)
+      const session = getAdminSession()
       if (session?.centerId) {
         invalidateCenterFeaturesCache(session.centerId)
         markCenterFeaturesConfigured(session.centerId)
       }
       setDraft(next)
       await refresh()
+      await refreshBetaStart()
       setSaved(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : '저장 실패')

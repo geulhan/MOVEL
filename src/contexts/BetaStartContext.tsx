@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { useLocation } from 'react-router-dom'
 import {
   fetchCenterOnboardingProgress,
   type CenterOnboardingProgress,
@@ -19,6 +20,7 @@ import {
   type BetaStartStep,
 } from '../lib/betaStartSteps'
 import { getAdminSession } from '../lib/adminSession'
+import { CENTER_FEATURES_CONFIGURED_EVENT } from '../lib/centerOnboardingStorage'
 
 type BetaStartContextValue = {
   progress: CenterOnboardingProgress | null
@@ -36,6 +38,7 @@ const BetaStartContext = createContext<BetaStartContextValue | null>(null)
 export function BetaStartProvider({ children }: { children: ReactNode }) {
   const session = getAdminSession()
   const isAdmin = session?.role === 'admin'
+  const location = useLocation()
   const [progress, setProgress] = useState<CenterOnboardingProgress | null>(null)
   const [loading, setLoading] = useState(isAdmin)
   const [error, setError] = useState<string | null>(null)
@@ -66,14 +69,21 @@ export function BetaStartProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     void refresh()
-  }, [refresh])
+  }, [refresh, location.pathname])
 
   useEffect(() => {
     function handleVisibility() {
       if (document.visibilityState === 'visible') void refresh()
     }
+    function handleFeaturesConfigured() {
+      void refresh()
+    }
     document.addEventListener('visibilitychange', handleVisibility)
-    return () => document.removeEventListener('visibilitychange', handleVisibility)
+    window.addEventListener(CENTER_FEATURES_CONFIGURED_EVENT, handleFeaturesConfigured)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility)
+      window.removeEventListener(CENTER_FEATURES_CONFIGURED_EVENT, handleFeaturesConfigured)
+    }
   }, [refresh])
 
   const steps = useMemo(

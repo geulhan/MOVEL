@@ -5,9 +5,16 @@ function storageKey(prefix: string, id: string): string {
   return `${prefix}${id}`
 }
 
+export const CENTER_FEATURES_CONFIGURED_EVENT = 'mh:center-features-configured'
+
 export function markCenterFeaturesConfigured(centerId: string): void {
   try {
     localStorage.setItem(storageKey(FEATURES_CONFIGURED_PREFIX, centerId), '1')
+    window.dispatchEvent(
+      new CustomEvent(CENTER_FEATURES_CONFIGURED_EVENT, {
+        detail: { centerId },
+      }),
+    )
   } catch {
     /* ignore */
   }

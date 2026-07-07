@@ -1,3 +1,4 @@
+import { OPERATIONAL_FEATURE_KEYS } from '../types/centerFeatures'
 import { getCurrentCenterId } from '../lib/center'
 import {
   isAiReportGenerated,
@@ -28,8 +29,56 @@ function hasSavedCenterSettings(settings: Json | null | undefined): boolean {
   if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
     return false
   }
-  const theme = (settings as Record<string, unknown>).theme
+  const record = settings as Record<string, unknown>
+  const theme = record.theme
+  const onboarding = record.onboarding
+  if (
+    onboarding &&
+    typeof onboarding === 'object' &&
+    !Array.isArray(onboarding) &&
+    (onboarding as Record<string, unknown>).featuresConfigured === true
+  ) {
+    return true
+  }
   return theme != null && typeof theme === 'object'
+}
+
+async function hasOperationalFeaturesConfigured(
+  centerId: string,
+  centerCreatedAt: string | undefined,
+  settings: Json | null | undefined,
+): Promise<boolean> {
+  if (isCenterFeaturesConfigured(centerId)) return true
+
+  if (settings && typeof settings === 'object' && !Array.isArray(settings)) {
+    const onboarding = (settings as Record<string, unknown>).onboarding
+    if (
+      onboarding &&
+      typeof onboarding === 'object' &&
+      !Array.isArray(onboarding) &&
+      (onboarding as Record<string, unknown>).featuresConfigured === true
+    ) {
+      return true
+    }
+  }
+
+  if (!centerCreatedAt) return false
+
+  const { data, error } = await supabase
+    .from('center_features')
+    .select('updated_at')
+    .eq('center_id', centerId)
+    .in('feature_key', [...OPERATIONAL_FEATURE_KEYS])
+
+  if (error || !data?.length) return false
+
+  const createdAt = new Date(centerCreatedAt).getTime()
+  const latestUpdate = Math.max(
+    ...data.map((row) => new Date(String(row.updated_at)).getTime()),
+  )
+
+  // 가입 시 시드된 기능과 사용자가 저장한 시점(updated_at 갱신)을 구분
+  return latestUpdate > createdAt + 5_000
 }
 
 export async function fetchCenterOnboardingProgress(): Promise<CenterOnboardingProgress> {
@@ -47,7 +96,7 @@ export async function fetchCenterOnboardingProgress(): Promise<CenterOnboardingP
   ] = await Promise.all([
     supabase
       .from('centers')
-      .select('name, slug, logo_url, settings')
+      .select('name, slug, logo_url, settings, created_at')
       .eq('id', centerId)
       .single(),
     supabase
@@ -103,13 +152,18 @@ export async function fetchCenterOnboardingProgress(): Promise<CenterOnboardingP
   const memberRows = membersResult.data ?? []
   const memberCount = memberRows.length
   const firstMemberId = memberRows[0]?.id ? String(memberRows[0].id) : null
+  const operationalFeaturesConfigured = await hasOperationalFeaturesConfigured(
+    centerId,
+    center?.created_at ? String(center.created_at) : undefined,
+    center?.settings,
+  )
 
   return {
     centerId,
     centerName: center?.name ?? '',
     centerSlug: center?.slug ?? '',
     centerInfoComplete,
-    operationalFeaturesConfigured: isCenterFeaturesConfigured(centerId),
+    operationalFeaturesConfigured,
     memberCount,
     firstMemberId,
     scheduleCount: schedulesResult.count ?? 0,
