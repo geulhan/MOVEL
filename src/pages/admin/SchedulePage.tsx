@@ -10,11 +10,13 @@ import type { Trainer } from '../../types/database'
 type SchedulePageProps = {
   embedded?: boolean
   highlightMemberId?: string
+  journalReturnTo?: string
 }
 
 export default function SchedulePage({
   embedded = false,
   highlightMemberId,
+  journalReturnTo,
 }: SchedulePageProps = {}) {
   const session = getAdminSession()
   const isAdmin = session?.role === 'admin'
@@ -91,6 +93,9 @@ export default function SchedulePage({
         filterTrainerId={filterTrainerId || undefined}
         isAdmin={isAdmin}
         showClassSchedules
+        journalReturnTo={
+          journalReturnTo ?? (embedded ? '/admin/reservations?tab=pt' : '/admin/schedule')
+        }
       />
     </div>
   )

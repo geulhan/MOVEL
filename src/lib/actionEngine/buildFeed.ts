@@ -171,10 +171,10 @@ function buildDormantActions(ctx: ActionFeedContext): FeedAction[] {
       meta: '휴면 위험',
       deadline: ctx.today,
       deadlineLabel: deadlineLabelForPriority('medium', ctx.today),
-      nextAction: '연락',
+      nextAction: '회원',
       execute: 'navigate',
       memberId: member.id,
-      href: `/admin/member/${member.id}`,
+      href: `/admin/member/${member.id}?returnTo=${encodeURIComponent('/admin')}`,
     })
   }
 
@@ -296,6 +296,8 @@ function buildReviewBatchAction(ctx: ActionFeedContext): FeedAction | null {
 
   if (eligible.length === 0) return null
 
+  const firstMemberId = eligible[0]
+
   return {
     id: 'batch-review-request',
     priority: 'low',
@@ -304,10 +306,11 @@ function buildReviewBatchAction(ctx: ActionFeedContext): FeedAction | null {
     reason: `${eligible.length}명 · 첫 수업 완료`,
     deadline: ctx.today,
     deadlineLabel: '이번 주',
-    nextAction: '발송',
+    nextAction: '처리',
     execute: 'navigate',
     count: eligible.length,
-    href: '/admin/motionhub',
+    memberId: firstMemberId,
+    href: `/admin/member/${firstMemberId}?returnTo=${encodeURIComponent('/admin')}`,
   }
 }
 

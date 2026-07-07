@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { formatPhone } from '../../api/members'
 import { MemberActionBar } from '../admin/MemberActionBar'
 import { MemberWorkflowBar } from '../admin/MemberWorkflowBar'
@@ -13,6 +13,8 @@ import { MemberDetailProvider, useMemberDetail } from './MemberDetailContext'
 function MemberDetailShellInner() {
   const navigate = useNavigate()
   const location = useLocation()
+  const [searchParams] = useSearchParams()
+  const returnTo = searchParams.get('returnTo')
   const { member, loading, error } = useMemberDetail()
   const isSubPage =
     location.pathname.endsWith('/journal') ||
@@ -48,16 +50,38 @@ function MemberDetailShellInner() {
 
   const basePath = `/admin/member/${member.id}`
 
+  function handleBack() {
+    if (returnTo) {
+      navigate(returnTo)
+      return
+    }
+    navigate(isSubPage ? basePath : '/admin/members')
+  }
+
+  function backLabelFromReturnTo(target: string): string {
+    if (target.includes('schedule') || target.includes('reservations')) {
+      return '← 센터 일정'
+    }
+    if (target === '/admin') {
+      return '← Today Feed'
+    }
+    return '← 이전'
+  }
+
+  const backLabel = returnTo
+    ? backLabelFromReturnTo(returnTo)
+    : isSubPage
+      ? '← 회원 상세'
+      : '← 회원 목록'
+
   return (
     <div className="space-y-5">
       <button
         type="button"
-        onClick={() =>
-          navigate(isSubPage ? basePath : '/admin/members')
-        }
+        onClick={handleBack}
         className={btnNavBack}
       >
-        {isSubPage ? '← 회원 상세' : '← 회원 목록'}
+        {backLabel}
       </button>
 
       {error && (

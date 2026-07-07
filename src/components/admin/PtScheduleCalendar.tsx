@@ -96,6 +96,7 @@ type Props = {
   filterTrainerId?: string
   isAdmin?: boolean
   showClassSchedules?: boolean
+  journalReturnTo?: string
 }
 
 export function PtScheduleCalendar({
@@ -104,6 +105,7 @@ export function PtScheduleCalendar({
   filterTrainerId,
   isAdmin = false,
   showClassSchedules = false,
+  journalReturnTo = '/admin/reservations?tab=pt',
 }: Props) {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
@@ -692,7 +694,7 @@ export function PtScheduleCalendar({
                   {scheduleNeedsJournal(s) && (
                     <div className="mt-2.5">
                       <Link
-                        to={`/admin/member/${s.member_id}/journal?date=${scheduleDateKey(s.scheduled_at)}`}
+                        to={`/admin/member/${s.member_id}/journal?date=${scheduleDateKey(s.scheduled_at)}&returnTo=${encodeURIComponent(journalReturnTo)}`}
                         className="inline-flex rounded-lg border border-gold/50 bg-gold/15 px-2.5 py-1 text-xs font-semibold text-charcoal transition hover:bg-gold/25"
                       >
                         운동일지 작성
