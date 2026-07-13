@@ -77,6 +77,18 @@ export const LEGACY_TEMPLATE_KEY_ALIASES: Record<string, AlimtalkTemplateKey> = 
   renewal: 'membership_expire_7',
 }
 
+export function resolveCanonicalTemplateKey(
+  raw: string,
+): AlimtalkTemplateKey | null {
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+  const canonical = LEGACY_TEMPLATE_KEY_ALIASES[trimmed] ?? trimmed
+  if ((ALL_ALIMTALK_TEMPLATE_KEYS as readonly string[]).includes(canonical)) {
+    return canonical as AlimtalkTemplateKey
+  }
+  return null
+}
+
 export const SEND_NOTIFICATION_MEMBER_KEYS = new Set<AlimtalkTemplateKey>([
   'member_signup_guide',
   'payment_completed',
@@ -176,12 +188,7 @@ export const TEMPLATE_LABELS: Record<
 export function normalizeTemplateKey(
   raw: string,
 ): AlimtalkTemplateKey | null {
-  const trimmed = raw.trim()
-  if (!trimmed) return null
-  if ((ALL_ALIMTALK_TEMPLATE_KEYS as readonly string[]).includes(trimmed)) {
-    return trimmed as AlimtalkTemplateKey
-  }
-  return LEGACY_TEMPLATE_KEY_ALIASES[trimmed] ?? null
+  return resolveCanonicalTemplateKey(raw)
 }
 
 export function isCenterTemplate(

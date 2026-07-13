@@ -366,14 +366,14 @@ export async function fetchPtReminderPendingTargets(): Promise<PtReminderTarget[
 export async function sendWelcomeMessage(
   memberId: string,
 ): Promise<SendNotificationResult> {
-  return sendNotification('welcome', memberId)
+  return sendNotification('member_signup_guide', memberId)
 }
 
 export async function sendPaymentMessage(
   memberId: string,
   paymentId: string,
 ): Promise<SendNotificationResult> {
-  return sendNotification('payment_done', memberId, { paymentId })
+  return sendNotification('payment_completed', memberId, { paymentId })
 }
 
 export async function sendRenewalMessage(
@@ -564,7 +564,7 @@ export async function dismissWelcomeTargets(
   await insertSkippedMessageLogs(
     targets.map((target) => ({
       member: target.member,
-      templateKey: 'welcome' as const,
+      templateKey: 'member_signup_guide' as const,
     })),
   )
 }
@@ -575,7 +575,7 @@ export async function dismissPaymentTargets(
   await insertSkippedMessageLogs(
     targets.map((target) => ({
       member: target.member,
-      templateKey: 'payment_done' as const,
+      templateKey: 'payment_completed' as const,
       metadata: { payment_id: target.payment.id },
     })),
   )
