@@ -2,6 +2,12 @@ import type { Member, Trainer, TrainerSettlementMode } from '../types/database'
 import type { PtSchedule } from '../api/schedule'
 import type { ClassTrainerSessionPayroll } from '../api/classFixedSchedule'
 import {
+  buildSessionLogUnitPriceMap,
+  memberNextSessionUnitPrice,
+  type PtPayment,
+  type PtSessionLog,
+} from './recognitionRevenue'
+import {
   calculateTrainerPay,
   formatSettlementLabel,
   resolveTrainerIdByName,
@@ -18,11 +24,45 @@ function isSameCalendarDay(a: string, b: string): boolean {
   )
 }
 
+/** @deprecated 결제 건별 FIFO 단가는 memberSessionUnitPriceForPayroll 사용 */
 export function memberSessionUnitPrice(member: Member): number {
   const sessions = Number(member.total_sessions)
   const amount = Number(member.payment_amount)
   if (sessions <= 0 || amount <= 0) return 0
   return Math.round(amount / sessions)
+}
+
+export function memberSessionUnitPriceForPayroll(
+  memberId: string,
+  payments: PtPayment[],
+  sessionLogs: PtSessionLog[],
+): number {
+  return memberNextSessionUnitPrice(payments, sessionLogs, memberId)
+}
+
+function matchSessionLogToAttendance(
+  log: PtSessionLog,
+  attendance: AttendancePayrollLog,
+): boolean {
+  if (log.memberId !== attendance.member_id) return false
+  return (
+    Math.abs(
+      new Date(log.deductedAt).getTime() - new Date(attendance.checked_in_at).getTime(),
+    ) < 10 * 60 * 1000
+  )
+}
+
+function resolveAttendanceUnitPrice(
+  attendance: AttendancePayrollLog,
+  payments: PtPayment[],
+  sessionLogs: PtSessionLog[],
+  priceByLogId: Map<string, number>,
+): number {
+  const matchedLog = sessionLogs.find((log) => matchSessionLogToAttendance(log, attendance))
+  if (matchedLog) {
+    return priceByLogId.get(matchedLog.id) ?? 0
+  }
+  return memberNextSessionUnitPrice(payments, sessionLogs, attendance.member_id)
 }
 
 export type TrainerPayrollSummaryRow = {
@@ -199,9 +239,12 @@ export function buildAttendancePayrollSummary(
   trainers: Trainer[],
   defaultSettlementRate: number,
   classSessions: ClassTrainerSessionPayroll[] = [],
+  payments: PtPayment[] = [],
+  sessionLogs: PtSessionLog[] = [],
 ): AttendancePayrollSummary {
   const memberById = new Map(members.map((member) => [member.id, member]))
   const byTrainer = new Map<string, TrainerBucket>()
+  const priceByLogId = buildSessionLogUnitPriceMap(payments, sessionLogs)
 
   for (const log of logs) {
     const member = memberById.get(log.member_id)
@@ -211,7 +254,12 @@ export function buildAttendancePayrollSummary(
       schedules,
       trainers,
     )
-    const unitPrice = member ? memberSessionUnitPrice(member) : 0
+    const unitPrice =
+      payments.length > 0
+        ? resolveAttendanceUnitPrice(log, payments, sessionLogs, priceByLogId)
+        : member
+          ? memberSessionUnitPrice(member)
+          : 0
     addToBucket(byTrainer, trainerId, trainerName, unitPrice, 1)
   }
 

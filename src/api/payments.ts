@@ -5,6 +5,7 @@ import { logPlatformActivity } from './platformActivity'
 import { awardCustomRulesOnPayment, awardReferralOnPayment } from './rewards'
 import { recalcMemberExpiry } from './period'
 import { supabase } from '../lib/supabase'
+import type { PtPayment, PtSessionLog } from '../lib/recognitionRevenue'
 import type { PaymentCategory, PaymentHistory } from '../types/database'
 
 export async function createPaymentRecord(
@@ -246,4 +247,43 @@ export async function syncMemberPaymentTotal(memberId: string): Promise<void> {
     .eq('id', memberId)
 
   if (updateError) throw updateError
+}
+
+/** 출석 정산용 PT 결제·차감 이력 (결제 건별 FIFO 단가) */
+export async function fetchCenterPtPayrollInputs(): Promise<{
+  payments: PtPayment[]
+  sessionLogs: PtSessionLog[]
+}> {
+  const centerId = await getCurrentCenterId()
+  const [paymentsRes, logsRes] = await Promise.all([
+    supabase
+      .from('payment_history')
+      .select('id, member_id, amount, sessions, paid_at')
+      .eq('center_id', centerId)
+      .eq('category', 'pt'),
+    supabase
+      .from('session_logs')
+      .select('id, member_id, deducted_at, quantity')
+      .eq('center_id', centerId),
+  ])
+
+  if (paymentsRes.error) throw paymentsRes.error
+  if (logsRes.error) throw logsRes.error
+
+  const payments: PtPayment[] = (paymentsRes.data ?? []).map((row) => ({
+    id: String(row.id),
+    memberId: String(row.member_id),
+    amount: Number(row.amount),
+    sessions: Number(row.sessions),
+    paidAt: String(row.paid_at),
+  }))
+
+  const sessionLogs: PtSessionLog[] = (logsRes.data ?? []).map((row) => ({
+    id: String(row.id),
+    memberId: String(row.member_id),
+    deductedAt: String(row.deducted_at),
+    quantity: Number(row.quantity ?? 1),
+  }))
+
+  return { payments, sessionLogs }
 }

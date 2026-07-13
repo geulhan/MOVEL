@@ -4,6 +4,7 @@ import {
   cancelAttendance,
   centerAttendanceStatusLabel,
   checkInMember,
+  completeScheduleAttendance,
   fetchCenterAttendanceBoard,
   fetchMonthAttendanceLogs,
   formatMonthLabel,
@@ -14,6 +15,7 @@ import {
 } from '../../api/attendance'
 import { fetchBusinessAnalyticsSettings } from '../../api/businessAnalyticsSettings'
 import { fetchMembers, formatCurrency, formatPhone, isExpired } from '../../api/members'
+import { fetchCenterPtPayrollInputs } from '../../api/payments'
 import {
   fetchSchedulesInRange,
   updateScheduleStatus,
@@ -28,10 +30,11 @@ import { formatSupabaseError, getErrorMessage } from '../../lib/errors'
 import {
   buildAttendancePayrollSummary,
   attendanceRowBelongsToTrainer,
-  memberSessionUnitPrice,
+  memberSessionUnitPriceForPayroll,
   scopePayrollSummaryForTrainer,
   type AttendancePayrollSummary,
 } from '../../lib/attendancePayroll'
+import type { PtPayment, PtSessionLog } from '../../lib/recognitionRevenue'
 import { DEFAULT_BUSINESS_ANALYTICS_SETTINGS } from '../../types/businessAnalytics'
 import { SearchBar } from '../SearchBar'
 import { PageHelpButton } from './PageHelpButton'
@@ -144,6 +147,10 @@ export function CenterAttendanceBoard({
     null,
   )
   const [payrollLoading, setPayrollLoading] = useState(true)
+  const [payrollInputs, setPayrollInputs] = useState<{
+    payments: PtPayment[]
+    sessionLogs: PtSessionLog[]
+  }>({ payments: [], sessionLogs: [] })
 
   const monthLabel = formatMonthLabel(monthRef)
   const isMonthView = statusFilter === 'scheduled'
@@ -167,7 +174,7 @@ export function CenterAttendanceBoard({
     setError(null)
     try {
       const { startIso, endIso } = monthRangeIso(monthRef)
-      const [board, memberList, trainers, monthLogs, monthSchedules, classSessions] =
+      const [board, memberList, trainers, monthLogs, monthSchedules, classSessions, payrollInputs] =
         await Promise.all([
           fetchCenterAttendanceBoard(monthRef),
           fetchMembers(),
@@ -175,6 +182,7 @@ export function CenterAttendanceBoard({
           fetchMonthAttendanceLogs(monthRef),
           fetchSchedulesInRange(startIso, endIso),
           fetchMonthClassTrainerSessions(startIso, endIso),
+          fetchCenterPtPayrollInputs(),
         ])
 
       let defaultSettlementRate =
@@ -195,6 +203,7 @@ export function CenterAttendanceBoard({
       setMonthScheduledRows(board.monthScheduledRows)
       setSummary(board.summary)
       setMembers(memberList)
+      setPayrollInputs(payrollInputs)
 
       const fullPayroll = buildAttendancePayrollSummary(
         monthLogs,
@@ -203,6 +212,8 @@ export function CenterAttendanceBoard({
         trainers,
         defaultSettlementRate,
         classSessions,
+        payrollInputs.payments,
+        payrollInputs.sessionLogs,
       )
       setPayrollSummary(
         isTrainer
@@ -298,10 +309,21 @@ export function CenterAttendanceBoard({
     setActingKey(row.key)
     setError(null)
     try {
-      const { member: updated } = await checkInMember(row.memberId, 'admin')
-      setToast(
-        `${updated.name} 님 출석 완료 · 잔여 ${updated.remaining_sessions}회`,
-      )
+      if (row.scheduleId) {
+        const { member, alreadyAttended } = await completeScheduleAttendance(
+          row.scheduleId,
+        )
+        setToast(
+          alreadyAttended
+            ? `${member.name} 님 수업 완료 처리됨`
+            : `${member.name} 님 출석 완료 · 잔여 ${member.remaining_sessions}회`,
+        )
+      } else {
+        const { member: updated } = await checkInMember(row.memberId, 'admin')
+        setToast(
+          `${updated.name} 님 출석 완료 · 잔여 ${updated.remaining_sessions}회`,
+        )
+      }
       await load()
     } catch (err) {
       setError(getErrorMessage(err))
@@ -573,7 +595,13 @@ export function CenterAttendanceBoard({
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap tabular-nums text-charcoal/70">
                         {member && member.total_sessions > 0
-                          ? formatCurrency(memberSessionUnitPrice(member))
+                          ? formatCurrency(
+                              memberSessionUnitPriceForPayroll(
+                                member.id,
+                                payrollInputs.payments,
+                                payrollInputs.sessionLogs,
+                              ),
+                            )
                           : '-'}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap tabular-nums">

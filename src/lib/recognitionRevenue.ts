@@ -116,6 +116,76 @@ function buildMemberFifo(payments: PtPayment[]): FifoPackage[] {
     }))
 }
 
+/** 결제 건별 FIFO로 각 session_log의 회당 단가를 계산 */
+export function buildSessionLogUnitPriceMap(
+  payments: PtPayment[],
+  logs: PtSessionLog[],
+): Map<string, number> {
+  const paymentsByMember = new Map<string, PtPayment[]>()
+  for (const payment of payments) {
+    if (payment.sessions <= 0 || payment.amount <= 0) continue
+    const list = paymentsByMember.get(payment.memberId) ?? []
+    list.push(payment)
+    paymentsByMember.set(payment.memberId, list)
+  }
+
+  const logsByMember = new Map<string, PtSessionLog[]>()
+  for (const log of logs) {
+    const list = logsByMember.get(log.memberId) ?? []
+    list.push(log)
+    logsByMember.set(log.memberId, list)
+  }
+
+  const priceByLogId = new Map<string, number>()
+
+  for (const [memberId, memberLogs] of logsByMember) {
+    const fifo = buildMemberFifo(paymentsByMember.get(memberId) ?? [])
+    const sorted = [...memberLogs].sort((a, b) =>
+      a.deductedAt.localeCompare(b.deductedAt),
+    )
+
+    for (const log of sorted) {
+      const chunks = assignLogToFifo(fifo, log.quantity)
+      if (chunks.length === 0) {
+        priceByLogId.set(log.id, 0)
+        continue
+      }
+      const gross = chunks.reduce(
+        (sum, chunk) => sum + chunk.perSession * chunk.quantity,
+        0,
+      )
+      priceByLogId.set(log.id, Math.round(gross / log.quantity))
+    }
+  }
+
+  return priceByLogId
+}
+
+/** 다음 차감 시 적용될 회당 단가 (FIFO) */
+export function memberNextSessionUnitPrice(
+  payments: PtPayment[],
+  logs: PtSessionLog[],
+  memberId: string,
+): number {
+  const memberPayments = payments.filter(
+    (payment) => payment.memberId === memberId && payment.sessions > 0 && payment.amount > 0,
+  )
+  const fifo = buildMemberFifo(memberPayments)
+  const memberLogs = logs
+    .filter((log) => log.memberId === memberId)
+    .sort((a, b) => a.deductedAt.localeCompare(b.deductedAt))
+
+  for (const log of memberLogs) {
+    assignLogToFifo(fifo, log.quantity)
+  }
+
+  for (const pkg of fifo) {
+    if (pkg.remaining > 0) return Math.round(pkg.perSession)
+  }
+
+  return 0
+}
+
 function assignLogToFifo(
   packages: FifoPackage[],
   quantity: number,

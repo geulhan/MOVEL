@@ -409,7 +409,7 @@ export function PtScheduleCalendar({
   async function handleComplete(schedule: PtSchedule) {
     if (
       !window.confirm(
-        `${schedule.member_name ?? '회원'} 님 수업을 완료(출석) 처리할까요?\n해당 일 미출석이면 PT 1회가 차감됩니다.`,
+        `${schedule.member_name ?? '회원'} 님 수업을 완료(출석) 처리할까요?\n이 예약에 PT 1회가 차감됩니다.`,
       )
     ) {
       return

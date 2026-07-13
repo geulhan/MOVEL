@@ -244,7 +244,10 @@ export async function updateMemberRemainingSessions(
   return normalizeMember(data)
 }
 
-export async function deductSession(memberId: string): Promise<Member> {
+export async function deductSession(
+  memberId: string,
+  options?: { scheduleId?: string },
+): Promise<Member> {
   const { data: current, error: fetchError } = await supabase
     .from('members')
     .select('*')
@@ -267,12 +270,23 @@ export async function deductSession(memberId: string): Promise<Member> {
   if (error) throw error
 
   const centerId = member.center_id ?? (await resolveCenterIdForMember(memberId))
-  const { error: logError } = await supabase.from('session_logs').insert({
+  const sessionLogPayload: {
+    center_id: string
+    member_id: string
+    quantity: number
+    remaining_after: number
+    schedule_id?: string
+  } = {
     center_id: centerId,
     member_id: memberId,
     quantity: 1,
     remaining_after: newRemaining,
-  })
+  }
+  if (options?.scheduleId) {
+    sessionLogPayload.schedule_id = options.scheduleId
+  }
+
+  const { error: logError } = await supabase.from('session_logs').insert(sessionLogPayload)
 
   if (logError) {
     await supabase

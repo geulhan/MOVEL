@@ -272,6 +272,7 @@ export type SessionLog = {
   deducted_at: string
   quantity: number
   remaining_after: number | null
+  schedule_id?: string | null
 }
 
 export type MemberMemo = {
@@ -354,6 +355,7 @@ export type AttendanceLog = {
   member_id: string
   checked_in_at: string
   method: string
+  schedule_id?: string | null
 }
 
 export type PtSchedule = {
@@ -684,6 +686,7 @@ export type Database = {
           member_id: string
           quantity?: number
           remaining_after?: number | null
+          schedule_id?: string | null
         },
         never
       >
@@ -904,6 +907,7 @@ export type Database = {
           member_id: string
           method?: string
           checked_in_at?: string
+          schedule_id?: string | null
         },
         never
       >

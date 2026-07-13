@@ -23,6 +23,7 @@ export type AttendanceRecord = {
   member_name: string
   checked_in_at: string
   method: string
+  schedule_id?: string | null
 }
 
 type AttendanceRow = {
@@ -30,6 +31,20 @@ type AttendanceRow = {
   member_id: string
   checked_in_at: string
   method: string
+  schedule_id?: string | null
+}
+
+export async function fetchAttendanceForSchedule(
+  scheduleId: string,
+): Promise<AttendanceRow | null> {
+  const { data, error } = await supabase
+    .from('attendance_logs')
+    .select('id, member_id, checked_in_at, method, schedule_id')
+    .eq('schedule_id', scheduleId)
+    .maybeSingle()
+
+  if (error) throw error
+  return data as AttendanceRow | null
 }
 
 export async function fetchTodayAttendanceForMember(
@@ -38,8 +53,9 @@ export async function fetchTodayAttendanceForMember(
 ): Promise<AttendanceRow | null> {
   let query = supabase
     .from('attendance_logs')
-    .select('id, member_id, checked_in_at, method')
+    .select('id, member_id, checked_in_at, method, schedule_id')
     .eq('member_id', memberId)
+    .is('schedule_id', null)
     .gte('checked_in_at', localDayStartIso())
     .lte('checked_in_at', localDayEndIso())
     .order('checked_in_at', { ascending: false })
@@ -78,12 +94,20 @@ export type CheckInResult = {
 export async function checkInMember(
   memberId: string,
   method: AttendanceMethod = 'admin',
+  options?: { scheduleId?: string },
 ): Promise<CheckInResult> {
   const centerId = await resolveCenterIdForMember(memberId)
 
-  const existing = await fetchTodayAttendanceForMember(memberId, centerId)
-  if (existing) {
-    throw new Error('오늘은 이미 출석 처리되었습니다.')
+  if (options?.scheduleId) {
+    const existingForSchedule = await fetchAttendanceForSchedule(options.scheduleId)
+    if (existingForSchedule) {
+      throw new Error('이미 출석 처리된 수업입니다.')
+    }
+  } else {
+    const existing = await fetchTodayAttendanceForMember(memberId, centerId)
+    if (existing) {
+      throw new Error('오늘은 이미 출석 처리되었습니다.')
+    }
   }
 
   const { data: memberRow, error: memberError } = await supabase
@@ -100,17 +124,29 @@ export async function checkInMember(
 
   let deducted = false
   try {
-    const member = await deductSession(memberId)
+    const member = await deductSession(memberId, {
+      scheduleId: options?.scheduleId,
+    })
     deducted = true
+
+    const attendancePayload: {
+      center_id: string
+      member_id: string
+      method: AttendanceMethod
+      schedule_id?: string
+    } = {
+      center_id: memberCenterId,
+      member_id: memberId,
+      method,
+    }
+    if (options?.scheduleId) {
+      attendancePayload.schedule_id = options.scheduleId
+    }
 
     const { data, error } = await supabase
       .from('attendance_logs')
-      .insert({
-        center_id: memberCenterId,
-        member_id: memberId,
-        method,
-      })
-      .select('id, member_id, checked_in_at, method')
+      .insert(attendancePayload)
+      .select('id, member_id, checked_in_at, method, schedule_id')
       .single()
 
     if (error) throw error
@@ -118,14 +154,18 @@ export async function checkInMember(
     const attendance = data as AttendanceRow
 
     try {
-      const schedules = await fetchMemberSchedules(memberId, {
-        includePastDays: 0,
-        futureDays: 1,
-      })
-      const todaySchedules = getTodayScheduledPts(schedules)
-      await Promise.all(
-        todaySchedules.map((s) => updateScheduleStatus(s.id, 'completed')),
-      )
+      if (options?.scheduleId) {
+        await updateScheduleStatus(options.scheduleId, 'completed')
+      } else {
+        const schedules = await fetchMemberSchedules(memberId, {
+          includePastDays: 0,
+          futureDays: 1,
+        })
+        const todaySchedules = getTodayScheduledPts(schedules)
+        await Promise.all(
+          todaySchedules.map((s) => updateScheduleStatus(s.id, 'completed')),
+        )
+      }
     } catch (scheduleErr) {
       console.warn('스케줄 완료 처리 실패:', scheduleErr)
     }
@@ -157,35 +197,12 @@ export async function checkInMember(
 }
 
 
-async function fetchAttendanceOnScheduleDay(
-  memberId: string,
-  scheduledAt: string,
-): Promise<AttendanceRow | null> {
-  const dayStart = new Date(scheduledAt)
-  dayStart.setHours(0, 0, 0, 0)
-  const dayEnd = new Date(scheduledAt)
-  dayEnd.setHours(23, 59, 59, 999)
-
-  const { data, error } = await supabase
-    .from('attendance_logs')
-    .select('id, member_id, checked_in_at, method')
-    .eq('member_id', memberId)
-    .gte('checked_in_at', dayStart.toISOString())
-    .lte('checked_in_at', dayEnd.toISOString())
-    .order('checked_in_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  if (error) throw error
-  return data as AttendanceRow | null
-}
-
 export type CompleteScheduleResult = {
   member: Member
   alreadyAttended: boolean
 }
 
-/** 관리자 전용: PT 일정 완료 + 출석 처리(해당 일 미출석 시 PT 1회 차감) */
+/** 관리자 전용: PT 일정 완료 + 출석 처리(해당 예약 미출석 시 PT 1회 차감) */
 export async function completeScheduleAttendance(
   scheduleId: string,
 ): Promise<CompleteScheduleResult> {
@@ -208,12 +225,8 @@ export async function completeScheduleAttendance(
     throw new Error('아직 시작되지 않은 수업은 완료 처리할 수 없습니다.')
   }
 
-  const existing = await fetchAttendanceOnScheduleDay(
-    schedule.member_id,
-    schedule.scheduled_at,
-  )
-
-  if (existing) {
+  const existingForSchedule = await fetchAttendanceForSchedule(scheduleId)
+  if (existingForSchedule) {
     await updateScheduleStatus(scheduleId, 'completed')
     const { data: memberRow, error: memberError } = await supabase
       .from('members')
@@ -229,7 +242,9 @@ export async function completeScheduleAttendance(
   }
 
   if (isSameLocalDay(schedule.scheduled_at)) {
-    const { member } = await checkInMember(schedule.member_id, 'admin')
+    const { member } = await checkInMember(schedule.member_id, 'admin', {
+      scheduleId,
+    })
     void logPlatformActivity('schedule_completed', {
       centerId: scheduleCenterId,
       metadata: { schedule_id: scheduleId, member_id: schedule.member_id },
@@ -252,7 +267,7 @@ export async function completeScheduleAttendance(
   let deducted = false
 
   try {
-    const member = await deductSession(schedule.member_id)
+    const member = await deductSession(schedule.member_id, { scheduleId })
     deducted = true
 
     const { data: attendanceRow, error: attendanceError } = await supabase
@@ -262,8 +277,9 @@ export async function completeScheduleAttendance(
         member_id: schedule.member_id,
         method: 'admin',
         checked_in_at: schedule.scheduled_at,
+        schedule_id: scheduleId,
       })
-      .select('id, member_id, checked_in_at, method')
+      .select('id, member_id, checked_in_at, method, schedule_id')
       .single()
 
     if (attendanceError) throw attendanceError
@@ -304,28 +320,43 @@ export async function completeScheduleAttendance(
 export async function cancelAttendance(recordId: string): Promise<Member> {
   const { data: att, error: fetchError } = await supabase
     .from('attendance_logs')
-    .select('id, member_id, checked_in_at, method')
+    .select('id, member_id, checked_in_at, method, schedule_id')
     .eq('id', recordId)
     .single()
 
   if (fetchError) throw fetchError
   const attendance = att as AttendanceRow
-  const checkedAt = new Date(attendance.checked_in_at).getTime()
 
-  const { data: logs, error: logsError } = await supabase
-    .from('session_logs')
-    .select('id, deducted_at')
-    .eq('member_id', attendance.member_id)
-    .order('deducted_at', { ascending: false })
-    .limit(10)
+  let matched: { id: string } | null = null
 
-  if (logsError) throw logsError
+  if (attendance.schedule_id) {
+    const { data: scheduleLog, error: scheduleLogError } = await supabase
+      .from('session_logs')
+      .select('id')
+      .eq('schedule_id', attendance.schedule_id)
+      .maybeSingle()
+    if (scheduleLogError) throw scheduleLogError
+    matched = scheduleLog as { id: string } | null
+  }
 
-  const matched = ((logs ?? []) as { id: string; deducted_at: string }[]).find(
-    (log) =>
-      Math.abs(new Date(log.deducted_at).getTime() - checkedAt) <
-      10 * 60 * 1000,
-  )
+  if (!matched) {
+    const checkedAt = new Date(attendance.checked_in_at).getTime()
+    const { data: logs, error: logsError } = await supabase
+      .from('session_logs')
+      .select('id, deducted_at')
+      .eq('member_id', attendance.member_id)
+      .order('deducted_at', { ascending: false })
+      .limit(10)
+
+    if (logsError) throw logsError
+
+    matched =
+      ((logs ?? []) as { id: string; deducted_at: string }[]).find(
+        (log) =>
+          Math.abs(new Date(log.deducted_at).getTime() - checkedAt) <
+          10 * 60 * 1000,
+      ) ?? null
+  }
 
   if (matched) {
     const { error: delLogError } = await supabase
@@ -341,6 +372,14 @@ export async function cancelAttendance(recordId: string): Promise<Member> {
     .eq('id', recordId)
 
   if (delAttError) throw delAttError
+
+  if (attendance.schedule_id) {
+    try {
+      await updateScheduleStatus(attendance.schedule_id, 'scheduled')
+    } catch (scheduleErr) {
+      console.warn('출석 취소 후 스케줄 복구 실패:', scheduleErr)
+    }
+  }
 
   try {
     await reversePtAttendance(attendance.member_id, attendance.id)
@@ -358,7 +397,7 @@ export async function fetchAttendanceRecords(
   const centerId = await getCurrentCenterId()
   let query = supabase
     .from('attendance_logs')
-    .select('id, member_id, checked_in_at, method')
+    .select('id, member_id, checked_in_at, method, schedule_id')
     .eq('center_id', centerId)
     .order('checked_in_at', { ascending: false })
     .limit(200)
@@ -382,6 +421,7 @@ export async function fetchAttendanceRecords(
     member_name: nameById.get(row.member_id) ?? '-',
     checked_in_at: row.checked_in_at,
     method: row.method,
+    schedule_id: row.schedule_id ?? null,
   }))
 }
 
@@ -534,6 +574,37 @@ export async function fetchMonthAttendanceLogs(
   return (data ?? []) as Array<{ member_id: string; checked_in_at: string }>
 }
 
+export async function fetchMonthSessionLogs(
+  monthRef: MonthRef,
+): Promise<
+  Array<{
+    id: string
+    member_id: string
+    deducted_at: string
+    quantity: number
+    schedule_id?: string | null
+  }>
+> {
+  const centerId = await getCurrentCenterId()
+  const { startIso, endIso } = monthRangeIso(monthRef)
+  const { data, error } = await supabase
+    .from('session_logs')
+    .select('id, member_id, deducted_at, quantity, schedule_id')
+    .eq('center_id', centerId)
+    .gte('deducted_at', startIso)
+    .lte('deducted_at', endIso)
+    .order('deducted_at', { ascending: true })
+
+  if (error) throw error
+  return (data ?? []) as Array<{
+    id: string
+    member_id: string
+    deducted_at: string
+    quantity: number
+    schedule_id?: string | null
+  }>
+}
+
 /** 선택 월: 예약됐으나 출석 처리되지 않은 수업 */
 export async function fetchMonthScheduledPending(
   monthRef: MonthRef,
@@ -606,21 +677,42 @@ export async function fetchTodayCenterAttendanceBoard(): Promise<{
     return checked >= start && checked <= end
   })
 
-  const attendanceByMember = new Map<string, AttendanceRecord>()
+  const attendanceByScheduleId = new Map<string, AttendanceRecord>()
+  const legacyAttendanceByMember = new Map<string, AttendanceRecord[]>()
+
   for (const row of todayAttendance) {
-    if (!attendanceByMember.has(row.member_id)) {
-      attendanceByMember.set(row.member_id, row)
+    if (row.schedule_id) {
+      attendanceByScheduleId.set(row.schedule_id, row)
+      continue
     }
+    const list = legacyAttendanceByMember.get(row.member_id) ?? []
+    list.push(row)
+    legacyAttendanceByMember.set(row.member_id, list)
   }
+
+  const usedLegacyAttendanceIds = new Set<string>()
 
   const activeSchedules = (schedules as PtSchedule[]).filter(
     (s) => s.status !== 'cancelled',
   )
 
   const rows: CenterAttendanceRow[] = activeSchedules.map((schedule) => {
-    const attendance = attendanceByMember.get(schedule.member_id) ?? null
+    let attendance = attendanceByScheduleId.get(schedule.id) ?? null
+
+    if (!attendance) {
+      const legacy = legacyAttendanceByMember.get(schedule.member_id)
+      while (legacy && legacy.length > 0) {
+        const candidate = legacy.shift()!
+        if (!usedLegacyAttendanceIds.has(candidate.id)) {
+          attendance = candidate
+          usedLegacyAttendanceIds.add(candidate.id)
+          break
+        }
+      }
+    }
+
     const attended = Boolean(attendance)
-  const displayStatus = deriveDisplayStatus({
+    const displayStatus = deriveDisplayStatus({
       attended,
       scheduleStatus: schedule.status,
       scheduledAt: schedule.scheduled_at,
@@ -644,22 +736,24 @@ export async function fetchTodayCenterAttendanceBoard(): Promise<{
     }
   })
 
-  for (const [memberId, attendance] of attendanceByMember.entries()) {
-    const hasScheduleRow = rows.some((row) => row.memberId === memberId)
+  for (const row of todayAttendance) {
+    if (row.schedule_id) continue
+    if (usedLegacyAttendanceIds.has(row.id)) continue
+    const hasScheduleRow = rows.some((scheduleRow) => scheduleRow.memberId === row.member_id)
     if (hasScheduleRow) continue
 
     rows.push({
-      key: `walkin-${attendance.id}`,
-      memberId,
-      memberName: attendance.member_name,
-      trainerName: trainerByMemberId.get(memberId) ?? null,
+      key: `walkin-${row.id}`,
+      memberId: row.member_id,
+      memberName: row.member_name,
+      trainerName: trainerByMemberId.get(row.member_id) ?? null,
       scheduleId: null,
       scheduledAt: null,
       scheduleStatus: null,
       displayStatus: 'walk_in',
-      checkedInAt: attendance.checked_in_at,
-      attendanceId: attendance.id,
-      method: attendance.method,
+      checkedInAt: row.checked_in_at,
+      attendanceId: row.id,
+      method: row.method,
     })
   }
 
