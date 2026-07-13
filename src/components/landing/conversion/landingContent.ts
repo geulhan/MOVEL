@@ -11,7 +11,7 @@ export const LANDING_HERO = {
   ],
   ctaNote: '무료 세팅 받고 14일 사용해보기',
   ctaLabel: '무료 세팅 시작하기',
-  feedCaption: '오늘 해야 할 일을 MotionHub가 먼저 알려드립니다.',
+  feedCaption: '오늘 해야 할 일을 모션 허브가 먼저 알려드립니다.',
 } as const
 
 export const WHY_PAIN_STEPS = [

@@ -1,4 +1,5 @@
 import { getMotionHubKakaoUrl, MOTIONHUB_CONTACT } from '../../constants/motionhub'
+import { MOTIONHUB_BRAND_KO } from '../../constants/motionhubSeo'
 
 type Props = {
   className?: string
@@ -14,7 +15,7 @@ export function MotionHubSupportLink({ className = '', compact = false }: Props)
       rel="noopener noreferrer"
       className={`inline-flex items-center gap-1.5 text-sm font-semibold text-charcoal underline-offset-2 hover:underline ${className}`}
     >
-      {compact ? '모션허브 문의' : MOTIONHUB_CONTACT.kakaoLabel}
+      {compact ? `${MOTIONHUB_BRAND_KO} 문의` : MOTIONHUB_CONTACT.kakaoLabel}
       <span aria-hidden className="text-xs opacity-60">
         ↗
       </span>

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { MotionHubLogo } from '../brand/MotionHubLogo'
-import { MOTIONHUB_HERO_SUBLINE, MOTIONHUB_MAIN_MESSAGE } from '../../constants/motionhubSeo'
+import { MOTIONHUB_BRAND_KO, MOTIONHUB_HERO_SUBLINE, MOTIONHUB_MAIN_MESSAGE } from '../../constants/motionhubSeo'
 import { MOTIONHUB_CENTER_GUIDE_PATH } from '../../constants/motionhubGuide'
 
 export function LandingFooter() {
@@ -68,8 +68,8 @@ export function LandingFooter() {
           </div>
         </div>
         <div className="mt-12 flex flex-col gap-2 border-t border-white/[0.06] pt-8 text-xs text-cream/35 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} 모션허브. All rights reserved.</p>
-          <p>Powered by 모션허브</p>
+          <p>© {new Date().getFullYear()} {MOTIONHUB_BRAND_KO}. All rights reserved.</p>
+          <p>Powered by {MOTIONHUB_BRAND_KO}</p>
         </div>
       </div>
     </footer>

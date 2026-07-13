@@ -203,6 +203,8 @@ export function canAccessAdminPath(
     return true
   }
 
+  if (pathname === '/admin/members/register') return false
+
   if (pathname === '/admin' || pathname === '/admin/') return true
 
   if (!TRAINER_ALLOWED_PREFIXES.some(

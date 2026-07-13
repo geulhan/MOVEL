@@ -37,6 +37,15 @@ import type { PaymentRequestStatus } from '../../types/database'
 
 type AdminTab = 'pricing' | 'requests' | 'contracts'
 
+const ADMIN_TABS: AdminTab[] = ['pricing', 'requests', 'contracts']
+
+function parseAdminTab(value: string | null): AdminTab {
+  if (value && ADMIN_TABS.includes(value as AdminTab)) {
+    return value as AdminTab
+  }
+  return 'pricing'
+}
+
 const STATUS_FILTERS: Array<{ id: 'all' | PaymentRequestStatus; label: string }> =
   [
     { id: 'all', label: '전체' },
@@ -62,7 +71,7 @@ export default function PaymentsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const highlightRequestId = searchParams.get('requestId')
   const pricingCategory = parsePricingCategory(searchParams.get('category'))
-  const [adminTab, setAdminTab] = useState<AdminTab>('pricing')
+  const adminTab = parseAdminTab(searchParams.get('tab'))
   const [statusFilter, setStatusFilter] = useState<'all' | PaymentRequestStatus>(
     'pending',
   )
@@ -92,11 +101,26 @@ export default function PaymentsPage() {
   }, [])
 
   useEffect(() => {
-    if (highlightRequestId) {
-      setAdminTab('requests')
+    if (!highlightRequestId) return
+    if (searchParams.get('tab') === 'requests') {
       setStatusFilter('all')
+      return
     }
-  }, [highlightRequestId])
+    const next = new URLSearchParams(searchParams)
+    next.set('tab', 'requests')
+    setSearchParams(next, { replace: true })
+    setStatusFilter('all')
+  }, [highlightRequestId, searchParams, setSearchParams])
+
+  function setAdminTab(tab: AdminTab) {
+    const next = new URLSearchParams(searchParams)
+    if (tab === 'pricing') {
+      next.delete('tab')
+    } else {
+      next.set('tab', tab)
+    }
+    setSearchParams(next, { replace: true })
+  }
 
   const load = useCallback(async () => {
     setLoading(true)

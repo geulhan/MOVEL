@@ -39,7 +39,7 @@ export function buildGettingStartedSteps(
       description: '이름과 휴대폰만 입력하면 됩니다.',
       done: progress.memberCount >= 1,
       actionLabel: progress.memberCount >= 1 ? '회원 보기' : '회원 등록하기',
-      actionTo: '/admin/members?onboarding=register',
+      actionTo: '/admin/members/register?onboarding=register',
     },
     {
       id: 'first_schedule',
@@ -65,7 +65,7 @@ export function buildGettingStartedSteps(
       actionLabel: progress.journalCount >= 1 ? '일지 보기' : '운동일지 작성',
       actionTo: progress.firstMemberId
         ? `/admin/member/${progress.firstMemberId}/journal`
-        : '/admin/members?onboarding=register',
+        : '/admin/members/register?onboarding=register',
     },
     {
       id: 'alimtalk_sent',

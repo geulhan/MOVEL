@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { MOTIONHUB_BRAND_ASSETS } from '../../constants/motionhubBrand'
+import { MOTIONHUB_BRAND_KO } from '../../constants/motionhubSeo'
 import type { CenterBranding } from '../../types/centerBranding'
 
 type Props = {
@@ -49,7 +50,7 @@ export function CenterBrandMark({
           className="text-[10px] font-medium"
           style={{ color: 'var(--center-sidebar-muted)' }}
         >
-          모션허브
+          {MOTIONHUB_BRAND_KO}
         </span>
       </div>
     </div>

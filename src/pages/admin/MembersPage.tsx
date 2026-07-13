@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   deductSession,
   fetchMembers,
@@ -12,7 +12,6 @@ import { isTrainerStaff } from '../../lib/adminPermissions'
 import { PAGE_HELP } from '../../lib/pageHelpTips'
 import { getAdminSession } from '../../lib/adminSession'
 import { MemberFilterBar } from '../../components/MemberFilterBar'
-import { MemberForm } from '../../components/MemberForm'
 import { MemberImportPanel } from '../../components/admin/MemberImportPanel'
 import { MemberSearchCombobox } from '../../components/admin/MemberSearchCombobox'
 import { MemberList } from '../../components/MemberList'
@@ -144,16 +143,16 @@ export default function MembersPage() {
     }
   }, [searchParams])
 
-  const onboardingParam = searchParams.get('onboarding')
+  useEffect(() => {
+    if (searchParams.get('onboarding') === 'register') {
+      navigate('/admin/members/register?onboarding=register', { replace: true })
+    }
+  }, [searchParams, navigate])
 
   const scopedMembers = useMemo(() => {
     if (!isTrainer || !session?.trainerId) return allMembers
     return allMembers.filter((member) => member.trainer_id === session.trainerId)
   }, [allMembers, isTrainer, session?.trainerId])
-
-  const isOnboardingRegister =
-    onboardingParam === 'register' ||
-    (!isTrainer && !loading && scopedMembers.length === 0)
 
   useEffect(() => {
     const term = searchInput.trim()
@@ -320,15 +319,20 @@ export default function MembersPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <PageHeader
-          title="회원 관리"
+          title="회원 목록"
           description={
             isTrainer
               ? '담당 회원 조회 및 상세 관리'
-              : '등록·검색·PT 차감 및 상세 관리'
+              : '검색·필터·PT 차감 및 상세 관리'
           }
           helpText={PAGE_HELP.members}
         />
         <div className="flex shrink-0 flex-wrap gap-2">
+          {!isTrainer && (
+            <Link to="/admin/members/register" className={btnOutline}>
+              회원 등록
+            </Link>
+          )}
           {!isTrainer && (
             <MemberImportPanel
               trainers={trainers}
@@ -361,26 +365,6 @@ export default function MembersPage() {
         <div className="rounded-xl border border-red-300/60 bg-red-50 px-4 py-3 text-sm font-medium text-red-800">
           {error}
         </div>
-      )}
-
-      {isOnboardingRegister && !isTrainer && (
-        <div className="rounded-xl border border-gold/40 bg-cream/50 px-4 py-3 text-sm text-charcoal">
-          <p className="font-semibold">지금 할 일: 첫 회원 1명 등록</p>
-          <p className="mt-1 text-muted">
-            이름과 휴대폰만 입력하세요. 등록 즉시 회원에게 가입 안내 알림톡이 발송됩니다.
-          </p>
-        </div>
-      )}
-
-      {!isTrainer && (
-        <MemberForm
-          trainers={trainers}
-          members={allMembers}
-          onCreated={() => void loadMembers()}
-          onboardingMode={isOnboardingRegister}
-          centerSlug={session?.centerSlug}
-          centerName={session?.centerName}
-        />
       )}
 
       <section className="space-y-3">

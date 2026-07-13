@@ -5,6 +5,7 @@ import { AdminLayout } from './components/layouts/AdminLayout'
 import AdminHomePage from './pages/admin/AdminHomePage'
 import BetaStartPage from './pages/admin/BetaStartPage'
 import MembersPage from './pages/admin/MembersPage'
+import MemberRegisterPage from './pages/admin/MemberRegisterPage'
 import { MemberAttendanceTab } from './components/member-detail/MemberAttendanceTab'
 import { MemberDetailShell } from './components/member-detail/MemberDetailShell'
 import { MemberJournalTab } from './components/member-detail/MemberJournalTab'
@@ -79,6 +80,7 @@ export default function App() {
             <Route index element={<AdminHomePage />} />
             <Route path="insights" element={<DashboardPage />} />
             <Route path="beta-start" element={<BetaStartPage />} />
+            <Route path="members/register" element={<MemberRegisterPage />} />
             <Route path="members" element={<MembersPage />} />
             <Route path="leads" element={<LeadsPage />} />
             <Route path="member/:memberId" element={<MemberDetailShell />}>

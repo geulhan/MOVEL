@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { BetaStartProvider, useBetaStart } from '../../contexts/BetaStartContext'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { navItemsForSession } from '../../lib/adminPermissions'
+import { Outlet, useNavigate } from 'react-router-dom'
+import { navEntriesForSession, type AdminNavEntry } from '../../lib/adminNav'
+import { AdminNavMenu } from './AdminNavMenu'
 import { clearAdminAuth, getAdminSession } from '../../lib/adminSession'
 import { resetCenterIdCache } from '../../lib/center'
 import { buildAdminLoginPath } from '../../lib/centerSlug'
@@ -52,8 +53,8 @@ function AdminLayoutInner() {
   useApplyCenterTheme(branding.theme, branding.centerName)
   const { features } = useCenterFeatures()
   const { complete: betaStartComplete, loading: betaStartLoading } = useBetaStart()
-  const navItems = useMemo(() => {
-    const items = navItemsForSession(session, features)
+  const navEntries = useMemo((): AdminNavEntry[] => {
+    const items = navEntriesForSession(session, features)
     if (
       session?.role === 'admin' &&
       !betaStartLoading &&
@@ -61,11 +62,12 @@ function AdminLayoutInner() {
     ) {
       return [
         {
+          type: 'link',
           to: '/admin/beta-start',
           end: false,
           label: '베타 시작하기',
           icon: '✦',
-          roles: ['admin'] as const,
+          roles: ['admin'],
         },
         ...items,
       ]
@@ -102,33 +104,11 @@ function AdminLayoutInner() {
             className="mt-2 px-1 text-[10px] font-medium leading-relaxed"
             style={{ color: 'var(--center-sidebar-muted)' }}
           >
-            모션허브 센터 관리
+            모션 허브 센터 관리
           </p>
         </div>
         <nav className="flex flex-1 flex-col gap-0.5 p-3">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className="flex min-w-0 items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium whitespace-nowrap transition"
-              style={({ isActive }) =>
-                isActive
-                  ? {
-                      background: 'var(--center-tab-active-bg)',
-                      color: 'var(--center-tab-active-text)',
-                    }
-                  : {
-                      color: 'var(--center-sidebar-muted)',
-                    }
-              }
-            >
-              <span className="w-4 shrink-0 text-center text-sm opacity-80">
-                {item.icon}
-              </span>
-              <span className="truncate">{item.label}</span>
-            </NavLink>
-          ))}
+          <AdminNavMenu entries={navEntries} variant="desktop" />
         </nav>
         <div
           className="space-y-2 border-t p-3"
@@ -196,29 +176,7 @@ function AdminLayoutInner() {
             </div>
           </div>
           <nav className="chip-scroll px-3 pb-2.5">
-            {navItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                className="chip rounded-full border px-3 py-1.5 text-xs font-medium transition"
-                style={({ isActive }) =>
-                  isActive
-                    ? {
-                        background: 'var(--center-tab-active-bg)',
-                        color: 'var(--center-tab-active-text)',
-                        borderColor: 'color-mix(in srgb, var(--center-accent) 40%, transparent)',
-                      }
-                    : {
-                        background: 'color-mix(in srgb, var(--center-sidebar-text) 8%, transparent)',
-                        color: 'var(--center-sidebar-muted)',
-                        borderColor: 'color-mix(in srgb, var(--center-sidebar-text) 12%, transparent)',
-                      }
-                }
-              >
-                {item.label}
-              </NavLink>
-            ))}
+            <AdminNavMenu entries={navEntries} variant="mobile" />
           </nav>
         </header>
 

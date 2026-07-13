@@ -40,7 +40,7 @@ function HeroSection() {
     <section className="landing-hero-mesh relative overflow-hidden pt-[4.5rem] pb-16 sm:pt-24 sm:pb-20">
       <LandingContainer className="relative">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="landing-eyebrow text-motionhub">MotionHub · AI Operating System</p>
+          <p className="landing-eyebrow text-motionhub">모션 허브 · AI Operating System</p>
           <h1 className="mt-5 text-[1.75rem] font-bold leading-[1.25] tracking-tight text-cream sm:text-4xl lg:text-[2.75rem] lg:leading-[1.15]">
             {LANDING_HERO.title}
           </h1>
@@ -58,7 +58,7 @@ function HeroSection() {
         <div className="mx-auto mt-14 max-w-5xl">
           <LandingScreenshot
             src="/landing/today-feed.png"
-            alt="MotionHub Today Feed 화면 — 오늘 해야 할 일 목록"
+            alt="모션 허브 Today Feed 화면 — 오늘 해야 할 일 목록"
             caption={LANDING_HERO.feedCaption}
             priority
           />
@@ -73,7 +73,7 @@ function WhySection() {
     <section id="why" className="bg-white py-20 sm:py-28">
       <LandingContainer>
         <div className="landing-section-centered">
-          <SectionEyebrow centered>Why MotionHub</SectionEyebrow>
+          <SectionEyebrow centered>Why 모션 허브</SectionEyebrow>
           <SectionTitle centered className="mt-3">
             대표의 문제부터 시작합니다
           </SectionTitle>
@@ -101,7 +101,7 @@ function WhySection() {
             ))}
           </ul>
           <p className="mt-10 text-center text-xl font-bold text-motionhub-deep sm:text-2xl">
-            MotionHub 하나로 해결됩니다.
+            모션 허브 하나로 해결됩니다.
           </p>
         </div>
       </LandingContainer>
@@ -116,7 +116,7 @@ function FlowSection() {
         <div className="landing-section-centered">
           <SectionEyebrow centered>How it works</SectionEyebrow>
           <SectionTitle centered className="mt-3">
-            MotionHub가 대신하는 일
+            모션 허브가 대신하는 일
           </SectionTitle>
         </div>
 
@@ -164,7 +164,7 @@ function DayCompareSection() {
 
           <div className="landing-compare-col landing-compare-col--motionhub">
             <p className="text-xs font-bold tracking-wide text-motionhub uppercase">
-              MotionHub Today Feed
+              모션 허브 Today Feed
             </p>
             <span className="mt-4 block text-2xl text-motionhub" aria-hidden>
               ↓
@@ -198,7 +198,7 @@ function AutomationSection() {
             <SectionEyebrow>Automation</SectionEyebrow>
             <SectionTitle className="mt-3">운영 자동화</SectionTitle>
             <SectionLead>
-              대표가 반복하는 업무를 MotionHub가 대신 처리합니다.
+              대표가 반복하는 업무를 모션 허브가 대신 처리합니다.
             </SectionLead>
             <ul className="mt-8 flex flex-wrap gap-2">
               {AUTO_EXAMPLES.map((item) => (
@@ -213,7 +213,7 @@ function AutomationSection() {
           </div>
           <LandingScreenshot
             src="/landing/messages-automation.png"
-            alt="MotionHub 메시지 자동화 화면"
+            alt="모션 허브 메시지 자동화 화면"
           />
         </div>
       </LandingContainer>
@@ -243,7 +243,7 @@ function AiSection() {
             </div>
             <LandingScreenshot
               src="/landing/ai-assistant.png"
-              alt="MotionHub AI 운영비서 화면"
+              alt="모션 허브 AI 운영비서 화면"
             />
           </div>
         </div>
@@ -488,7 +488,7 @@ function FinalCtaSection() {
         <p className="mt-6 text-base leading-relaxed text-cream/65 sm:text-lg">
           대표는 회원에게 집중하세요.
           <br />
-          운영은 MotionHub가 하겠습니다.
+          운영은 모션 허브가 하겠습니다.
         </p>
         <PrimaryButton to="/signup" className="mt-10 min-w-[14rem] px-8 py-4 text-base">
           14일 무료 체험 시작
