@@ -252,7 +252,7 @@ export function getMemberDetailTabs(
     if (!features || features.attendance) {
       adminTabs.push({ to: 'attendance', end: false, label: '출석' })
     }
-    adminTabs.push({ to: 'records', end: false, label: '메모·상담' })
+    adminTabs.push({ to: 'records', end: false, label: '기록' })
     if (!features || features.exercise_log) {
       adminTabs.push({ to: 'journal', end: false, label: '운동일지' })
     }
@@ -265,6 +265,9 @@ export function getMemberDetailTabs(
   if (!features || features.attendance) {
     trainerTabs.push({ to: 'attendance', end: false, label: '출석' })
   }
-  trainerTabs.push({ to: 'records', end: false, label: '메모·상담' })
+  trainerTabs.push({ to: 'records', end: false, label: '기록' })
+  if (!features || features.exercise_log) {
+    trainerTabs.push({ to: 'journal', end: false, label: '운동일지' })
+  }
   return trainerTabs
 }

@@ -34,6 +34,7 @@ import { useCenterFeatures } from '../../hooks/useCenterFeatures'
 import type { Member, Trainer } from '../../types/database'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/theme'
 import { FixedDayTimeFields as SharedFixedDayTimeFields } from './FixedDayTimeFields'
+import { MemberScheduleActionLinks } from './MemberScheduleActionLinks'
 import { dateKey, getMonthMatrix, monthLabel, WEEKDAYS } from '../../utils/calendar'
 import {
   buildMultiDayScheduleDatesWithTimes,
@@ -691,16 +692,13 @@ export function PtScheduleCalendar({
                       </button>
                     </div>
                   )}
-                  {scheduleNeedsJournal(s) && (
-                    <div className="mt-2.5">
-                      <Link
-                        to={`/admin/member/${s.member_id}/journal?date=${scheduleDateKey(s.scheduled_at)}&returnTo=${encodeURIComponent(journalReturnTo)}`}
-                        className="inline-flex rounded-lg border border-gold/50 bg-gold/15 px-2.5 py-1 text-xs font-semibold text-charcoal transition hover:bg-gold/25"
-                      >
-                        운동일지 작성
-                      </Link>
-                    </div>
-                  )}
+                  <MemberScheduleActionLinks
+                    memberId={s.member_id}
+                    returnTo={journalReturnTo}
+                    journalDate={scheduleDateKey(s.scheduled_at)}
+                    showJournal={journalFeatureEnabled}
+                    journalNeedsWrite={scheduleNeedsJournal(s)}
+                  />
                 </li>
               ))}
               {showClassSchedules &&

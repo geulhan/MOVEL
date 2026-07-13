@@ -200,6 +200,13 @@ export function MemberOverviewTab() {
           </Link>
         )}
         <Link
+          to={`${basePath}/records`}
+          className={`${cardClass} card-pad block transition hover:border-gold/50`}
+        >
+          <p className="text-sm font-semibold text-charcoal">기록</p>
+          <p className="mt-1 text-xs text-muted">관리자 메모 및 상담 기록</p>
+        </Link>
+        <Link
           to={`${basePath}/journal`}
           className={`${cardClass} card-pad block transition hover:border-gold/50`}
         >
@@ -212,13 +219,6 @@ export function MemberOverviewTab() {
         >
           <p className="text-sm font-semibold text-charcoal">출석 내역</p>
           <p className="mt-1 text-xs text-muted">총 {attendance.length}건</p>
-        </Link>
-        <Link
-          to={`${basePath}/records`}
-          className={`${cardClass} card-pad block transition hover:border-gold/50`}
-        >
-          <p className="text-sm font-semibold text-charcoal">메모 · 상담</p>
-          <p className="mt-1 text-xs text-muted">관리자 메모 및 상담 기록</p>
         </Link>
       </section>
 

@@ -51,6 +51,9 @@ export function MemberActionBar() {
         <Link to={`/admin/attendance?memberId=${memberId}`} className={btnOutline}>
           출석
         </Link>
+        <Link to={`${base}/records`} className={btnOutline}>
+          기록
+        </Link>
         <Link to={`${base}/journal`} className={btnOutline}>
           운동일지
         </Link>

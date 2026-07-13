@@ -37,6 +37,7 @@ import {
 } from '../../api/classFixedSchedule'
 import { fetchTrainers } from '../../api/trainers'
 import { getAdminSession } from '../../lib/adminSession'
+import { useCenterFeatures } from '../../hooks/useCenterFeatures'
 import { getErrorMessage } from '../../lib/errors'
 import { filterBySearch, resolveMemberFromSearch } from '../../utils/renewal'
 import {
@@ -56,6 +57,7 @@ import {
   type ClassContentFields,
 } from '../../constants/classContentFields'
 import { FixedDayTimeFields } from '../../components/admin/FixedDayTimeFields'
+import { MemberScheduleActionLinks } from '../../components/admin/MemberScheduleActionLinks'
 import { PageHeader } from '../../components/admin/PageHeader'
 import { PAGE_HELP } from '../../lib/pageHelpTips'
 import { AdminToast, useAdminToast } from '../../components/admin/AdminToast'
@@ -82,6 +84,8 @@ export default function ClassesPage({
   initialMemberId,
 }: ClassesPageProps = {}) {
   const session = getAdminSession()
+  const { features } = useCenterFeatures()
+  const journalReturnTo = embedded ? '/admin/reservations?tab=class' : '/admin/classes'
   const { toast, setToast, clearToast } = useAdminToast()
   const [weekStart, setWeekStart] = useState(() => startOfWeekMonday(todayDateString()))
   const [classes, setClasses] = useState<FitnessClass[]>([])
@@ -1093,6 +1097,11 @@ export default function ClassesPage({
                             </button>
                           </div>
                         ) : null}
+                        <MemberScheduleActionLinks
+                          memberId={r.member_id}
+                          returnTo={journalReturnTo}
+                          showJournal={features.exercise_log !== false}
+                        />
                       </li>
                     ))}
                   </ul>

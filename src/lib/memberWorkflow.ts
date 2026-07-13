@@ -8,6 +8,7 @@ export type MemberWorkflowStepId =
   | 'payment'
   | 'schedule'
   | 'attendance'
+  | 'records'
   | 'journal'
   | 'renewal'
 
@@ -63,6 +64,13 @@ export function buildMemberWorkflowSteps(input: {
       href: `/admin/attendance?memberId=${memberId}`,
     })
   }
+
+  steps.push({
+    id: 'records',
+    label: '기록',
+    done: false,
+    href: `${base}/records`,
+  })
 
   if (features?.exercise_log !== false) {
     steps.push({

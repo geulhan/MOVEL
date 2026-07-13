@@ -16,14 +16,8 @@ function MemberDetailShellInner() {
   const [searchParams] = useSearchParams()
   const returnTo = searchParams.get('returnTo')
   const { member, loading, error } = useMemberDetail()
-  const isSubPage =
-    location.pathname.endsWith('/journal') ||
-    location.pathname.endsWith('/inbody')
-  const subPageLabel = location.pathname.endsWith('/inbody')
-    ? '인바디'
-    : location.pathname.endsWith('/journal')
-      ? '운동일지'
-      : null
+  const isSubPage = location.pathname.endsWith('/inbody')
+  const subPageLabel = location.pathname.endsWith('/inbody') ? '인바디' : null
   const { features } = useCenterFeatures()
   const mainTabs = getMemberDetailTabs(getAdminSession(), features)
 
