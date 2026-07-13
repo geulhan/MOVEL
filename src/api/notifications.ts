@@ -203,14 +203,18 @@ export function notifyStepVerificationResult(
   })
 }
 
+export type MessageLogWithMember = MessageLog & {
+  member_name: string | null
+}
+
 export async function fetchMessageLogs(
   limit = 100,
   status?: MessageLog['status'] | 'all',
-): Promise<MessageLog[]> {
+): Promise<MessageLogWithMember[]> {
   const centerId = await getCurrentCenterId()
   let query = supabase
     .from('message_logs')
-    .select('*')
+    .select('*, members(name)')
     .eq('center_id', centerId)
     .order('created_at', { ascending: false })
     .limit(limit)
@@ -222,7 +226,17 @@ export async function fetchMessageLogs(
   const { data, error } = await query
 
   if (error) throw error
-  return data ?? []
+
+  return (data ?? []).map((row) => {
+    const members = row.members as { name?: string } | null
+    const { members: _members, ...log } = row as MessageLog & {
+      members?: { name?: string } | null
+    }
+    return {
+      ...log,
+      member_name: members?.name?.trim() || null,
+    }
+  })
 }
 
 async function invokeReminderFunction(functionName: string): Promise<unknown> {

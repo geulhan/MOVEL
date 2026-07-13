@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   fetchMessageLogs,
+  type MessageLogWithMember,
   triggerNotificationCron,
   triggerPtReminders,
   triggerRenewalReminders,
@@ -12,6 +13,7 @@ import { MessagingCreditPanel } from '../../components/admin/MessagingCreditPane
 import { PageHeader } from '../../components/admin/PageHeader'
 import { PAGE_HELP } from '../../lib/pageHelpTips'
 import { MotionHubSupportLink } from '../../components/admin/MotionHubSupportLink'
+import { formatPhone } from '../../api/members'
 import type { MessageCampaignKind } from '../../api/messageCampaigns'
 import {
   MESSAGE_STATUS_LABELS,
@@ -66,7 +68,7 @@ export default function MessagesPage() {
   const [statusFilter, setStatusFilter] = useState<MessageLogStatus | 'all'>(
     'all',
   )
-  const [logs, setLogs] = useState<MessageLog[]>([])
+  const [logs, setLogs] = useState<MessageLogWithMember[]>([])
   const [logsLoading, setLogsLoading] = useState(true)
   const [logsError, setLogsError] = useState<string | null>(null)
   const [cronMessage, setCronMessage] = useState<string | null>(null)
@@ -315,6 +317,7 @@ export default function MessagesPage() {
               <tr className="border-b border-gold/20 bg-cream/60 text-left text-xs text-muted">
                 <th className="px-4 py-3 font-semibold">시간</th>
                 <th className="px-4 py-3 font-semibold">종류</th>
+                <th className="px-4 py-3 font-semibold">회원</th>
                 <th className="px-4 py-3 font-semibold">수신번호</th>
                 <th className="px-4 py-3 font-semibold">상태</th>
                 <th className="px-4 py-3 font-semibold">비고</th>
@@ -323,13 +326,13 @@ export default function MessagesPage() {
             <tbody>
               {logsLoading ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-muted">
+                  <td colSpan={6} className="px-4 py-8 text-center text-muted">
                     불러오는 중…
                   </td>
                 </tr>
               ) : logs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-muted">
+                  <td colSpan={6} className="px-4 py-8 text-center text-muted">
                     발송 이력이 없습니다.
                   </td>
                 </tr>
@@ -343,8 +346,20 @@ export default function MessagesPage() {
                       {MESSAGE_TEMPLATE_LABELS[log.template_key] ??
                         log.template_key}
                     </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {log.member_id && log.member_name ? (
+                        <Link
+                          to={`/admin/member/${log.member_id}`}
+                          className="font-medium text-charcoal underline-offset-2 hover:underline"
+                        >
+                          {log.member_name}
+                        </Link>
+                      ) : (
+                        <span className="text-muted">-</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 whitespace-nowrap font-mono text-xs">
-                      {log.phone}
+                      {log.phone ? formatPhone(log.phone) : '-'}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <StatusBadge status={log.status} />
