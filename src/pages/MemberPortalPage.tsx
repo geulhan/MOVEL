@@ -46,6 +46,7 @@ import { MemberPaymentSection } from '../components/member/MemberPaymentSection'
 import { MemberRewardsSection } from '../components/MemberRewardsSection'
 import { MemberGrowthHubShell } from '../components/member/growth/MemberGrowthHubShell'
 import { PullToRefresh } from '../components/PullToRefresh'
+import { MemberTodayAttendancePanel } from '../components/member/MemberTodayAttendancePanel'
 import { MemberScheduleSection } from '../components/MemberScheduleSection'
 import { MemberClassBookingSection } from '../components/member/MemberClassBookingSection'
 import { MemberJournalPortalSection } from '../components/member/MemberJournalPortalSection'
@@ -136,6 +137,11 @@ export default function MemberPortalPage() {
   function handleFlowNavigate(nextTab: Tab) {
     setTab(nextTab)
   }
+
+  const goToMemberHome = useCallback(() => {
+    setTab('home')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [])
 
   useEffect(() => {
     if (!onboardingFlow || authMode !== 'login') return
@@ -342,6 +348,7 @@ export default function MemberPortalPage() {
       setCheckInConfirmOpen(false)
       try {
         await loadMemberData(member.id)
+        setRefreshToken((token) => token + 1)
       } catch (reloadErr) {
         console.warn('출석 후 회원 정보 갱신 실패:', reloadErr)
       }
@@ -621,7 +628,7 @@ export default function MemberPortalPage() {
       memberName={member.name}
       memberTheme={memberTheme}
       onLogout={handleLogout}
-      onDashboard={() => setTab('home')}
+      onDashboard={goToMemberHome}
     >
       <MemberPortalNav
         activeTab={activeNavTab}
@@ -663,6 +670,21 @@ export default function MemberPortalPage() {
 
         {tab === 'home' && member && (
         <>
+        <MemberTodayAttendancePanel
+          key={refreshToken}
+          memberId={member.id}
+          variant="home"
+          checkIn={{
+            todayAttendance,
+            recentAttendance,
+            checkInLoading,
+            onCheckIn: requestCheckIn,
+            memberStatus: member.status,
+            remainingSessions: member.remaining_sessions,
+            memberExpired,
+          }}
+          onViewAllSchedule={() => setTab('schedule')}
+        />
         <section className={`${cardClass} space-y-4 p-6`}>
           {member.total_sessions === 0 && (
             <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">

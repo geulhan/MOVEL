@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { MotionHubLogo } from '../brand/MotionHubLogo'
 import { useApplyMemberTheme, useMemberThemeVars } from '../../hooks/useMemberTheme'
+import { MOTIONHUB_BRAND_KO } from '../../constants/motionhubSeo'
 import { isPlatformLandingHost } from '../../pages/RootPage'
 import { DEFAULT_CENTER_THEME, type CenterTheme } from '../../types/centerBranding'
 
@@ -51,7 +52,7 @@ export function MemberLayout({
       type="button"
       onClick={onDashboard}
       className="flex shrink-0 items-center transition hover:opacity-90"
-      aria-label="대시보드 (내 정보)"
+      aria-label="회원 메인으로"
     >
       {logo}
     </button>
@@ -94,7 +95,7 @@ export function MemberLayout({
                   {memberName} 님
                 </p>
                 <p className="text-[11px] font-medium text-charcoal/50">
-                  모션허브 회원
+                  {MOTIONHUB_BRAND_KO} 회원
                 </p>
               </div>
             </div>
@@ -139,7 +140,7 @@ export function MemberLayout({
         }`}
       >
         <Link to={homeTo} className="font-medium hover:text-charcoal">
-          모션허브 홈
+          {MOTIONHUB_BRAND_KO} 홈
         </Link>
       </footer>
     </div>
