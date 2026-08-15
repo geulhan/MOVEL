@@ -3,26 +3,19 @@ import {
   getPlazaRingPath,
 } from './campusRoads'
 import { PLAZA_HUB } from './worldLayout'
+import type { NpcCharacterStyle } from '../VillageNpcSprite'
 
 export type VillageNpcDef = {
   id: string
   path: [number, number][]
   dur: number
   delay: number
-  skin: string
-  shirt: string
-  pants: string
-  hair: string
+  style: NpcCharacterStyle
   scale: number
   static?: boolean
   bubble?: string
+  waving?: boolean
 }
-
-const NPCS = [
-  { skin: '#ffcc80', shirt: '#ef5350', pants: '#1565c0', hair: '#4e342e' },
-  { skin: '#ffab91', shirt: '#66bb6a', pants: '#37474f', hair: '#3e2723' },
-  { skin: '#ffe0b2', shirt: '#42a5f5', pants: '#5d4037', hair: '#212121' },
-] as const
 
 let cachedNpcs: VillageNpcDef[] | null = null
 
@@ -43,25 +36,26 @@ export function generateVillageNpcs(): VillageNpcDef[] {
       path: plazaLoop,
       dur: 22,
       delay: 0,
-      ...NPCS[0],
-      scale: 1.35,
+      style: 'walker',
+      scale: 1.45,
     },
     {
       id: 'npc-track-run',
       path: trackLoop,
-      dur: 16,
-      delay: 3,
-      ...NPCS[1],
-      scale: 1.3,
+      dur: 14,
+      delay: 2,
+      style: 'runner',
+      scale: 1.4,
     },
     {
       id: 'npc-plaza-guide',
       path: [[cx + 64, cy + 42] as [number, number]],
       dur: 0,
       delay: 0,
-      ...NPCS[2],
-      scale: 1.4,
+      style: 'guide',
+      scale: 1.5,
       static: true,
+      waving: true,
       bubble: '운동하면 마을이 자라요',
     },
   ]

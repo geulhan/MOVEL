@@ -1,10 +1,20 @@
 import { generateVillageNpcs, pathToSvgD, type VillageNpcDef } from './data/worldNpcs'
+import {
+  NPC_PALETTES,
+  VillageNpcSpeechBubble,
+  VillageNpcSprite,
+} from './VillageNpcSprite'
 
 export function VillageNpcLayer() {
   const npcs = generateVillageNpcs()
 
   return (
     <g id="village-npcs">
+      <defs>
+        <filter id="npc-bubble-shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx={0} dy={2} stdDeviation={2} floodColor="#1a3018" floodOpacity={0.2} />
+        </filter>
+      </defs>
       {npcs.map((npc) => (
         <VillageNpc key={npc.id} npc={npc} />
       ))}
@@ -19,44 +29,27 @@ function NpcBody({
   npc: VillageNpcDef
   showBubble: boolean
 }) {
-  const s = npc.scale
+  const palette = NPC_PALETTES[npc.style]
 
   return (
-    <g transform={`scale(${s})`}>
-      {showBubble && npc.bubble && (
-        <g transform="translate(0, -46)">
-          <rect
-            x={-58}
-            y={-20}
-            width={116}
-            height={24}
-            rx={10}
-            fill="#fffef8"
-            stroke="#5a9e6f"
-            strokeWidth={1.5}
-            opacity={0.96}
+    <g transform={`scale(${npc.scale})`}>
+      {showBubble && npc.bubble && <VillageNpcSpeechBubble text={npc.bubble} />}
+      <g>
+        {!npc.static && (
+          <animateTransform
+            attributeName="transform"
+            type="translate"
+            values="0,0;0,-2;0,0"
+            dur="0.7s"
+            repeatCount="indefinite"
           />
-          <polygon points="-5,4 0,11 5,4" fill="#fffef8" stroke="#5a9e6f" strokeWidth={1} />
-          <text
-            x={0}
-            y={-4}
-            textAnchor="middle"
-            fill="#2d4a28"
-            fontSize={9}
-            fontWeight="600"
-            fontFamily="system-ui, sans-serif"
-          >
-            {npc.bubble}
-          </text>
-        </g>
-      )}
-      <ellipse cx={0} cy={12} rx={10} ry={3.5} fill="rgba(0,0,0,0.18)" />
-      <rect x={-8} y={2} width={16} height={18} rx={5} fill={npc.shirt} stroke="#263238" strokeWidth={1.2} />
-      <rect x={-7} y={18} width={6} height={11} rx={2.5} fill={npc.pants} />
-      <rect x={1} y={18} width={6} height={11} rx={2.5} fill={npc.pants} />
-      <circle cx={0} cy={-7} r={9} fill={npc.skin} stroke="#5d4037" strokeWidth={1.2} />
-      <ellipse cx={0} cy={-11} rx={10} ry={7} fill={npc.hair} />
-      <circle cx={0} cy={-9} r={7} fill={npc.skin} />
+        )}
+        <VillageNpcSprite
+          palette={palette}
+          style={npc.style}
+          waving={npc.waving}
+        />
+      </g>
     </g>
   )
 }
@@ -81,7 +74,6 @@ function VillageNpc({ npc }: { npc: VillageNpcDef }) {
           dur={`${npc.dur}s`}
           begin={`${npc.delay}s`}
           repeatCount="indefinite"
-          rotate="auto"
         >
           <mpath href={`#path-${npc.id}`} />
         </animateMotion>
