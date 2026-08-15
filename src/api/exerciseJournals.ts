@@ -1,4 +1,5 @@
 import { getCurrentCenterId, resolveCenterIdForMember } from '../lib/center'
+import { compressImageForUpload } from '../lib/image/compressImage'
 import { supabase } from '../lib/supabase'
 import { earnGrowthOnWorkoutLog } from './growth/growthEarnService'
 import { awardCustomRulesOnExerciseJournal } from './rewards'
@@ -47,12 +48,24 @@ export async function uploadExerciseJournalPhotos(
       throw new Error('이미지는 10MB 이하만 가능합니다.')
     }
 
-    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+    const uploadFile = await compressImageForUpload(file)
+    if (uploadFile.size > MAX_BYTES) {
+      throw new Error('이미지는 10MB 이하만 가능합니다.')
+    }
+
+    const ext =
+      uploadFile.name.split('.').pop()?.toLowerCase() ||
+      uploadFile.type.split('/').pop() ||
+      'jpg'
     const imagePath = `${memberId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
 
     const { error: uploadError } = await supabase.storage
       .from(BUCKET)
-      .upload(imagePath, file, { cacheControl: '3600', upsert: false })
+      .upload(imagePath, uploadFile, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: uploadFile.type || 'image/jpeg',
+      })
 
     if (uploadError) {
       throw new Error(`이미지 업로드 실패: ${uploadError.message}`)

@@ -58,7 +58,9 @@ export function ExerciseJournalPhotoPicker({
         >
           사진 첨부 ({files.length}/{MAX_PHOTOS})
         </button>
-        <span className="text-xs text-muted">JPEG·PNG·WEBP, 10MB 이하</span>
+        <span className="text-xs text-muted">
+          JPEG·PNG·WEBP, 10MB 이하 · 업로드 시 자동 최적화
+        </span>
       </div>
       <input
         ref={inputRef}
