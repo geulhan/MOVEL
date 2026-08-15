@@ -41,6 +41,10 @@ function EnvPropGraphic({ type }: { type: EnvPropType }) {
       return <DirtPatch />
     case 'grass_patch':
       return <GrassPatch />
+    case 'chicken':
+      return <Chicken />
+    case 'sheep':
+      return <Sheep />
     default:
       return null
   }
@@ -163,6 +167,35 @@ function GrassPatch() {
       {[-6, 0, 6].map((gx) => (
         <line key={gx} x1={gx} y1={6} x2={gx + (gx > 0 ? 2 : -2)} y2={-4} stroke="#558b2f" strokeWidth={1.5} />
       ))}
+    </g>
+  )
+}
+
+function Chicken() {
+  return (
+    <g>
+      <ellipse cx={0} cy={8} rx={10} ry={3} fill="rgba(30,50,25,0.18)" />
+      <ellipse cx={0} cy={2} rx={8} ry={7} fill="#fff8e1" stroke="#f9a825" strokeWidth={1} />
+      <circle cx={6} cy={-2} r={5} fill="#fff8e1" stroke="#f9a825" strokeWidth={1} />
+      <polygon points="10,-2 14,0 10,2" fill="#ff8f00" />
+      <circle cx={7} cy={-3} r={1.2} fill="#263238" />
+      <line x1={-2} y1={8} x2={-2} y2={12} stroke="#ff8f00" strokeWidth={2} />
+      <line x1={2} y1={8} x2={2} y2={12} stroke="#ff8f00" strokeWidth={2} />
+    </g>
+  )
+}
+
+function Sheep() {
+  return (
+    <g>
+      <ellipse cx={0} cy={10} rx={14} ry={4} fill="rgba(30,50,25,0.18)" />
+      <ellipse cx={0} cy={0} rx={12} ry={9} fill="#eceff1" stroke="#b0bec5" strokeWidth={1} />
+      <ellipse cx={-8} cy={2} rx={5} ry={6} fill="#eceff1" stroke="#b0bec5" strokeWidth={0.8} />
+      <ellipse cx={8} cy={2} rx={5} ry={6} fill="#eceff1" stroke="#b0bec5" strokeWidth={0.8} />
+      <circle cx={10} cy={-2} r={5} fill="#cfd8dc" stroke="#90a4ae" strokeWidth={1} />
+      <circle cx={12} cy={-3} r={1} fill="#263238" />
+      <line x1={-6} y1={8} x2={-6} y2={13} stroke="#78909c" strokeWidth={2} />
+      <line x1={6} y1={8} x2={6} y2={13} stroke="#78909c" strokeWidth={2} />
     </g>
   )
 }

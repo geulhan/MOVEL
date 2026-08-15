@@ -58,6 +58,14 @@ export function WorldCentralPlazaGraphic() {
         strokeWidth={3}
       />
       <g>{tiles}</g>
+      <g id="plaza-furniture" opacity={0.95}>
+        <ellipse cx={cx} cy={cy + 12} rx={28} ry={14} fill="#8d6e63" opacity={0.85} />
+        <ellipse cx={cx} cy={cy + 10} rx={22} ry={11} fill="#a1887f" />
+        <rect x={cx - 34} y={cy + 22} width={12} height={10} rx={2} fill="#6d4c41" />
+        <rect x={cx + 22} y={cy + 22} width={12} height={10} rx={2} fill="#6d4c41" />
+        <rect x={cx - 38} y={cy + 18} width={18} height={4} rx={1} fill="#8d6e63" />
+        <rect x={cx + 20} y={cy + 18} width={18} height={4} rx={1} fill="#8d6e63" />
+      </g>
       <ellipse
         cx={cx}
         cy={cy}

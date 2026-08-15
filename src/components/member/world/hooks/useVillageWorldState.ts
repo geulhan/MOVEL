@@ -27,6 +27,7 @@ export type VillageWorldState = {
   nextStageName: string | null
   progressPercent: number
   currentAcorns: number
+  currentMile: number
   pendingAcorns: number
   exerciseEventsSinceCollect: number
   builtFacilityCount: number
@@ -114,7 +115,8 @@ export function useVillageWorldState(
     growthUntilNext: profile?.growth_until_next ?? 0,
     nextStageName: profile?.next_stage_name ?? null,
     progressPercent,
-    currentAcorns: village.state?.current_acorns ?? 0,
+    currentAcorns: profile?.current_acorns ?? village.state?.current_acorns ?? 0,
+    currentMile: profile?.current_mile ?? 0,
     pendingAcorns: village.state?.production?.pending_acorns ?? 0,
     exerciseEventsSinceCollect:
       village.state?.production?.exercise_events_since_collect ?? 0,

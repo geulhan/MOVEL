@@ -17,6 +17,8 @@ export type EnvPropType =
   | 'fence'
   | 'dirt_path'
   | 'grass_patch'
+  | 'chicken'
+  | 'sheep'
 
 export type EnvProp = {
   id: string
@@ -145,6 +147,12 @@ export function generateWorldEnvironment(): EnvProp[] {
     { id: 'fix-lamp-e', type: 'street_lamp', x: 640, y: 512, rot: 0, scale: 1 },
     { id: 'fix-db-w', type: 'dumbbell_rack', x: 384, y: 512, rot: 0, scale: 0.95 },
     { id: 'fix-sign-s', type: 'exercise_sign', x: 512, y: 648, rot: 0, scale: 1 },
+    { id: 'fix-flower-1', type: 'flower_bed', x: 430, y: 580, rot: -4, scale: 1.05 },
+    { id: 'fix-flower-2', type: 'flower_bed', x: 594, y: 575, rot: 6, scale: 1 },
+    { id: 'fix-flower-3', type: 'flower_bed', x: 448, y: 448, rot: 0, scale: 0.95 },
+    { id: 'fix-flower-4', type: 'flower_bed', x: 576, y: 442, rot: 0, scale: 0.95 },
+    { id: 'fix-chicken', type: 'chicken', x: 720, y: 680, rot: 0, scale: 1.1 },
+    { id: 'fix-sheep', type: 'sheep', x: 300, y: 660, rot: 0, scale: 1.15 },
   ]
   props.push(...fixed)
 

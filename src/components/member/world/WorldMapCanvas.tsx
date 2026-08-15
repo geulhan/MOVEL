@@ -119,9 +119,9 @@ export function WorldMapCanvas({
     >
       <defs>
         <linearGradient id="wm-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#87ceeb" />
-          <stop offset="45%" stopColor="#b8dff0" />
-          <stop offset="100%" stopColor="#8ecf7a" />
+          <stop offset="0%" stopColor="#7ec8e8" />
+          <stop offset="40%" stopColor="#b8e0f4" />
+          <stop offset="100%" stopColor="#9ed67a" />
         </linearGradient>
         <radialGradient id="kingdom-glow" cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor="#fffde8" stopOpacity={0.55} />
@@ -162,8 +162,11 @@ export function WorldMapCanvas({
       </defs>
 
       <rect width={ARTBOARD_SIZE} height={300} fill="url(#wm-sky)" />
-      <ellipse cx="220" cy="100" rx={100} ry={36} fill="#ffffff" opacity={0.4} />
-      <ellipse cx={780} cy={85} rx={90} ry={32} fill="#ffffff" opacity={0.35} />
+      <circle cx={820} cy={72} r={42} fill="#fff9c4" opacity={0.92} />
+      <circle cx={820} cy={72} r={52} fill="#fff59d" opacity={0.25} />
+      <ellipse cx="220" cy="100" rx="110" ry="38" fill="#ffffff" opacity={0.45} />
+      <ellipse cx="780" cy="85" rx="100" ry="34" fill="#ffffff" opacity={0.38} />
+      <ellipse cx="480" cy="55" rx="70" ry="24" fill="#ffffff" opacity={0.3} />
 
       <g id="terrain-grass" style={{ imageRendering: 'pixelated' }}>
         <PixelRects rects={terrain.grass} />
@@ -197,7 +200,10 @@ export function WorldMapCanvas({
       <g id="terrain-rocks" style={{ imageRendering: 'pixelated' }} opacity={0.4}>
         <PixelRects rects={terrain.rocks} />
       </g>
-      <g id="terrain-trees" style={{ imageRendering: 'pixelated' }} opacity={0.4}>
+      <g id="terrain-shadows" opacity={0.55}>
+        <PixelRects rects={terrain.groundShadows} />
+      </g>
+      <g id="terrain-trees" style={{ imageRendering: 'pixelated' }} opacity={0.5}>
         <PixelRects rects={terrain.smallTrees} />
       </g>
 
