@@ -50,20 +50,20 @@ export function useWorldMapCamera() {
     const w = el.clientWidth
     const h = el.clientHeight
     const bounds = getVillageBounds()
-    const scale = clamp(Math.min(w, h) / (bounds.width * 1.08), MIN_SCALE, MAX_SCALE)
+    const scale = clamp(Math.min(w, h) / (bounds.width * 1.02), 0.72, 1.35)
     const x = w / 2 - bounds.cx * scale
     const y = h / 2 - bounds.cy * scale
     setCamera({ scale, x, y })
   }, [])
 
   useEffect(() => {
-    fitToKingdomCenter()
+    fitToVillage()
     const el = viewportRef.current
     if (!el) return
-    const ro = new ResizeObserver(() => fitToKingdomCenter())
+    const ro = new ResizeObserver(() => fitToVillage())
     ro.observe(el)
     return () => ro.disconnect()
-  }, [fitToKingdomCenter])
+  }, [fitToVillage])
 
   const screenToWorld = useCallback(
     (clientX: number, clientY: number) => {

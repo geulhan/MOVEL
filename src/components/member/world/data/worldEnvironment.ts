@@ -143,16 +143,12 @@ export function generateWorldEnvironment(): EnvProp[] {
   }
 
   const fixed: EnvProp[] = [
-    { id: 'fix-bench-n', type: 'bench', x: 512, y: 330, rot: 0, scale: 1 },
-    { id: 'fix-lamp-e', type: 'street_lamp', x: 640, y: 512, rot: 0, scale: 1 },
-    { id: 'fix-db-w', type: 'dumbbell_rack', x: 384, y: 512, rot: 0, scale: 0.95 },
-    { id: 'fix-sign-s', type: 'exercise_sign', x: 512, y: 648, rot: 0, scale: 1 },
-    { id: 'fix-flower-1', type: 'flower_bed', x: 430, y: 580, rot: -4, scale: 1.05 },
-    { id: 'fix-flower-2', type: 'flower_bed', x: 594, y: 575, rot: 6, scale: 1 },
-    { id: 'fix-flower-3', type: 'flower_bed', x: 448, y: 448, rot: 0, scale: 0.95 },
-    { id: 'fix-flower-4', type: 'flower_bed', x: 576, y: 442, rot: 0, scale: 0.95 },
-    { id: 'fix-chicken', type: 'chicken', x: 720, y: 680, rot: 0, scale: 1.1 },
-    { id: 'fix-sheep', type: 'sheep', x: 300, y: 660, rot: 0, scale: 1.15 },
+    { id: 'fix-bench-n', type: 'bench', x: 512, y: 348, rot: 0, scale: 1.05 },
+    { id: 'fix-lamp-e', type: 'street_lamp', x: 668, y: 512, rot: 0, scale: 1 },
+    { id: 'fix-flower-1', type: 'flower_bed', x: 392, y: 598, rot: -4, scale: 1.1 },
+    { id: 'fix-flower-2', type: 'flower_bed', x: 632, y: 592, rot: 6, scale: 1.05 },
+    { id: 'fix-chicken', type: 'chicken', x: 748, y: 708, rot: 0, scale: 1.15 },
+    { id: 'fix-sheep', type: 'sheep', x: 268, y: 692, rot: 0, scale: 1.2 },
   ]
   props.push(...fixed)
 
@@ -166,7 +162,7 @@ export function getVillageBounds() {
   return {
     cx: TREE_WORLD.cx,
     cy: TREE_WORLD.cy,
-    width: 470,
-    height: 470,
+    width: 700,
+    height: 700,
   }
 }

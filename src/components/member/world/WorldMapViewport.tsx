@@ -30,7 +30,7 @@ export function WorldMapViewport({
   exerciseEventsSinceCollect = 0,
   className = '',
 }: Props) {
-  const { viewportRef, camera, fitToKingdomCenter, screenToWorld, handlers } =
+  const { viewportRef, camera, fitToVillage, screenToWorld, handlers } =
     useWorldMapCamera()
   const pointerStart = useRef<{ x: number; y: number } | null>(null)
 
@@ -83,7 +83,7 @@ export function WorldMapViewport({
         }
       }}
       onPointerCancel={handlers.onPointerCancel}
-      onDoubleClick={() => fitToKingdomCenter()}
+      onDoubleClick={() => fitToVillage()}
     >
       <div
         className="absolute left-0 top-0 origin-top-left will-change-transform"
@@ -100,8 +100,8 @@ export function WorldMapViewport({
         />
       </div>
 
-      <p className="pointer-events-none absolute bottom-2 left-0 right-0 text-center text-[10px] text-white/50">
-        건물·나무를 눌러 보기 · 드래그로 이동
+      <p className="pointer-events-none absolute bottom-2 left-0 right-0 text-center text-[10px] text-white/55">
+        건물·나무 탭 · 드래그 이동 · 두 번 탭 전체 보기
       </p>
     </div>
   )

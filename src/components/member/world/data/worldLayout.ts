@@ -2,12 +2,12 @@
 
 export const WORLD_SIZE = 1024
 
-/** 운동나무 = 절대 주인공 (화면 비중 60%) */
+/** 운동나무 = 중심 랜드마크 (PNG 에셋 비율) */
 export const TREE_WORLD = {
   cx: 512,
   cy: 512,
-  drawSize: 584,
-  hitRadius: 118,
+  drawSize: 240,
+  hitRadius: 72,
 } as const
 
 /** 중앙 운동광장(타운스퀘어) — 시설 에셋이 아닌 지형 허브 */
@@ -64,10 +64,10 @@ export const UNLOCK_STAGE_LABEL: Record<string, string> = {
   sakura: '벚꽃나무',
 }
 
-const UNIFIED_DRAW = 84
-const UNIFIED_HIT = 52
-const UNIFIED_PLOT_RX = 68
-const UNIFIED_PLOT_RY = 50
+const UNIFIED_DRAW = 148
+const UNIFIED_HIT = 58
+const UNIFIED_PLOT_RX = 78
+const UNIFIED_PLOT_RY = 56
 
 /** 북 트랙 · 동 체육관 · 서 회복 · 남 영양 · 광장=지형 */
 const LAYOUT: Record<
@@ -79,7 +79,7 @@ const LAYOUT: Record<
   gym: { cx: 760, cy: 512 },
   recovery: { cx: 264, cy: 512 },
   nutrition: { cx: 512, cy: 760 },
-  hall: { cx: 688, cy: 648, plotRx: 58, plotRy: 42, drawSize: 72 },
+  hall: { cx: 688, cy: 648, plotRx: 68, plotRy: 48, drawSize: 128 },
 }
 
 function def(

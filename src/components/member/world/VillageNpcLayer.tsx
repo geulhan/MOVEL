@@ -24,25 +24,25 @@ function NpcBody({
   return (
     <g transform={`scale(${s})`}>
       {showBubble && npc.bubble && (
-        <g transform="translate(0, -42)">
+        <g transform="translate(0, -46)">
           <rect
-            x={-52}
-            y={-18}
-            width={104}
-            height={22}
-            rx={8}
+            x={-58}
+            y={-20}
+            width={116}
+            height={24}
+            rx={10}
             fill="#fffef8"
             stroke="#5a9e6f"
-            strokeWidth={1.2}
-            opacity={0.95}
+            strokeWidth={1.5}
+            opacity={0.96}
           />
-          <polygon points="-6,4 0,10 6,4" fill="#fffef8" stroke="#5a9e6f" strokeWidth={1} />
+          <polygon points="-5,4 0,11 5,4" fill="#fffef8" stroke="#5a9e6f" strokeWidth={1} />
           <text
             x={0}
             y={-4}
             textAnchor="middle"
             fill="#2d4a28"
-            fontSize={8}
+            fontSize={9}
             fontWeight="600"
             fontFamily="system-ui, sans-serif"
           >
@@ -50,22 +50,13 @@ function NpcBody({
           </text>
         </g>
       )}
-      <ellipse cx={0} cy={10} rx={9} ry={3} fill="rgba(0,0,0,0.15)" />
-      <rect
-        x={-7}
-        y={0}
-        width={14}
-        height={16}
-        rx={4}
-        fill={npc.shirt}
-        stroke="#263238"
-        strokeWidth={1.2}
-      />
-      <rect x={-6} y={14} width={5} height={10} rx={2} fill={npc.pants} />
-      <rect x={1} y={14} width={5} height={10} rx={2} fill={npc.pants} />
-      <circle cx={0} cy={-6} r={8} fill={npc.skin} stroke="#5d4037" strokeWidth={1.2} />
-      <circle cx={-7} cy={4} r={3} fill={npc.skin} />
-      <circle cx={7} cy={4} r={3} fill={npc.skin} />
+      <ellipse cx={0} cy={12} rx={10} ry={3.5} fill="rgba(0,0,0,0.18)" />
+      <rect x={-8} y={2} width={16} height={18} rx={5} fill={npc.shirt} stroke="#263238" strokeWidth={1.2} />
+      <rect x={-7} y={18} width={6} height={11} rx={2.5} fill={npc.pants} />
+      <rect x={1} y={18} width={6} height={11} rx={2.5} fill={npc.pants} />
+      <circle cx={0} cy={-7} r={9} fill={npc.skin} stroke="#5d4037" strokeWidth={1.2} />
+      <ellipse cx={0} cy={-11} rx={10} ry={7} fill={npc.hair} />
+      <circle cx={0} cy={-9} r={7} fill={npc.skin} />
     </g>
   )
 }

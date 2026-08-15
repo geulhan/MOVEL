@@ -1,23 +1,18 @@
 import { useMemo } from 'react'
-import { PixelRects } from '../pixel/PixelArtboard'
 import { ARTBOARD_SIZE } from '../pixel/pixelTypes'
-import {
-  buildCompleteWorldTerrain,
-  buildConstructionSite,
-  buildLockedMist,
-} from './data/worldMapGenerator'
-import { generateWorldEnvironment } from './data/worldEnvironment'
 import { VILLAGE_BUILDING_EXTERIOR } from './data/villageAssets'
 import { TREE_WORLD, WORLD_BUILDINGS } from './data/worldLayout'
 import type { WorldBuildingState } from './hooks/useVillageWorldState'
 import type { WorldBuildingKey } from './data/worldLayout'
+import { generateWorldEnvironment } from './data/worldEnvironment'
 import { VillageEnvironmentLayer } from './VillageEnvironmentLayer'
 import { VillageNpcLayer } from './VillageNpcLayer'
 import { VillageFloatingRewards } from './VillageFloatingRewards'
 import { BuildingPlotGraphic } from './WorldBuildingPlotLayer'
 import { WorldBuildingExteriorGraphic } from './WorldBuildingExteriorGraphic'
-import { WorldKingdomTreeGraphic } from './WorldKingdomTreeGraphic'
 import { WorldCentralPlazaGraphic } from './WorldCentralPlazaGraphic'
+import { WorldGrassBackdrop } from './WorldGrassBackdrop'
+import { WorldKingdomTreeGraphic } from './WorldKingdomTreeGraphic'
 
 type Props = {
   treeStageKey: string
@@ -27,8 +22,7 @@ type Props = {
   exerciseEventsSinceCollect?: number
 }
 
-/** 시설 30~40% 축소 — 운동나무가 항상 더 크게 */
-const BUILDING_SCALE = 1.22
+const BUILDING_IMG_SCALE = 1.55
 
 type BuildingLayer = {
   key: string
@@ -36,10 +30,46 @@ type BuildingLayer = {
   cy: number
   size: number
   built: boolean
+  unlocked: boolean
   buildingKey: WorldBuildingKey
   imageUrl?: string
-  pixelRects?: ReturnType<typeof buildLockedMist>
   imageOpacity?: number
+}
+
+function LockedBuildingOverlay({
+  cx,
+  cy,
+  groundY,
+  plotRx,
+  plotRy,
+}: {
+  cx: number
+  cy: number
+  groundY: number
+  plotRx: number
+  plotRy: number
+}) {
+  return (
+    <g>
+      <ellipse
+        cx={cx}
+        cy={groundY}
+        rx={plotRx + 4}
+        ry={plotRy + 2}
+        fill="#b0bec5"
+        opacity={0.75}
+      />
+      <text
+        x={cx}
+        y={cy - 8}
+        textAnchor="middle"
+        fontSize={28}
+        opacity={0.85}
+      >
+        🔒
+      </text>
+    </g>
+  )
 }
 
 export function WorldMapCanvas({
@@ -49,11 +79,6 @@ export function WorldMapCanvas({
   isWorldActive = false,
   exerciseEventsSinceCollect = 0,
 }: Props) {
-  const terrain = useMemo(
-    () => buildCompleteWorldTerrain(treeStageKey),
-    [treeStageKey],
-  )
-
   const envProps = useMemo(() => generateWorldEnvironment(), [])
 
   const buildingLayers = useMemo((): BuildingLayer[] => {
@@ -63,17 +88,19 @@ export function WorldMapCanvas({
       const def = WORLD_BUILDINGS.find((d) => d.key === b.key)
       if (def?.terrainOnly) continue
 
-      const size = Math.round(b.drawSize * BUILDING_SCALE)
+      const size = b.drawSize
 
       if (!b.isUnlocked) {
         layers.push({
           key: `${b.key}-locked`,
-          pixelRects: buildLockedMist(b.cx, b.cy),
           cx: b.cx,
           cy: b.cy,
           size,
           built: false,
+          unlocked: false,
           buildingKey: b.key,
+          imageUrl: VILLAGE_BUILDING_EXTERIOR[b.key],
+          imageOpacity: 0.22,
         })
         continue
       }
@@ -81,13 +108,13 @@ export function WorldMapCanvas({
       if (!b.isBuilt) {
         layers.push({
           key: `${b.key}-site`,
-          pixelRects: buildConstructionSite(b.cx, b.cy),
           imageUrl: VILLAGE_BUILDING_EXTERIOR[b.key],
-          imageOpacity: 0.45,
+          imageOpacity: 0.55,
           cx: b.cx,
           cy: b.cy,
           size,
           built: false,
+          unlocked: true,
           buildingKey: b.key,
         })
         continue
@@ -100,6 +127,7 @@ export function WorldMapCanvas({
         cy: b.cy,
         size,
         built: true,
+        unlocked: true,
         buildingKey: b.key,
       })
     }
@@ -119,93 +147,58 @@ export function WorldMapCanvas({
     >
       <defs>
         <linearGradient id="wm-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#7ec8e8" />
-          <stop offset="40%" stopColor="#b8e0f4" />
-          <stop offset="100%" stopColor="#9ed67a" />
+          <stop offset="0%" stopColor="#8ecae6" />
+          <stop offset="55%" stopColor="#c5e8f7" />
+          <stop offset="100%" stopColor="#a8d98a" />
         </linearGradient>
-        <radialGradient id="kingdom-glow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#fffde8" stopOpacity={0.55} />
-          <stop offset="100%" stopColor="#a8e88a" stopOpacity={0} />
+        <radialGradient id="wm-grass-base" cx="50%" cy="48%" r="68%">
+          <stop offset="0%" stopColor="#8ed472" />
+          <stop offset="55%" stopColor="#6cb85c" />
+          <stop offset="100%" stopColor="#4a8f42" />
         </radialGradient>
-        <radialGradient id="meadow-bright" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#e8ffb8" stopOpacity={0.5} />
-          <stop offset="45%" stopColor="#b8f090" stopOpacity={0.22} />
+        <radialGradient id="wm-meadow-glow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#e8ffb8" stopOpacity={0.45} />
           <stop offset="100%" stopColor="#6aab58" stopOpacity={0} />
         </radialGradient>
+        <radialGradient id="wm-vignette" cx="50%" cy="50%" r="58%">
+          <stop offset="55%" stopColor="#000000" stopOpacity={0} />
+          <stop offset="100%" stopColor="#1a3018" stopOpacity={0.22} />
+        </radialGradient>
         <radialGradient id="tree-growth-aura" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#9AEA72" stopOpacity={0.35} />
-          <stop offset="70%" stopColor="#62C44E" stopOpacity={0.1} />
+          <stop offset="0%" stopColor="#9AEA72" stopOpacity={0.28} />
           <stop offset="100%" stopColor="#3E9638" stopOpacity={0} />
         </radialGradient>
         <filter
           id="wm-building-shadow"
-          x="-35%"
-          y="-25%"
-          width="170%"
-          height="160%"
-          colorInterpolationFilters="sRGB"
-        >
-          <feDropShadow dx="0" dy="6" stdDeviation="5" floodColor="#0f2010" floodOpacity="0.45" />
-          <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#000000" floodOpacity="0.22" />
-        </filter>
-        <filter
-          id="wm-tree-shadow"
           x="-40%"
           y="-30%"
           width="180%"
           height="170%"
           colorInterpolationFilters="sRGB"
         >
-          <feDropShadow dx="0" dy="12" stdDeviation="10" floodColor="#142810" floodOpacity="0.5" />
-          <feDropShadow dx="0" dy="5" stdDeviation="4" floodColor="#000000" floodOpacity="0.25" />
+          <feDropShadow dx="0" dy="8" stdDeviation="6" floodColor="#0f2010" floodOpacity="0.4" />
+        </filter>
+        <filter
+          id="wm-tree-shadow"
+          x="-35%"
+          y="-25%"
+          width="170%"
+          height="160%"
+          colorInterpolationFilters="sRGB"
+        >
+          <feDropShadow dx="0" dy="10" stdDeviation="8" floodColor="#142810" floodOpacity="0.45" />
         </filter>
       </defs>
 
-      <rect width={ARTBOARD_SIZE} height={300} fill="url(#wm-sky)" />
-      <circle cx={820} cy={72} r={42} fill="#fff9c4" opacity={0.92} />
-      <circle cx={820} cy={72} r={52} fill="#fff59d" opacity={0.25} />
-      <ellipse cx="220" cy="100" rx="110" ry="38" fill="#ffffff" opacity={0.45} />
-      <ellipse cx="780" cy="85" rx="100" ry="34" fill="#ffffff" opacity={0.38} />
-      <ellipse cx="480" cy="55" rx="70" ry="24" fill="#ffffff" opacity={0.3} />
+      <rect width={ARTBOARD_SIZE} height={280} fill="url(#wm-sky)" />
+      <circle cx={800} cy={68} r={38} fill="#fff9c4" />
+      <circle cx={800} cy={68} r={50} fill="#fff59d" opacity={0.22} />
+      <ellipse cx={200} cy={90} rx={95} ry={32} fill="#ffffff" opacity={0.5} />
+      <ellipse cx={760} cy={78} rx={85} ry={28} fill="#ffffff" opacity={0.42} />
 
-      <g id="terrain-grass" style={{ imageRendering: 'pixelated' }}>
-        <PixelRects rects={terrain.grass} />
-      </g>
-      <g id="terrain-elevation" opacity={0.7} style={{ imageRendering: 'pixelated' }}>
-        <PixelRects rects={terrain.elevation} />
-      </g>
-      <g id="terrain-forest" style={{ imageRendering: 'pixelated' }}>
-        <PixelRects rects={terrain.forest} />
-      </g>
-      <g id="terrain-paths" style={{ imageRendering: 'pixelated' }}>
-        <PixelRects rects={terrain.paths} />
-      </g>
-
-      <ellipse
-        cx={TREE_WORLD.cx}
-        cy={TREE_WORLD.cy}
-        rx={268}
-        ry={215}
-        fill="url(#meadow-bright)"
-      />
-
-      <g id="terrain-plaza" style={{ imageRendering: 'pixelated' }}>
-        <PixelRects rects={terrain.plaza} />
-      </g>
+      <WorldGrassBackdrop />
 
       <WorldCentralPlazaGraphic />
-
-      <VillageEnvironmentLayer props={envProps} />
-
-      <g id="terrain-rocks" style={{ imageRendering: 'pixelated' }} opacity={0.4}>
-        <PixelRects rects={terrain.rocks} />
-      </g>
-      <g id="terrain-shadows" opacity={0.55}>
-        <PixelRects rects={terrain.groundShadows} />
-      </g>
-      <g id="terrain-trees" style={{ imageRendering: 'pixelated' }} opacity={0.5}>
-        <PixelRects rects={terrain.smallTrees} />
-      </g>
 
       <g id="building-plots">
         {WORLD_BUILDINGS.filter((def) => !def.terrainOnly).map((def) => {
@@ -221,15 +214,17 @@ export function WorldMapCanvas({
         })}
       </g>
 
-      <g id="buildings" opacity={0.95}>
+      <VillageEnvironmentLayer props={envProps} />
+
+      <g id="buildings">
         {buildingLayers.map((layer) => {
           const def = WORLD_BUILDINGS.find((d) => d.key === layer.buildingKey)
-          const plotRy = def?.plotRy ?? 50
-          const imgW = layer.size * 1.18
-          const imgH = layer.size * 1.18
+          const plotRy = def?.plotRy ?? 56
+          const imgW = layer.size * BUILDING_IMG_SCALE
+          const imgH = layer.size * BUILDING_IMG_SCALE
           const imgX = layer.cx - imgW / 2
           const groundY = layer.cy + 14
-          const imgY = groundY - imgH + plotRy * 0.35
+          const imgY = groundY - imgH + plotRy * 0.42
 
           return (
             <g key={layer.key}>
@@ -242,26 +237,46 @@ export function WorldMapCanvas({
                   imgY={imgY}
                   imgW={imgW}
                   imgH={imgH}
-                  plotRx={def?.plotRx ?? 68}
+                  plotRx={def?.plotRx ?? 78}
                   plotRy={plotRy}
                   opacity={layer.imageOpacity ?? 1}
                 />
               )}
-              {layer.pixelRects && (
-                <g style={{ imageRendering: 'pixelated' }}>
-                  <PixelRects rects={layer.pixelRects} />
-                </g>
+              {!layer.unlocked && (
+                <LockedBuildingOverlay
+                  cx={layer.cx}
+                  cy={layer.cy}
+                  groundY={groundY}
+                  plotRx={def?.plotRx ?? 78}
+                  plotRy={plotRy}
+                />
+              )}
+              {layer.unlocked && !layer.built && (
+                <text
+                  x={layer.cx}
+                  y={layer.cy - 20}
+                  textAnchor="middle"
+                  fill="#5d4037"
+                  fontSize={11}
+                  fontWeight="700"
+                  fontFamily="system-ui,sans-serif"
+                  stroke="#fff"
+                  strokeWidth={3}
+                  paintOrder="stroke"
+                >
+                  건설 가능
+                </text>
               )}
               {selectedBuildingKey === layer.buildingKey && (
                 <ellipse
                   cx={layer.cx}
                   cy={groundY}
-                  rx={(def?.plotRx ?? 68) + 6}
-                  ry={(def?.plotRy ?? 50) + 4}
+                  rx={(def?.plotRx ?? 78) + 8}
+                  ry={(def?.plotRy ?? 56) + 5}
                   fill="none"
-                  stroke="#ffca28"
+                  stroke="#ffc107"
                   strokeWidth={3}
-                  opacity={0.9}
+                  opacity={0.95}
                 />
               )}
             </g>
@@ -269,37 +284,21 @@ export function WorldMapCanvas({
         })}
       </g>
 
-      <ellipse
-        cx={TREE_WORLD.cx}
-        cy={TREE_WORLD.cy + 62}
-        rx={treeSize * 0.3}
-        ry={treeSize * 0.09}
-        fill="#142810"
-        opacity={0.38}
-      />
-
       <g id="tree-aura" pointerEvents="none">
         <circle
           cx={TREE_WORLD.cx}
           cy={TREE_WORLD.cy}
-          r={treeSize * 0.46}
+          r={treeSize * 0.52}
           fill="url(#tree-growth-aura)"
-          opacity={isWorldActive ? 0.9 : 0.55}
+          opacity={isWorldActive ? 0.85 : 0.5}
         >
           <animate
             attributeName="opacity"
-            values={isWorldActive ? '0.7;1;0.7' : '0.45;0.65;0.45'}
+            values={isWorldActive ? '0.65;0.9;0.65' : '0.4;0.55;0.4'}
             dur="4s"
             repeatCount="indefinite"
           />
         </circle>
-        <ellipse
-          cx={TREE_WORLD.cx}
-          cy={TREE_WORLD.cy}
-          rx={treeSize * 0.38}
-          ry={treeSize * 0.32}
-          fill="url(#kingdom-glow)"
-        />
       </g>
 
       <g id="hero-tree">
