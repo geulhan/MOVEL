@@ -12,6 +12,7 @@ import {
   type PeriodPass,
   type PtPayment,
   type PtSessionLog,
+  type PtSettlementOptions,
 } from '../lib/recognitionRevenue'
 import { supabase } from '../lib/supabase'
 import type { BusinessAnalyticsSnapshot } from '../types/businessAnalytics'
@@ -28,8 +29,14 @@ import { fetchContractSettings } from './contractSettings'
 import { isRenewalTarget } from '../utils/renewal'
 import { normalizeMember } from '../lib/memberNormalize'
 import type { Member, Trainer } from '../types/database'
-import { resolveTrainerSettlementRate } from '../lib/trainerSettlement'
+import {
+  resolveTrainerFixedAmount,
+  resolveTrainerSettlementMode,
+  resolveTrainerSettlementRate,
+} from '../lib/trainerSettlement'
 import { fetchMonthlyOperationalSignals } from './monthlyReportSignals'
+import { fetchPtPricing, ptSettlementOptionsFromPricing } from './pricing'
+import { paymentSettlementBaseAmount } from '../lib/vatSettlement'
 
 type CenterPassAnalyticsRow = {
   id: string
@@ -248,12 +255,14 @@ function isEligibleForAverageSessionPrice(member: Member): boolean {
 function computeAverageSessionPrice(
   members: Member[],
   ptPayments: PtPayment[],
+  ptSettlementOptions: PtSettlementOptions,
 ): {
   averageSessionPrice: number
   totalPayment: number
   totalSessions: number
   memberCount: number
 } {
+  const excludeVat = ptSettlementOptions.excludeVatFromSettlement === true
   const eligibleIds = new Set(
     members.filter(isEligibleForAverageSessionPrice).map((member) => member.id),
   )
@@ -271,14 +280,17 @@ function computeAverageSessionPrice(
 
   if (relevantPayments.length > 0) {
     for (const payment of relevantPayments) {
-      totalPayment += payment.amount
+      totalPayment += paymentSettlementBaseAmount(payment.amount, excludeVat)
       totalSessions += payment.sessions
       countedMembers.add(payment.memberId)
     }
   } else {
     for (const member of members) {
       if (!eligibleIds.has(member.id)) continue
-      totalPayment += Number(member.payment_amount)
+      totalPayment += paymentSettlementBaseAmount(
+        Number(member.payment_amount),
+        excludeVat,
+      )
       totalSessions += Number(member.total_sessions)
       countedMembers.add(member.id)
     }
@@ -406,6 +418,7 @@ function computeTrainerPayrollTotal(
   year: number,
   month: number,
   totalPtRecognized: number,
+  ptSettlementOptions: PtSettlementOptions,
 ): number {
   const trainerIds = new Set(
     memberTrainers
@@ -424,6 +437,7 @@ function computeTrainerPayrollTotal(
       trainerId,
       year,
       month,
+      ptSettlementOptions,
     )
     if (recognized <= 0) continue
 
@@ -440,12 +454,31 @@ function computeTrainerPayrollTotal(
   return trainerPayroll
 }
 
+function computeOwnerTrainerPayroll(
+  ownerTrainerId: string | null,
+  trainers: Trainer[],
+  defaultRate: number,
+  ownerPtRecognized: number,
+  ownerSessions: number,
+): number {
+  if (!ownerTrainerId) return 0
+
+  const mode = resolveTrainerSettlementMode(ownerTrainerId, trainers)
+  if (mode === 'fixed') {
+    return resolveTrainerFixedAmount(ownerTrainerId, trainers) * ownerSessions
+  }
+
+  const rate = resolveTrainerSettlementRate(ownerTrainerId, trainers, defaultRate)
+  return Math.round(ownerPtRecognized * (rate / 100))
+}
+
 function buildSnapshotForMonth(
   inputs: Awaited<ReturnType<typeof loadRecognitionInputs>>,
   settings: Awaited<ReturnType<typeof fetchBusinessAnalyticsSettings>>,
   contractSettings: Awaited<ReturnType<typeof fetchContractSettings>>,
   year: number,
   month: number,
+  ptSettlementOptions: PtSettlementOptions,
 ): Omit<BusinessAnalyticsSnapshot, 'monthlyReport' | 'operational' | 'priorOperational'> {
   const cashBreakdown = cashRevenueBreakdownForMonth(inputs.payments, year, month)
   const cashRevenue = cashBreakdown.total
@@ -463,13 +496,18 @@ function buildSnapshotForMonth(
     inputs.sessionLogs,
     year,
     month,
+    ptSettlementOptions,
   )
   const totalRecognized = centerPassRecognized + ptRecognized
 
   const today = new Date().toISOString().slice(0, 10)
   const daysPerSession = contractSettings.ptRefundDaysPerSession
   const centerPassPrepaid = centerPassPrepaidBalance(inputs.periodPasses, today)
-  const ptPrepaid = ptPrepaidBalance(inputs.ptPayments, inputs.sessionLogs)
+  const ptPrepaid = ptPrepaidBalance(
+    inputs.ptPayments,
+    inputs.sessionLogs,
+    ptSettlementOptions,
+  )
   const totalPrepaid = centerPassPrepaid + ptPrepaid
 
   const centerPassSplit = splitCenterPassPrepaidByRefundWindow(
@@ -487,6 +525,7 @@ function buildSnapshotForMonth(
     inputs.sessionLogs,
     daysPerSession,
     today,
+    ptSettlementOptions,
   )
 
   const centerPassRefundRisk = centerPassSplit.refundable + facilitySplit.refundable
@@ -505,6 +544,7 @@ function buildSnapshotForMonth(
     year,
     month,
     ptRecognized,
+    ptSettlementOptions,
   )
   const centerPtShare = ptRecognized - trainerPayroll
 
@@ -514,7 +554,7 @@ function buildSnapshotForMonth(
     totalPayment: registeredPtTotalAmount,
     totalSessions: registeredPtTotalSessions,
     memberCount: registeredMemberCount,
-  } = computeAverageSessionPrice(members, inputs.ptPayments)
+  } = computeAverageSessionPrice(members, inputs.ptPayments, ptSettlementOptions)
 
   const ownerMemberIds = settings.ownerTrainerId
     ? new Set(
@@ -532,7 +572,6 @@ function buildSnapshotForMonth(
         month,
       )
     : 0
-  const ownerPayroll = ownerSessions * averageSessionPrice
 
   const ownerPtRecognized = settings.ownerTrainerId
     ? ptRecognizedByTrainer(
@@ -542,8 +581,17 @@ function buildSnapshotForMonth(
         settings.ownerTrainerId,
         year,
         month,
+        ptSettlementOptions,
       )
     : 0
+
+  const ownerPayroll = computeOwnerTrainerPayroll(
+    settings.ownerTrainerId,
+    inputs.trainers,
+    settings.trainerSettlementRate,
+    ownerPtRecognized,
+    ownerSessions,
+  )
 
   const fixedCostsTotal = sumFixedCosts(settings.fixedCosts)
   const taxReserve = Math.round(
@@ -556,7 +604,6 @@ function buildSnapshotForMonth(
   const netProfit =
     totalRecognized -
     trainerPayroll -
-    ownerPayroll -
     fixedCostsTotal -
     taxReserve -
     facilityReserve
@@ -656,11 +703,13 @@ export async function fetchBusinessAnalytics(
   const targetMonth = month ?? now.getMonth() + 1
 
   const centerId = await getCurrentCenterId()
-  const [settings, contractSettings, inputs] = await Promise.all([
+  const [settings, contractSettings, inputs, ptPricing] = await Promise.all([
     fetchBusinessAnalyticsSettings(),
     fetchContractSettings(),
     loadRecognitionInputs(centerId),
+    fetchPtPricing(),
   ])
+  const ptSettlementOptions = ptSettlementOptionsFromPricing(ptPricing)
 
   const snapshot = buildSnapshotForMonth(
     inputs,
@@ -668,6 +717,7 @@ export async function fetchBusinessAnalytics(
     contractSettings,
     targetYear,
     targetMonth,
+    ptSettlementOptions,
   )
 
   const monthlyReport = []
@@ -679,6 +729,7 @@ export async function fetchBusinessAnalytics(
       contractSettings,
       y,
       m,
+      ptSettlementOptions,
     )
     const members = inputs.members
     const activeMembers = members.filter((member) => member.status === 'active').length

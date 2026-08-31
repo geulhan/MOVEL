@@ -50,7 +50,15 @@ function normalizePricing(
         .sort((a, b) => a.sort_order - b.sort_order)
     : []
 
-  if (packages.length > 0) return { packages }
+  if (packages.length > 0) {
+    const excludeVatFromSettlement = Boolean(
+      value &&
+        typeof value === 'object' &&
+        (value as { excludeVatFromSettlement?: unknown }).excludeVatFromSettlement ===
+          true,
+    )
+    return { packages, excludeVatFromSettlement }
+  }
   return category === 'pt' ? DEFAULT_PT_PRICING : { packages: [] }
 }
 
@@ -122,7 +130,12 @@ export async function saveSessionPassPricing(
   }
 
   const payload = {
-    setting_value: { packages } as const,
+    setting_value: {
+      packages,
+      ...(category === 'pt'
+        ? { excludeVatFromSettlement: config.excludeVatFromSettlement === true }
+        : {}),
+    } as const,
     description: `${label} 기본 가격`,
     updated_at: new Date().toISOString(),
   }
@@ -174,4 +187,10 @@ export function findPackageById(
   packageId: string,
 ): PtPackage | undefined {
   return config.packages.find((pkg) => pkg.id === packageId)
+}
+
+export function ptSettlementOptionsFromPricing(
+  config: PtPricingConfig,
+): { excludeVatFromSettlement: boolean } {
+  return { excludeVatFromSettlement: config.excludeVatFromSettlement === true }
 }

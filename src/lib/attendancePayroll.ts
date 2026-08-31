@@ -6,6 +6,7 @@ import {
   memberNextSessionUnitPrice,
   type PtPayment,
   type PtSessionLog,
+  type PtSettlementOptions,
 } from './recognitionRevenue'
 import {
   calculateTrainerPay,
@@ -36,8 +37,9 @@ export function memberSessionUnitPriceForPayroll(
   memberId: string,
   payments: PtPayment[],
   sessionLogs: PtSessionLog[],
+  options?: PtSettlementOptions,
 ): number {
-  return memberNextSessionUnitPrice(payments, sessionLogs, memberId)
+  return memberNextSessionUnitPrice(payments, sessionLogs, memberId, options)
 }
 
 function matchSessionLogToAttendance(
@@ -57,12 +59,13 @@ function resolveAttendanceUnitPrice(
   payments: PtPayment[],
   sessionLogs: PtSessionLog[],
   priceByLogId: Map<string, number>,
+  options?: PtSettlementOptions,
 ): number {
   const matchedLog = sessionLogs.find((log) => matchSessionLogToAttendance(log, attendance))
   if (matchedLog) {
     return priceByLogId.get(matchedLog.id) ?? 0
   }
-  return memberNextSessionUnitPrice(payments, sessionLogs, attendance.member_id)
+  return memberNextSessionUnitPrice(payments, sessionLogs, attendance.member_id, options)
 }
 
 export type TrainerPayrollSummaryRow = {
@@ -241,10 +244,15 @@ export function buildAttendancePayrollSummary(
   classSessions: ClassTrainerSessionPayroll[] = [],
   payments: PtPayment[] = [],
   sessionLogs: PtSessionLog[] = [],
+  ptSettlementOptions?: PtSettlementOptions,
 ): AttendancePayrollSummary {
   const memberById = new Map(members.map((member) => [member.id, member]))
   const byTrainer = new Map<string, TrainerBucket>()
-  const priceByLogId = buildSessionLogUnitPriceMap(payments, sessionLogs)
+  const priceByLogId = buildSessionLogUnitPriceMap(
+    payments,
+    sessionLogs,
+    ptSettlementOptions,
+  )
 
   for (const log of logs) {
     const member = memberById.get(log.member_id)
@@ -256,7 +264,13 @@ export function buildAttendancePayrollSummary(
     )
     const unitPrice =
       payments.length > 0
-        ? resolveAttendanceUnitPrice(log, payments, sessionLogs, priceByLogId)
+        ? resolveAttendanceUnitPrice(
+            log,
+            payments,
+            sessionLogs,
+            priceByLogId,
+            ptSettlementOptions,
+          )
         : member
           ? memberSessionUnitPrice(member)
           : 0

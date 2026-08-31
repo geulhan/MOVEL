@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { fetchPtPricing, savePtPricing } from '../../api/pricing'
 import { formatCurrency } from '../../api/members'
 import type { PtPackage } from '../../constants/pricing'
+import { excludeVatFromPaymentAmount } from '../../lib/vatSettlement'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/theme'
 
 function emptyPackage(sortOrder: number): PtPackage {
@@ -17,6 +18,7 @@ function emptyPackage(sortOrder: number): PtPackage {
 
 export function PtPricingEditor() {
   const [packages, setPackages] = useState<PtPackage[]>([])
+  const [excludeVatFromSettlement, setExcludeVatFromSettlement] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -28,6 +30,7 @@ export function PtPricingEditor() {
       try {
         const pricing = await fetchPtPricing()
         setPackages(pricing.packages)
+        setExcludeVatFromSettlement(pricing.excludeVatFromSettlement === true)
       } catch (err) {
         setError(
           err instanceof Error ? err.message : '가격 설정을 불러올 수 없습니다.',
@@ -57,7 +60,7 @@ export function PtPricingEditor() {
     setError(null)
     setMessage(null)
     try {
-      await savePtPricing({ packages })
+      await savePtPricing({ packages, excludeVatFromSettlement })
       setMessage('기본 가격이 저장되었습니다.')
     } catch (err) {
       setError(err instanceof Error ? err.message : '저장에 실패했습니다.')
@@ -78,6 +81,21 @@ export function PtPricingEditor() {
           결제 요청·회원 온라인 결제 시 기본으로 제시되는 패키지입니다. 회원별
           할인은 결제 요청에서 별도 적용합니다.
         </p>
+        <label className="mt-4 flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={excludeVatFromSettlement}
+            onChange={(e) => setExcludeVatFromSettlement(e.target.checked)}
+          />
+          <span>
+            <span className="font-medium text-charcoal">부가세(10%) 제외 후 정산</span>
+            <span className="mt-0.5 block text-xs text-muted">
+              카드 결제액에서 부가세를 뺀 공급가액 기준으로 PT 인식매출·강사 수업료·출석
+              정산을 계산합니다. (결제액 ÷ 1.1)
+            </span>
+          </span>
+        </label>
       </div>
 
       {error && (
@@ -159,7 +177,19 @@ export function PtPricingEditor() {
               </button>
             </div>
             <p className="sm:col-span-5 text-xs text-muted">
-              회당 {formatCurrency(Math.round(pkg.amount / Math.max(pkg.sessions, 1)))}
+              회당 결제액 {formatCurrency(Math.round(pkg.amount / Math.max(pkg.sessions, 1)))}
+              {excludeVatFromSettlement && (
+                <>
+                  {' '}
+                  · 정산 기준{' '}
+                  {formatCurrency(
+                    Math.round(
+                      excludeVatFromPaymentAmount(pkg.amount) /
+                        Math.max(pkg.sessions, 1),
+                    ),
+                  )}
+                </>
+              )}
             </p>
           </div>
         ))}

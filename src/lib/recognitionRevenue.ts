@@ -1,3 +1,9 @@
+import {
+  isPtVatExcluded,
+  paymentPerSessionBaseAmount,
+  type PtSettlementOptions,
+} from './vatSettlement'
+
 export type PeriodPass = {
   id: string
   startsAt: string
@@ -25,6 +31,8 @@ export type MemberTrainer = {
   memberId: string
   trainerId: string | null
 }
+
+export type { PtSettlementOptions }
 
 function parseDateOnly(value: string): Date {
   return new Date(`${String(value).slice(0, 10)}T12:00:00`)
@@ -104,14 +112,18 @@ type FifoPackage = {
   remaining: number
 }
 
-function buildMemberFifo(payments: PtPayment[]): FifoPackage[] {
+function buildMemberFifo(
+  payments: PtPayment[],
+  options?: PtSettlementOptions,
+): FifoPackage[] {
+  const excludeVat = isPtVatExcluded(options)
   return payments
     .filter((p) => p.sessions > 0 && p.amount > 0)
     .sort((a, b) => a.paidAt.localeCompare(b.paidAt))
     .map((p) => ({
       id: p.id,
       sessions: p.sessions,
-      perSession: p.amount / p.sessions,
+      perSession: paymentPerSessionBaseAmount(p.amount, p.sessions, excludeVat),
       remaining: p.sessions,
     }))
 }
@@ -120,6 +132,7 @@ function buildMemberFifo(payments: PtPayment[]): FifoPackage[] {
 export function buildSessionLogUnitPriceMap(
   payments: PtPayment[],
   logs: PtSessionLog[],
+  options?: PtSettlementOptions,
 ): Map<string, number> {
   const paymentsByMember = new Map<string, PtPayment[]>()
   for (const payment of payments) {
@@ -139,7 +152,7 @@ export function buildSessionLogUnitPriceMap(
   const priceByLogId = new Map<string, number>()
 
   for (const [memberId, memberLogs] of logsByMember) {
-    const fifo = buildMemberFifo(paymentsByMember.get(memberId) ?? [])
+    const fifo = buildMemberFifo(paymentsByMember.get(memberId) ?? [], options)
     const sorted = [...memberLogs].sort((a, b) =>
       a.deductedAt.localeCompare(b.deductedAt),
     )
@@ -166,11 +179,12 @@ export function memberNextSessionUnitPrice(
   payments: PtPayment[],
   logs: PtSessionLog[],
   memberId: string,
+  options?: PtSettlementOptions,
 ): number {
   const memberPayments = payments.filter(
     (payment) => payment.memberId === memberId && payment.sessions > 0 && payment.amount > 0,
   )
-  const fifo = buildMemberFifo(memberPayments)
+  const fifo = buildMemberFifo(memberPayments, options)
   const memberLogs = logs
     .filter((log) => log.memberId === memberId)
     .sort((a, b) => a.deductedAt.localeCompare(b.deductedAt))
@@ -210,9 +224,10 @@ export function recognizePtRevenue(
   logs: PtSessionLog[],
   year: number,
   month: number,
+  options?: PtSettlementOptions,
 ): number {
   const { start, end } = monthBounds(year, month)
-  return Math.round(recognizePtRevenueDetailed(payments, logs, start, end))
+  return Math.round(recognizePtRevenueDetailed(payments, logs, start, end, options))
 }
 
 function recognizePtRevenueDetailed(
@@ -220,6 +235,7 @@ function recognizePtRevenueDetailed(
   logs: PtSessionLog[],
   monthStart: string,
   monthEnd: string,
+  options?: PtSettlementOptions,
 ): number {
   const byMember = new Map<string, PtPayment[]>()
   for (const payment of payments) {
@@ -231,7 +247,7 @@ function recognizePtRevenueDetailed(
   let total = 0
 
   for (const [memberId, memberPayments] of byMember) {
-    const fifo = buildMemberFifo(memberPayments)
+    const fifo = buildMemberFifo(memberPayments, options)
     const memberLogs = logs
       .filter((log) => log.memberId === memberId)
       .sort((a, b) => a.deductedAt.localeCompare(b.deductedAt))
@@ -249,7 +265,11 @@ function recognizePtRevenueDetailed(
   return total
 }
 
-export function ptPrepaidBalance(payments: PtPayment[], logs: PtSessionLog[]): number {
+export function ptPrepaidBalance(
+  payments: PtPayment[],
+  logs: PtSessionLog[],
+  options?: PtSettlementOptions,
+): number {
   const byMember = new Map<string, PtPayment[]>()
   for (const payment of payments) {
     const list = byMember.get(payment.memberId) ?? []
@@ -260,7 +280,7 @@ export function ptPrepaidBalance(payments: PtPayment[], logs: PtSessionLog[]): n
   let total = 0
 
   for (const [memberId, memberPayments] of byMember) {
-    const fifo = buildMemberFifo(memberPayments)
+    const fifo = buildMemberFifo(memberPayments, options)
     const memberLogs = logs
       .filter((log) => log.memberId === memberId)
       .sort((a, b) => a.deductedAt.localeCompare(b.deductedAt))
@@ -301,6 +321,7 @@ export function ptRecognizedByTrainer(
   trainerId: string,
   year: number,
   month: number,
+  options?: PtSettlementOptions,
 ): number {
   const memberIds = new Set(
     members.filter((m) => m.trainerId === trainerId).map((m) => m.memberId),
@@ -311,7 +332,7 @@ export function ptRecognizedByTrainer(
   const filteredLogs = logs.filter((l) => memberIds.has(l.memberId))
   const { start, end } = monthBounds(year, month)
   return Math.round(
-    recognizePtRevenueDetailed(filteredPayments, filteredLogs, start, end),
+    recognizePtRevenueDetailed(filteredPayments, filteredLogs, start, end, options),
   )
 }
 

@@ -9,6 +9,8 @@ export type PtPackage = {
 
 export type PtPricingConfig = {
   packages: PtPackage[]
+  /** 카드 결제액에서 부가세(10%)를 제외한 금액으로 PT 정산·인식매출 계산 */
+  excludeVatFromSettlement?: boolean
 }
 
 export const DEFAULT_PT_PACKAGES: PtPackage[] = [
@@ -40,6 +42,7 @@ export const DEFAULT_PT_PACKAGES: PtPackage[] = [
 
 export const DEFAULT_PT_PRICING: PtPricingConfig = {
   packages: DEFAULT_PT_PACKAGES,
+  excludeVatFromSettlement: false,
 }
 
 export const PAYMENT_REQUEST_EXPIRY_DAYS = 14

@@ -8,6 +8,7 @@ import {
 } from '../../api/businessAnalyticsSettings'
 import { formatCurrency } from '../../api/members'
 import { fetchTrainers } from '../../api/trainers'
+import { fetchPtPricing } from '../../api/pricing'
 import { BusinessMonthlyReportPanel } from '../../components/admin/BusinessMonthlyReportPanel'
 import { MotionHubAiAssistantPanel } from '../../components/admin/MotionHubAiAssistantPanel'
 import { PageHeader } from '../../components/admin/PageHeader'
@@ -183,6 +184,10 @@ function SettingsPanel({
               </option>
             ))}
           </select>
+          <p className="mt-1 text-xs text-muted">
+            대표가 직접 수업한 회원의 수업료 정산액을 참고용으로 표시합니다. 순이익에는
+            트레이너 지급액에 이미 반영되며, 수업료 0%이면 대표 인건비도 0원입니다.
+          </p>
         </label>
 
         <label className="block text-sm">
@@ -293,6 +298,7 @@ export default function BusinessAnalyticsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showSettings, setShowSettings] = useState(false)
+  const [excludeVatFromSettlement, setExcludeVatFromSettlement] = useState(false)
 
   useEffect(() => {
     setTab(parseAnalyticsTab(searchParams.get('tab')))
@@ -306,14 +312,16 @@ export default function BusinessAnalyticsPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [snapshot, nextSettings, trainerRows] = await Promise.all([
+      const [snapshot, nextSettings, trainerRows, ptPricing] = await Promise.all([
         fetchBusinessAnalytics(year, month),
         fetchBusinessAnalyticsSettings(),
         fetchTrainers(),
+        fetchPtPricing(),
       ])
       setData(snapshot)
       setSettings(nextSettings)
       setTrainers(trainerRows)
+      setExcludeVatFromSettlement(ptPricing.excludeVatFromSettlement === true)
       setError(null)
     } catch (err) {
       setError(formatSupabaseError(err))
@@ -457,7 +465,11 @@ export default function BusinessAnalyticsPage() {
               <KpiCard
                 label="PT 인식매출"
                 value={formatCurrency(data.ptRecognized)}
-                sub="이번 달 소진 회차 기준"
+                sub={
+                  excludeVatFromSettlement
+                    ? '이번 달 소진 회차 · 부가세 제외 기준'
+                    : '이번 달 소진 회차 기준'
+                }
               />
               <KpiCard
                 label="총 인식매출"
@@ -528,7 +540,11 @@ export default function BusinessAnalyticsPage() {
               <KpiCard
                 label="대표 인건비"
                 value={formatCurrency(data.ownerPayroll)}
-                sub={`이번 달 ${data.ownerSessions}회 × 평균 ${formatCurrency(data.averageSessionPrice)}`}
+                sub={
+                  settings.ownerTrainerId
+                    ? `대표 트레이너 ${data.ownerSessions}회 · 트레이너 지급액에 포함`
+                    : '대표 트레이너 미지정'
+                }
               />
               <KpiCard label="고정비" value={formatCurrency(data.fixedCostsTotal)} />
               <KpiCard

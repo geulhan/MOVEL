@@ -1,5 +1,9 @@
 import { addDays } from '../utils/dates'
-import type { PtPayment, PtSessionLog } from './recognitionRevenue'
+import type { PtPayment, PtSessionLog, PtSettlementOptions } from './recognitionRevenue'
+import {
+  isPtVatExcluded,
+  paymentPerSessionBaseAmount,
+} from './vatSettlement'
 
 export type PrepaidBalanceSplit = {
   total: number
@@ -30,14 +34,23 @@ export function calcPtRefundCutoffDate(
   return addDays(paidDate, windowDays)
 }
 
-function buildMemberFifo(payments: PtPayment[], daysPerSession: number): FifoPackage[] {
+function buildMemberFifo(
+  payments: PtPayment[],
+  daysPerSession: number,
+  options?: PtSettlementOptions,
+): FifoPackage[] {
+  const excludeVat = isPtVatExcluded(options)
   return payments
     .filter((payment) => payment.sessions > 0 && payment.amount > 0)
     .sort((a, b) => a.paidAt.localeCompare(b.paidAt))
     .map((payment) => ({
       id: payment.id,
       sessions: payment.sessions,
-      perSession: payment.amount / payment.sessions,
+      perSession: paymentPerSessionBaseAmount(
+        payment.amount,
+        payment.sessions,
+        excludeVat,
+      ),
       remaining: payment.sessions,
       paidAt: payment.paidAt,
       refundCutoff: calcPtRefundCutoffDate(
@@ -64,6 +77,7 @@ export function splitPtPrepaidByRefundWindow(
   logs: PtSessionLog[],
   daysPerSession: number,
   asOf: string,
+  options?: PtSettlementOptions,
 ): PrepaidBalanceSplit {
   const asOfDate = parseDateOnly(asOf)
   const byMember = new Map<string, PtPayment[]>()
@@ -79,7 +93,7 @@ export function splitPtPrepaidByRefundWindow(
   let expired = 0
 
   for (const [memberId, memberPayments] of byMember) {
-    const fifo = buildMemberFifo(memberPayments, daysPerSession)
+    const fifo = buildMemberFifo(memberPayments, daysPerSession, options)
     const memberLogs = logs
       .filter((log) => log.memberId === memberId)
       .sort((a, b) => a.deductedAt.localeCompare(b.deductedAt))

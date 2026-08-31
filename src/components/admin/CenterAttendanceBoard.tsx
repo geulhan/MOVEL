@@ -16,6 +16,7 @@ import {
 import { fetchBusinessAnalyticsSettings } from '../../api/businessAnalyticsSettings'
 import { fetchMembers, formatCurrency, formatPhone, isExpired } from '../../api/members'
 import { fetchCenterPtPayrollInputs } from '../../api/payments'
+import { fetchPtPricing, ptSettlementOptionsFromPricing } from '../../api/pricing'
 import {
   fetchSchedulesInRange,
   updateScheduleStatus,
@@ -34,7 +35,7 @@ import {
   scopePayrollSummaryForTrainer,
   type AttendancePayrollSummary,
 } from '../../lib/attendancePayroll'
-import type { PtPayment, PtSessionLog } from '../../lib/recognitionRevenue'
+import type { PtPayment, PtSessionLog, PtSettlementOptions } from '../../lib/recognitionRevenue'
 import { DEFAULT_BUSINESS_ANALYTICS_SETTINGS } from '../../types/businessAnalytics'
 import { SearchBar } from '../SearchBar'
 import { PageHelpButton } from './PageHelpButton'
@@ -151,6 +152,7 @@ export function CenterAttendanceBoard({
     payments: PtPayment[]
     sessionLogs: PtSessionLog[]
   }>({ payments: [], sessionLogs: [] })
+  const [ptSettlementOptions, setPtSettlementOptions] = useState<PtSettlementOptions>({})
 
   const monthLabel = formatMonthLabel(monthRef)
   const isMonthView = statusFilter === 'scheduled'
@@ -174,16 +176,26 @@ export function CenterAttendanceBoard({
     setError(null)
     try {
       const { startIso, endIso } = monthRangeIso(monthRef)
-      const [board, memberList, trainers, monthLogs, monthSchedules, classSessions, payrollInputs] =
-        await Promise.all([
-          fetchCenterAttendanceBoard(monthRef),
-          fetchMembers(),
-          fetchTrainers({ activeOnly: false }),
-          fetchMonthAttendanceLogs(monthRef),
-          fetchSchedulesInRange(startIso, endIso),
-          fetchMonthClassTrainerSessions(startIso, endIso),
-          fetchCenterPtPayrollInputs(),
-        ])
+      const [
+        board,
+        memberList,
+        trainers,
+        monthLogs,
+        monthSchedules,
+        classSessions,
+        payrollInputs,
+        ptPricing,
+      ] = await Promise.all([
+        fetchCenterAttendanceBoard(monthRef),
+        fetchMembers(),
+        fetchTrainers({ activeOnly: false }),
+        fetchMonthAttendanceLogs(monthRef),
+        fetchSchedulesInRange(startIso, endIso),
+        fetchMonthClassTrainerSessions(startIso, endIso),
+        fetchCenterPtPayrollInputs(),
+        fetchPtPricing(),
+      ])
+      const ptSettlementOptions = ptSettlementOptionsFromPricing(ptPricing)
 
       let defaultSettlementRate =
         DEFAULT_BUSINESS_ANALYTICS_SETTINGS.trainerSettlementRate
@@ -204,6 +216,7 @@ export function CenterAttendanceBoard({
       setSummary(board.summary)
       setMembers(memberList)
       setPayrollInputs(payrollInputs)
+      setPtSettlementOptions(ptSettlementOptions)
 
       const fullPayroll = buildAttendancePayrollSummary(
         monthLogs,
@@ -214,6 +227,7 @@ export function CenterAttendanceBoard({
         classSessions,
         payrollInputs.payments,
         payrollInputs.sessionLogs,
+        ptSettlementOptions,
       )
       setPayrollSummary(
         isTrainer
@@ -600,6 +614,7 @@ export function CenterAttendanceBoard({
                                 member.id,
                                 payrollInputs.payments,
                                 payrollInputs.sessionLogs,
+                                ptSettlementOptions,
                               ),
                             )
                           : '-'}

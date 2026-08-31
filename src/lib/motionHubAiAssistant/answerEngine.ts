@@ -68,7 +68,9 @@ function answerNetProfit(ctx: MotionHubAssistantContext): MotionHubAssistantAnsw
       lines: [
         `인식매출 ${formatCurrency(s.totalRecognized)}`,
         `− 트레이너 인건비 ${formatCurrency(s.trainerPayroll)}`,
-        `− 대표 인건비 ${formatCurrency(s.ownerPayroll)}`,
+        ...(s.ownerPayroll > 0
+          ? [`  (대표 인건비 ${formatCurrency(s.ownerPayroll)} 포함)`]
+          : []),
         `− 고정비 ${formatCurrency(s.fixedCostsTotal)}`,
         `− 세금 충당 ${formatCurrency(s.taxReserve)}`,
         `− 시설 충당 ${formatCurrency(s.facilityReserve)}`,
@@ -78,7 +80,7 @@ function answerNetProfit(ctx: MotionHubAssistantContext): MotionHubAssistantAnsw
     {
       title: '비용 분석',
       lines: [
-        `인건비 합계 ${formatCurrency(s.trainerPayroll + s.ownerPayroll)} (인식매출의 ${s.totalRecognized > 0 ? Math.round(((s.trainerPayroll + s.ownerPayroll) / s.totalRecognized) * 100) : 0}%)`,
+        `인건비 합계 ${formatCurrency(s.trainerPayroll)} (인식매출의 ${s.totalRecognized > 0 ? Math.round((s.trainerPayroll / s.totalRecognized) * 100) : 0}%)`,
         `고정비 상세 — 임대 ${formatCurrency(fc.rent)} · 관리 ${formatCurrency(fc.maintenance)} · 카드수수료 ${formatCurrency(fc.cardFee)} · 통신 ${formatCurrency(fc.telecom)} · 기타 ${formatCurrency(fc.other)}`,
         `환불 가능 추정 ${formatCurrency(s.totalRefundRisk)} (PT ${formatCurrency(s.ptRefundRisk)} · 회원권 ${formatCurrency(s.centerPassRefundRisk)})`,
       ],
@@ -89,9 +91,9 @@ function answerNetProfit(ctx: MotionHubAssistantContext): MotionHubAssistantAnsw
   if (s.netProfit >= 0) {
     causes.push('현재 데이터상 순이익은 플러스입니다. 마이너스가 아닙니다.')
   } else {
-    if (s.trainerPayroll + s.ownerPayroll > s.totalRecognized * 0.55) {
+    if (s.trainerPayroll > s.totalRecognized * 0.55) {
       causes.push(
-        `인건비 비중이 높습니다 (${formatCurrency(s.trainerPayroll + s.ownerPayroll)}). 인식매출 대비 정산율 점검이 필요합니다.`,
+        `인건비 비중이 높습니다 (${formatCurrency(s.trainerPayroll)}). 인식매출 대비 정산율 점검이 필요합니다.`,
       )
     }
     if (s.fixedCostsTotal > s.totalRecognized * 0.35) {
