@@ -87,7 +87,7 @@ export async function emitScheduleChangedNotification(
 export async function fetchSchedulesInRange(
   startIso: string,
   endIso: string,
-  options?: { trainerId?: string },
+  options?: { trainerId?: string; includeCancelled?: boolean },
 ): Promise<PtSchedule[]> {
   const centerId = await getCurrentCenterId()
   let query = supabase
@@ -97,6 +97,10 @@ export async function fetchSchedulesInRange(
     .gte('scheduled_at', startIso)
     .lte('scheduled_at', endIso)
     .order('scheduled_at')
+
+  if (!options?.includeCancelled) {
+    query = query.neq('status', 'cancelled')
+  }
 
   if (options?.trainerId) {
     query = query.eq('trainer_id', options.trainerId)

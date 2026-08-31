@@ -234,17 +234,17 @@ export async function cancelScheduleWithSessionRestore(
   await updateScheduleStatus(scheduleId, 'cancelled')
 }
 
-/** 고정 수업의 앞으로 예정된 일정 전체 취소 */
+/** 고정 수업의 앞으로 예정된 일정 전체 취소 (오늘 포함) */
 export async function cancelAllFutureFixedSchedules(
   fixedScheduleId: string,
 ): Promise<number> {
-  const now = new Date().toISOString()
+  const fromIso = localDayStartIso()
   const { data, error } = await supabase
     .from('pt_schedules')
     .select('id, member_id, scheduled_at, status')
     .eq('fixed_schedule_id', fixedScheduleId)
     .eq('status', 'scheduled')
-    .gte('scheduled_at', now)
+    .gte('scheduled_at', fromIso)
 
   if (error) throw error
   const rows = (data ?? []) as Pick<

@@ -1,6 +1,7 @@
 import { getCurrentCenterId } from '../lib/center'
 import { supabase } from '../lib/supabase'
 import { WEEKDAYS } from '../utils/calendar'
+import { localDayStartIso } from '../utils/date'
 import {
   buildClassFixedScheduleDatesWithTimes,
   normalizeDayTimes,
@@ -315,12 +316,13 @@ export async function deactivateClassFixedSchedule(fixedId: string): Promise<num
   if (fixedError) throw fixedError
 
   const nowIso = new Date().toISOString()
+  const fromIso = localDayStartIso()
   const { data, error } = await supabase
     .from('class_schedules')
     .update({ status: 'cancelled', updated_at: nowIso })
     .eq('fixed_schedule_id', fixedId)
     .eq('status', 'scheduled')
-    .gte('starts_at', nowIso)
+    .gte('starts_at', fromIso)
     .select('id')
 
   if (error) throw error

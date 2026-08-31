@@ -602,220 +602,10 @@ export function PtScheduleCalendar({
         )}
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        <div className={`${cardClass} card-pad min-w-0`}>
-          <h3 className="font-bold whitespace-nowrap text-charcoal">
-            {selectedDate
-              ? `${selectedDate.replace(/-/g, '.')} 일정`
-              : '일정 목록'}
-            {selectedDate && (
-              <span className="ml-2 text-sm font-normal text-charcoal/50">
-                PT {selectedSchedules.length}건
-                {showClassSchedules ? ` · 그룹 ${selectedClassSchedules.length}건` : ''}
-              </span>
-            )}
-          </h3>
-          {!selectedDate ? (
-            <p className="mt-4 text-sm text-charcoal/50">
-              캘린더에서 날짜를 선택해 주세요.
-            </p>
-          ) : selectedSchedules.length === 0 && selectedClassSchedules.length === 0 ? (
-            <p className="mt-4 text-sm text-charcoal/50">예약이 없습니다.</p>
-          ) : (
-            <ul className="mt-4 space-y-2.5">
-              {selectedSchedules.map((s) => (
-                <li
-                  key={s.id}
-                  className="rounded-xl border border-gold/20 bg-cream/40 p-3.5"
-                >
-                  <div className="flex min-w-0 items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold text-charcoal">
-                        <span className="tabular-nums">{formatTime(s.scheduled_at)}</span>
-                        <span className="mx-1.5 text-charcoal/30">·</span>
-                        <span>{s.member_name}</span>
-                      </p>
-                      <p className="mt-0.5 truncate text-xs text-charcoal/55">
-                        {s.trainer_name ?? '트레이너 미지정'} · {s.duration_minutes}분
-                      </p>
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        {s.fixed_schedule_id && (
-                          <span className="rounded bg-gold/20 px-1.5 py-0.5 text-[10px] font-semibold text-charcoal/70">
-                            {s.is_detached ? '고정·개별' : '고정'}
-                          </span>
-                        )}
-                      </div>
-                      {s.note && (
-                        <p className="mt-1 truncate text-xs text-charcoal/65">{s.note}</p>
-                      )}
-                    </div>
-                    <span
-                      className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap ${STATUS_BADGE[s.status]}`}
-                    >
-                      {STATUS_LABELS[s.status]}
-                    </span>
-                  </div>
-                  {s.status === 'scheduled' && canManage && (
-                    <div className="mt-2.5 flex flex-wrap gap-1">
-                      <button type="button" className="btn-ghost" onClick={() => openEdit(s)}>
-                        변경
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-ghost"
-                        onClick={() => void handleCancel(s.id)}
-                      >
-                        취소
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-ghost text-red-600"
-                        onClick={() => void handleStatus(s.id, 'no_show')}
-                      >
-                        노쇼
-                      </button>
-                      {canManage && !lockedTrainerId && (
-                        <button
-                          type="button"
-                          className="rounded-lg border border-emerald-600/40 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800"
-                          onClick={() => void handleComplete(s)}
-                        >
-                          완료
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className="btn-ghost text-red-800"
-                        onClick={() => void handleDelete(s.id)}
-                      >
-                        삭제
-                      </button>
-                    </div>
-                  )}
-                  <MemberScheduleActionLinks
-                    memberId={s.member_id}
-                    returnTo={journalReturnTo}
-                    journalDate={scheduleDateKey(s.scheduled_at)}
-                    showJournal={journalFeatureEnabled}
-                    journalNeedsWrite={scheduleNeedsJournal(s)}
-                  />
-                </li>
-              ))}
-              {showClassSchedules &&
-                selectedClassSchedules.map((schedule) => (
-                  <li
-                    key={`class-${schedule.id}`}
-                    className="rounded-xl border border-teal-200/60 bg-teal-50/40 p-3.5"
-                  >
-                    <div className="flex min-w-0 items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-semibold text-charcoal">
-                          <span className="rounded bg-teal-100 px-1.5 py-0.5 text-[10px] font-bold text-teal-800">
-                            그룹
-                          </span>
-                          <span className="ml-1.5 tabular-nums">
-                            {formatTime(schedule.starts_at)}
-                          </span>
-                          <span className="mx-1.5 text-charcoal/30">·</span>
-                          <span>{schedule.class_name}</span>
-                        </p>
-                        <p className="mt-0.5 truncate text-xs text-charcoal/55">
-                          {schedule.trainer_name ?? '강사 미지정'} · 예약{' '}
-                          {schedule.reserved_count ?? 0}/{schedule.capacity ?? '-'}
-                        </p>
-                        {schedule.fixed_schedule_id && (
-                          <span className="mt-1 inline-block rounded bg-gold/20 px-1.5 py-0.5 text-[10px] font-semibold text-charcoal/70">
-                            {schedule.is_detached ? '고정·개별' : '고정'}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="mt-2">
-                      <Link
-                        to="/admin/classes"
-                        className="inline-flex rounded-lg border border-teal-600/30 bg-white px-2.5 py-1 text-xs font-semibold text-teal-900 transition hover:bg-teal-50"
-                      >
-                        클래스 관리에서 보기
-                      </Link>
-                    </div>
-                  </li>
-                ))}
-            </ul>
-          )}
-
-          {fixedList.length > 0 && (
-            <div className="mt-6 border-t border-gold/20 pt-4">
-              <h4 className="text-xs font-semibold text-charcoal/65">등록된 고정 수업</h4>
-              <ul className="mt-2 space-y-2">
-                {fixedList.map((fixed) => (
-                  <li
-                    key={fixed.id}
-                    className="rounded-lg border border-gold/20 bg-white/70 px-3 py-2 text-xs"
-                  >
-                    <p className="font-medium text-charcoal">
-                      {memberNameById.get(fixed.member_id) ?? '회원'}
-                    </p>
-                    <p className="mt-0.5 text-charcoal/60">
-                      {formatFixedScheduleTimes(fixed)}
-                    </p>
-                    {canManage && (
-                      <div className="mt-1.5 flex flex-wrap gap-1">
-                        <button
-                          type="button"
-                          className="btn-ghost"
-                          onClick={() => {
-                            setEditFixed(fixed)
-                            setEditSeriesDays(getFixedDaysOfWeek(fixed))
-                            setEditFixedDayTimes(getFixedDayTimes(fixed))
-                            setEditTrainerId(fixed.trainer_id ?? '')
-                            setEditNote(fixed.note ?? '')
-                          }}
-                        >
-                          전체 변경
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-ghost"
-                          onClick={() =>
-                            void syncFixedScheduleToRemaining(fixed.id)
-                              .then((n) => {
-                                onToast?.(
-                                  n > 0 ? `잔여 동기화 · ${n}건 추가` : '추가 일정 없음',
-                                )
-                                return load()
-                              })
-                              .catch((err) => setError(formatSupabaseError(err)))
-                          }
-                        >
-                          잔여 동기화
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-ghost text-red-700"
-                          onClick={() => {
-                            if (!window.confirm('고정 수업을 전체 취소할까요?')) return
-                            void cancelAllFutureFixedSchedules(fixed.id)
-                              .then((n) => {
-                                onToast?.(`고정 수업 취소 · ${n}건`)
-                                return load()
-                              })
-                              .catch((err) => setError(formatSupabaseError(err)))
-                          }}
-                        >
-                          전체 취소
-                        </button>
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-
+      <div className="flex flex-col gap-5 lg:grid lg:grid-cols-2">
         <form
           onSubmit={(e) => void handleSubmit(e)}
-          className={`${cardClass} card-pad min-w-0`}
+          className={`${cardClass} card-pad order-1 min-w-0 lg:order-2`}
         >
           <h3 className="font-bold text-charcoal">일정 등록</h3>
           <div className="mt-3 flex gap-2">
@@ -977,6 +767,218 @@ export function PtScheduleCalendar({
             </button>
           </div>
         </form>
+
+        <div className={`${cardClass} card-pad order-2 min-w-0 lg:order-1`}>
+          <h3 className="font-bold whitespace-nowrap text-charcoal">
+            {selectedDate
+              ? `${selectedDate.replace(/-/g, '.')} 일정`
+              : '일정 목록'}
+            {selectedDate && (
+              <span className="ml-2 text-sm font-normal text-charcoal/50">
+                PT {selectedSchedules.length}건
+                {showClassSchedules ? ` · 그룹 ${selectedClassSchedules.length}건` : ''}
+              </span>
+            )}
+          </h3>
+          {!selectedDate ? (
+            <p className="mt-4 text-sm text-charcoal/50">
+              캘린더에서 날짜를 선택해 주세요.
+            </p>
+          ) : selectedSchedules.length === 0 && selectedClassSchedules.length === 0 ? (
+            <p className="mt-4 text-sm text-charcoal/50">예약이 없습니다.</p>
+          ) : (
+            <ul className="mt-4 space-y-2.5">
+              {selectedSchedules.map((s) => (
+                <li
+                  key={s.id}
+                  className="rounded-xl border border-gold/20 bg-cream/40 p-3.5"
+                >
+                  <div className="flex min-w-0 items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-charcoal">
+                        <span className="tabular-nums">{formatTime(s.scheduled_at)}</span>
+                        <span className="mx-1.5 text-charcoal/30">·</span>
+                        <span>{s.member_name}</span>
+                      </p>
+                      <p className="mt-0.5 truncate text-xs text-charcoal/55">
+                        {s.trainer_name ?? '트레이너 미지정'} · {s.duration_minutes}분
+                      </p>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {s.fixed_schedule_id && (
+                          <span className="rounded bg-gold/20 px-1.5 py-0.5 text-[10px] font-semibold text-charcoal/70">
+                            {s.is_detached ? '고정·개별' : '고정'}
+                          </span>
+                        )}
+                      </div>
+                      {s.note && (
+                        <p className="mt-1 truncate text-xs text-charcoal/65">{s.note}</p>
+                      )}
+                    </div>
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap ${STATUS_BADGE[s.status]}`}
+                    >
+                      {STATUS_LABELS[s.status]}
+                    </span>
+                  </div>
+                  {s.status === 'scheduled' && canManage && (
+                    <div className="mt-2.5 flex flex-wrap gap-1">
+                      <button type="button" className="btn-ghost" onClick={() => openEdit(s)}>
+                        변경
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-ghost"
+                        onClick={() => void handleCancel(s.id)}
+                      >
+                        취소
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-ghost text-red-600"
+                        onClick={() => void handleStatus(s.id, 'no_show')}
+                      >
+                        노쇼
+                      </button>
+                      {canManage && !lockedTrainerId && (
+                        <button
+                          type="button"
+                          className="rounded-lg border border-emerald-600/40 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800"
+                          onClick={() => void handleComplete(s)}
+                        >
+                          완료
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="btn-ghost text-red-800"
+                        onClick={() => void handleDelete(s.id)}
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  )}
+                  <MemberScheduleActionLinks
+                    memberId={s.member_id}
+                    returnTo={journalReturnTo}
+                    journalDate={scheduleDateKey(s.scheduled_at)}
+                    showJournal={journalFeatureEnabled}
+                    journalNeedsWrite={scheduleNeedsJournal(s)}
+                  />
+                </li>
+              ))}
+              {showClassSchedules &&
+                selectedClassSchedules.map((schedule) => (
+                  <li
+                    key={`class-${schedule.id}`}
+                    className="rounded-xl border border-teal-200/60 bg-teal-50/40 p-3.5"
+                  >
+                    <div className="flex min-w-0 items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-semibold text-charcoal">
+                          <span className="rounded bg-teal-100 px-1.5 py-0.5 text-[10px] font-bold text-teal-800">
+                            그룹
+                          </span>
+                          <span className="ml-1.5 tabular-nums">
+                            {formatTime(schedule.starts_at)}
+                          </span>
+                          <span className="mx-1.5 text-charcoal/30">·</span>
+                          <span>{schedule.class_name}</span>
+                        </p>
+                        <p className="mt-0.5 truncate text-xs text-charcoal/55">
+                          {schedule.trainer_name ?? '강사 미지정'} · 예약{' '}
+                          {schedule.reserved_count ?? 0}/{schedule.capacity ?? '-'}
+                        </p>
+                        {schedule.fixed_schedule_id && (
+                          <span className="mt-1 inline-block rounded bg-gold/20 px-1.5 py-0.5 text-[10px] font-semibold text-charcoal/70">
+                            {schedule.is_detached ? '고정·개별' : '고정'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-2">
+                      <Link
+                        to="/admin/classes"
+                        className="inline-flex rounded-lg border border-teal-600/30 bg-white px-2.5 py-1 text-xs font-semibold text-teal-900 transition hover:bg-teal-50"
+                      >
+                        클래스 관리에서 보기
+                      </Link>
+                    </div>
+                  </li>
+                ))}
+            </ul>
+          )}
+
+          {fixedList.length > 0 && (
+            <details className="mt-6 border-t border-gold/20 pt-4">
+              <summary className="cursor-pointer text-xs font-semibold text-charcoal/65">
+                등록된 고정 수업 ({fixedList.length})
+              </summary>
+              <ul className="mt-2 space-y-2">
+                {fixedList.map((fixed) => (
+                  <li
+                    key={fixed.id}
+                    className="rounded-lg border border-gold/20 bg-white/70 px-3 py-2 text-xs"
+                  >
+                    <p className="font-medium text-charcoal">
+                      {memberNameById.get(fixed.member_id) ?? '회원'}
+                    </p>
+                    <p className="mt-0.5 text-charcoal/60">
+                      {formatFixedScheduleTimes(fixed)}
+                    </p>
+                    {canManage && (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        <button
+                          type="button"
+                          className="btn-ghost"
+                          onClick={() => {
+                            setEditFixed(fixed)
+                            setEditSeriesDays(getFixedDaysOfWeek(fixed))
+                            setEditFixedDayTimes(getFixedDayTimes(fixed))
+                            setEditTrainerId(fixed.trainer_id ?? '')
+                            setEditNote(fixed.note ?? '')
+                          }}
+                        >
+                          전체 변경
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-ghost"
+                          onClick={() =>
+                            void syncFixedScheduleToRemaining(fixed.id)
+                              .then((n) => {
+                                onToast?.(
+                                  n > 0 ? `잔여 동기화 · ${n}건 추가` : '추가 일정 없음',
+                                )
+                                return load()
+                              })
+                              .catch((err) => setError(formatSupabaseError(err)))
+                          }
+                        >
+                          잔여 동기화
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-ghost text-red-700"
+                          onClick={() => {
+                            if (!window.confirm('고정 수업을 전체 취소할까요?')) return
+                            void cancelAllFutureFixedSchedules(fixed.id)
+                              .then((n) => {
+                                onToast?.(`고정 수업 취소 · ${n}건`)
+                                return load()
+                              })
+                              .catch((err) => setError(formatSupabaseError(err)))
+                          }}
+                        >
+                          전체 취소
+                        </button>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+        </div>
       </div>
 
       {editFixed && (
