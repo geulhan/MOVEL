@@ -169,6 +169,43 @@ export async function createMember(input: {
   return normalizeMember(data)
 }
 
+export async function updateMemberBasicInfo(
+  memberId: string,
+  input: { name: string; phone: string },
+): Promise<Member> {
+  const name = input.name.trim()
+  if (!name) {
+    throw new Error('이름을 입력해 주세요.')
+  }
+
+  const normalizedPhone = normalizePhone(input.phone)
+  if (normalizedPhone.length < 10) {
+    throw new Error('올바른 전화번호를 입력해 주세요.')
+  }
+
+  const centerId = await resolveCenterIdForMember(memberId)
+  const existingMemberId = await findMemberIdByPhoneInCenter(
+    centerId,
+    normalizedPhone,
+  )
+  if (existingMemberId && existingMemberId !== memberId) {
+    throw duplicateMemberPhoneError()
+  }
+
+  const { data, error } = await supabase
+    .from('members')
+    .update({
+      name,
+      phone: normalizedPhone,
+    })
+    .eq('id', memberId)
+    .select('*')
+    .single()
+
+  if (error) throw error
+  return normalizeMember(data)
+}
+
 export async function updateMemberTrainer(
   memberId: string,
   trainerId: string | null,

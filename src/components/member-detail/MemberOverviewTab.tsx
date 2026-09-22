@@ -6,11 +6,20 @@ import {
 } from '../../api/memberAuth'
 import {
   deleteMember,
+  DUPLICATE_MEMBER_PHONE_MESSAGE,
   formatCurrency,
   formatDate,
   formatPhone,
   isExpired,
+  updateMemberBasicInfo,
 } from '../../api/members'
+import { getErrorMessage } from '../../lib/errors'
+import { extractPhoneBody } from '../../utils/phone'
+import {
+  PhoneInput,
+  phoneBodyToFull,
+  validatePhoneBody,
+} from '../PhoneInput'
 import { extendMemberPeriod } from '../../api/period'
 import { SESSION_DAYS_PER_SESSION } from '../../constants/session'
 import { btnOutline, btnPrimary, cardClass, inputClass } from '../../styles/theme'
@@ -42,8 +51,60 @@ export function MemberOverviewTab() {
   const [passwordResetMessage, setPasswordResetMessage] = useState<string | null>(
     null,
   )
+  const [editingBasicInfo, setEditingBasicInfo] = useState(false)
+  const [editName, setEditName] = useState('')
+  const [editPhoneBody, setEditPhoneBody] = useState('')
+  const [basicInfoSaving, setBasicInfoSaving] = useState(false)
 
   if (!member) return null
+
+  function startEditBasicInfo() {
+    setEditName(member!.name)
+    setEditPhoneBody(extractPhoneBody(member!.phone))
+    setEditingBasicInfo(true)
+    setError(null)
+  }
+
+  function cancelEditBasicInfo() {
+    setEditingBasicInfo(false)
+    setEditName('')
+    setEditPhoneBody('')
+  }
+
+  async function handleSaveBasicInfo(e: FormEvent) {
+    e.preventDefault()
+    if (!member) return
+
+    if (!editName.trim()) {
+      setError('이름을 입력해 주세요.')
+      return
+    }
+    const phoneError = validatePhoneBody(editPhoneBody)
+    if (phoneError) {
+      setError(phoneError)
+      return
+    }
+
+    setBasicInfoSaving(true)
+    setError(null)
+    try {
+      await updateMemberBasicInfo(memberId, {
+        name: editName,
+        phone: phoneBodyToFull(editPhoneBody),
+      })
+      setEditingBasicInfo(false)
+      await reload()
+    } catch (err) {
+      const message = getErrorMessage(err)
+      setError(
+        message.includes(DUPLICATE_MEMBER_PHONE_MESSAGE)
+          ? DUPLICATE_MEMBER_PHONE_MESSAGE
+          : message,
+      )
+    } finally {
+      setBasicInfoSaving(false)
+    }
+  }
 
   const defaultPasswordHint = getDefaultMemberPasswordHint(member.phone)
 
@@ -128,14 +189,25 @@ export function MemberOverviewTab() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-base font-semibold text-charcoal">기본 정보</h3>
           {canManagePayments && (
-            <button
-              type="button"
-              onClick={() => void handlePasswordReset()}
-              disabled={resettingPassword}
-              className={btnOutline}
-            >
-              {resettingPassword ? '초기화 중…' : '비밀번호 초기화'}
-            </button>
+            <div className="flex flex-wrap gap-2">
+              {!editingBasicInfo && (
+                <button
+                  type="button"
+                  onClick={startEditBasicInfo}
+                  className={btnOutline}
+                >
+                  이름·연락처 수정
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => void handlePasswordReset()}
+                disabled={resettingPassword || editingBasicInfo}
+                className={btnOutline}
+              >
+                {resettingPassword ? '초기화 중…' : '비밀번호 초기화'}
+              </button>
+            </div>
           )}
         </div>
         {passwordResetMessage && (
@@ -143,7 +215,57 @@ export function MemberOverviewTab() {
             {passwordResetMessage}
           </p>
         )}
+        {editingBasicInfo && (
+          <form
+            onSubmit={(e) => void handleSaveBasicInfo(e)}
+            className="mt-4 grid gap-3 rounded-xl border border-gold/25 bg-cream/40 p-4 sm:grid-cols-2"
+          >
+            <label className="block text-sm sm:col-span-2">
+              <span className="mb-1.5 block font-medium text-charcoal">이름</span>
+              <input
+                type="text"
+                lang="ko"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className={inputClass}
+                autoFocus
+              />
+            </label>
+            <label className="block text-sm sm:col-span-2">
+              <span className="mb-1.5 block font-medium text-charcoal">
+                휴대전화
+              </span>
+              <PhoneInput
+                value={editPhoneBody}
+                onChange={setEditPhoneBody}
+                className={inputClass}
+              />
+              <p className="mt-1 text-xs text-muted">
+                회원 로그인 아이디(전화번호)입니다. 변경 시 회원에게 안내해 주세요.
+              </p>
+            </label>
+            <div className="flex flex-wrap gap-2 sm:col-span-2">
+              <button
+                type="submit"
+                disabled={basicInfoSaving}
+                className={btnPrimary}
+              >
+                {basicInfoSaving ? '저장 중…' : '저장'}
+              </button>
+              <button
+                type="button"
+                onClick={cancelEditBasicInfo}
+                disabled={basicInfoSaving}
+                className={btnOutline}
+              >
+                취소
+              </button>
+            </div>
+          </form>
+        )}
         <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <ProfileField label="이름" value={member.name} />
+          <ProfileField label="연락처" value={formatPhone(member.phone)} />
           <ProfileField
             label="담당 트레이너"
             value={member.trainer_name ?? '미지정'}
